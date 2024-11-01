@@ -1,0 +1,16 @@
+import { Component } from '@angular/core';
+import { HeaderComponent } from '../../components/header/header.component';
+import { Router } from '@angular/router';
+import { RegisterComponent } from '../../components/register/register.component';
+import { FooterComponent } from '../../components/footer/footer.component';
+
+@Component({
+  selector: 'app-register-page',
+  standalone: true,
+  imports: [HeaderComponent, RegisterComponent, FooterComponent],
+  templateUrl: './register-page.component.html',
+  styleUrl: './register-page.component.scss',
+})
+export class RegisterPageComponent {
+  constructor(private router: Router) {}
+}
