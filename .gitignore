@@ -1,3 +1,3 @@
-# Ignorer les dossiers node_modules pour le frontend et le backend
-captDirect/node_modules/
+# captDirect/node_modules/
 nodejs/node_modules/
+
