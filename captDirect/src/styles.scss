@@ -1,14 +1,50 @@
 /* You can add global styles to this file, and also import other style files */
 
-html,
-body {
-  height: 100%;
-  margin: 0;
-  padding: 0;
-  overflow: hidden; /* Éviter le défilement global */
-}
+// html,
+// body {
+//   height: 100%;
+//   margin: 0;
+//   padding: 0;
+//   overflow: hidden; /* Éviter le défilement global */
+// }
 body {
   margin: 0;
   font-family: Roboto, "Helvetica Neue", sans-serif;
-  background-color: bisque;
+  background-color: rgb(246, 247, 248);
+}
+
+/* Global Styles */
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.dashboard-container {
+  display: flex;
+  flex: 1;
+  height: 100%;
+}
+
+.main-content {
+  flex: 1;
+  padding: 20px;
+  overflow-y: auto;
+}
+
+.app-header,
+.app-footer {
+  width: 100%;
+}
+
+footer {
+  margin-top: auto; /* Fixe le pied de page en bas de la page */
+}
+
+.live-video iframe {
+  max-height: 60vh;
+  width: 100%;
+  border-radius: 8px;
 }

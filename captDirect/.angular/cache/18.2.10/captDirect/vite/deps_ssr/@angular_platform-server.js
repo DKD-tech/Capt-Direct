@@ -7,7 +7,8 @@ import {
   NoopAnimationDriver,
   WebAnimationsDriver,
   WebAnimationsStyleNormalizer
-} from "./chunk-WAX6MWXY.js";
+} from "./chunk-5NMQ74RI.js";
+import "./chunk-NL54XMRX.js";
 import {
   BrowserDomAdapter,
   BrowserModule,
@@ -16,7 +17,7 @@ import {
   EventManagerPlugin,
   HTTP_ROOT_INTERCEPTOR_FNS,
   HttpClientModule
-} from "./chunk-NKO74ZFF.js";
+} from "./chunk-QCBBDW74.js";
 import {
   DOCUMENT,
   NullViewportScroller,
@@ -26,7 +27,7 @@ import {
   XhrFactory,
   getDOM,
   setRootDomAdapter
-} from "./chunk-V2KK6NLT.js";
+} from "./chunk-Z3C77T6M.js";
 import {
   ALLOW_MULTIPLE_PLATFORMS,
   ANIMATION_MODULE_TYPE,
@@ -55,7 +56,6 @@ import {
   inject,
   makeEnvironmentProviders,
   platformCore,
-  require_cjs,
   setClassMetadata,
   setDocument,
   whenStable,
@@ -63,7 +63,10 @@ import {
   ɵɵdefineInjector,
   ɵɵdefineNgModule,
   ɵɵinject
-} from "./chunk-KSFTFUF6.js";
+} from "./chunk-SO674Y5E.js";
+import {
+  require_cjs
+} from "./chunk-3CUTSYCL.js";
 import {
   __async,
   __toESM

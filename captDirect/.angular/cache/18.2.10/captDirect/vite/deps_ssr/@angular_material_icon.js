@@ -2,11 +2,11 @@ import { createRequire } from 'module';const require = createRequire(import.meta
 import {
   DomSanitizer,
   HttpClient
-} from "./chunk-NKO74ZFF.js";
+} from "./chunk-QCBBDW74.js";
 import {
   DOCUMENT,
   isPlatformBrowser
-} from "./chunk-V2KK6NLT.js";
+} from "./chunk-Z3C77T6M.js";
 import {
   ANIMATION_MODULE_TYPE,
   APP_ID,
@@ -39,7 +39,6 @@ import {
   afterNextRender,
   booleanAttribute,
   inject,
-  require_cjs,
   require_operators,
   setClassMetadata,
   ɵɵInputTransformsFeature,
@@ -74,7 +73,10 @@ import {
   ɵɵtext,
   ɵɵtextInterpolate1,
   ɵɵviewQuery
-} from "./chunk-KSFTFUF6.js";
+} from "./chunk-SO674Y5E.js";
+import {
+  require_cjs
+} from "./chunk-3CUTSYCL.js";
 import {
   __spreadProps,
   __spreadValues,
@@ -3044,7 +3046,7 @@ var BidiModule = class _BidiModule {
 })();
 
 // node_modules/@angular/cdk/fesm2022/cdk.mjs
-var VERSION = new Version("18.2.10");
+var VERSION = new Version("18.2.11");
 
 // node_modules/@angular/material/fesm2022/core.mjs
 var import_rxjs5 = __toESM(require_cjs(), 1);
@@ -3086,7 +3088,7 @@ function MatOption_Conditional_6_Template(rf, ctx) {
 }
 var _c5 = ["mat-internal-form-field", ""];
 var _c6 = ["*"];
-var VERSION2 = new Version("18.2.10");
+var VERSION2 = new Version("18.2.11");
 var AnimationCurves = class {
   static {
     this.STANDARD_CURVE = "cubic-bezier(0.4,0.0,0.2,1)";

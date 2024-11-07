@@ -1,0 +1,121 @@
+/* Styles généraux */
+body {
+    font-family: 'Segoe UI', sans-serif;
+    color: #495057;
+    line-height: 1.5;
+    text-align: left;
+  }
+  
+  .hero {
+    width: 100%;
+    padding: 30px 0 40px;
+  }
+  
+  .d-flex {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  /* Texte */
+  .TextBanner {
+    font-size: 38px;
+    font-weight: 600;
+    line-height: 1.2;
+  }
+  
+  .TextBanner span {
+    font-weight: 700;
+    font-size: 40px;
+    color: #497bd1;
+  }
+  
+  .BannerText {
+    font-size: 18px;
+    font-weight: 400;
+    margin-top: 15px;
+    margin-bottom: 15px;
+  }
+  
+  /* Bouton */
+  .ButtonRegister {
+    display: inline-block;
+    margin-top: 15px;
+  }
+  
+  .ButtonRegister a {
+    text-decoration: none;
+  }
+  
+  .primary-button {
+    color: #fff;
+    background: #497bd1;
+    border-radius: 8px;
+    padding: 8px 12px;
+    transition: background 0.5s;
+  }
+  
+  .primary-button:hover {
+    background: #fab555;
+  }
+  
+  /* Image */
+  .image-content {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .img-fluid {
+    max-width: 100%;
+    height: auto;
+  }
+  
+  .animated {
+    animation: up-and-down 2s ease-in-out infinite alternate-reverse both;
+  }
+  
+  /* Layout responsive */
+  @media (min-width: 992px) {
+    .col-lg-6 {
+      flex: 0 0 50%;
+      max-width: 50%;
+    }
+  
+    .d-lg-flex {
+      display: flex !important;
+    }
+  }
+  
+  @keyframes up-and-down {
+    0% { transform: translateY(0); }
+    100% { transform: translateY(-10px); }
+  }
+
+
+/* Style du bouton "Explorer les vidéos" */
+.ButtonExplore {
+    margin-top: 20px;
+    text-align: left ; /* Assure l'alignement à gauche */
+  }
+  
+  .primary-button {
+    display: inline-block;
+    color: #fff;
+    background-color: #497bd1;
+    border-radius: 8px;
+    padding: 12px 24px;
+    font-weight: 600;
+    font-size: 16px;
+    text-align: center;
+    transition: background-color 0.3s ease;
+    text-decoration: none;
+  }
+  
+  .primary-button:hover {
+    background-color: #6b6d70;
+    color: #fff;
+  }
+  
+  
+  

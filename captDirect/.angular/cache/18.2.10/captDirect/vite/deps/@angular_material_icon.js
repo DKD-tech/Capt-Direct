@@ -1,16 +1,15 @@
 import {
   DomSanitizer,
   HttpClient
-} from "./chunk-FKVRC2SH.js";
+} from "./chunk-FORHMU3B.js";
 import {
   DOCUMENT,
   isPlatformBrowser
-} from "./chunk-CSAYQVME.js";
+} from "./chunk-E37JNIAW.js";
 import {
   ANIMATION_MODULE_TYPE,
   APP_ID,
   Attribute,
-  BehaviorSubject,
   CSP_NONCE,
   ChangeDetectionStrategy,
   ChangeDetectorRef,
@@ -27,42 +26,19 @@ import {
   LOCALE_ID,
   NgModule,
   NgZone,
-  Observable,
   Optional,
   Output,
   PLATFORM_ID,
   QueryList,
   SecurityContext,
   SkipSelf,
-  Subject,
-  Subscription,
   Version,
   ViewChild,
   ViewEncapsulation$1,
-  __spreadProps,
-  __spreadValues,
   afterNextRender,
   booleanAttribute,
-  catchError,
-  combineLatest,
-  concat,
-  debounceTime,
-  distinctUntilChanged,
-  filter,
-  finalize,
-  forkJoin,
   inject,
-  isObservable,
-  map,
-  of,
   setClassMetadata,
-  share,
-  skip,
-  startWith,
-  take,
-  takeUntil,
-  tap,
-  throwError,
   ɵɵInputTransformsFeature,
   ɵɵNgOnChangesFeature,
   ɵɵProvidersFeature,
@@ -95,7 +71,33 @@ import {
   ɵɵtext,
   ɵɵtextInterpolate1,
   ɵɵviewQuery
-} from "./chunk-I2LHZQ2L.js";
+} from "./chunk-6M5LYMSS.js";
+import {
+  BehaviorSubject,
+  Observable,
+  Subject,
+  Subscription,
+  __spreadProps,
+  __spreadValues,
+  catchError,
+  combineLatest,
+  concat,
+  debounceTime,
+  distinctUntilChanged,
+  filter,
+  finalize,
+  forkJoin,
+  isObservable,
+  map,
+  of,
+  share,
+  skip,
+  startWith,
+  take,
+  takeUntil,
+  tap,
+  throwError
+} from "./chunk-NXCR6CZN.js";
 
 // node_modules/@angular/cdk/fesm2022/platform.mjs
 var hasV8BreakIterator;
@@ -3049,7 +3051,7 @@ var BidiModule = class _BidiModule {
 })();
 
 // node_modules/@angular/cdk/fesm2022/cdk.mjs
-var VERSION = new Version("18.2.10");
+var VERSION = new Version("18.2.11");
 
 // node_modules/@angular/material/fesm2022/core.mjs
 var _c0 = ["*", [["mat-option"], ["ng-container"]]];
@@ -3089,7 +3091,7 @@ function MatOption_Conditional_6_Template(rf, ctx) {
 }
 var _c5 = ["mat-internal-form-field", ""];
 var _c6 = ["*"];
-var VERSION2 = new Version("18.2.10");
+var VERSION2 = new Version("18.2.11");
 var AnimationCurves = class {
   static {
     this.STANDARD_CURVE = "cubic-bezier(0.4,0.0,0.2,1)";

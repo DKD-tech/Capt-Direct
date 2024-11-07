@@ -1,30 +1,24 @@
 <div class="dashboard-container">
-  <aside class="sidebar">
-    <div class="user-info">
-      <mat-icon class="user-icon">person</mat-icon>
-      <span class="user-name">djeneba Kaba</span>
-    </div>
-    <nav class="nav-links">
-      <ul>
-        <li><a href="#">Settings</a></li>
-        <li><a href="#">Logout</a></li>
-      </ul>
-    </nav>
-  </aside>
+<!-- Sidebar -->
+<!-- <aside class="sidebar">
+  <app-side-bar></app-side-bar>
+</aside> -->
+<app-side-bar></app-side-bar>
 
   <main class="main-content">
     <div class="streaming-info">
       <div class="status-header">
-        <span class="dot red"></span>
-        <!-- Point rouge pour indiquer le statut -->
-        <span class="status-text">En attente</span>
-
+        <!-- Point vert pour indiquer le statut "on" -->
+        <span class="status-dot green"></span>En attente
+        <!-- <span class="status-text">En attente</span> -->
+      
         <!-- Ajout de l'horloge ici -->
         <div class="clock">
           <mat-icon>access_time</mat-icon>
           <span id="clock">12:12 à 12:22</span>
         </div>
       </div>
+      
       <div class="collaborators-count">
         <span>Vous êtes 3 collaborateurs en ligne</span>
       </div>
@@ -40,9 +34,9 @@
       </video> -->
       <iframe
         class="live-stream"
-        width="100%"
+        width="50%"
         height="500px"
-        src="https://www.youtube.com/embed/RIQFon1Kbn8?autoplay=1&mute=1"
+        src="/videos/speech_macron_fr.mp4"
         title="YouTube video player"
         frameborder="0"
         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"

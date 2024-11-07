@@ -2,12 +2,14 @@ import { createRequire } from 'module';const require = createRequire(import.meta
 import {
   InjectionToken,
   NgModule,
-  require_cjs,
   require_operators,
   setClassMetadata,
   ɵɵdefineInjector,
   ɵɵdefineNgModule
-} from "./chunk-KSFTFUF6.js";
+} from "./chunk-SO674Y5E.js";
+import {
+  require_cjs
+} from "./chunk-3CUTSYCL.js";
 import {
   __commonJS,
   __export,

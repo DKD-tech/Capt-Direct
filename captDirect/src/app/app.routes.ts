@@ -3,10 +3,17 @@ import { NotFoundComponent } from './pages/not-found/not-found.component';
 import { LoginPageComponent } from './pages/login-page/login-page.component';
 import { RegisterPageComponent } from './pages/register-page/register-page.component';
 import { DashboardPageComponent } from './pages/dashboard-page/dashboard-page.component';
+import { HomeComponent } from './components/home/home.component';
+import { SideBarComponent } from './components/side-bar/side-bar.component';
+
 
 export const routes: Routes = [
   {
-    path: '',
+    path: 'side-bar',
+    component: SideBarComponent,
+  },
+  {
+    path: 'login-page',
     redirectTo: 'login-page',
     pathMatch: 'full',
   },
@@ -17,6 +24,9 @@ export const routes: Routes = [
   {
     path: 'register-page',
     component: RegisterPageComponent,
+  },{
+    path: '',
+    component: HomeComponent,
   },
   {
     path: 'dashboard-page',

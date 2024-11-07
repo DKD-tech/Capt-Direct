@@ -36,11 +36,12 @@ import {
   withHttpTransferCacheOptions,
   withI18nSupport,
   withNoHttpTransferCache
-} from "./chunk-NKO74ZFF.js";
+} from "./chunk-QCBBDW74.js";
 import {
   getDOM
-} from "./chunk-V2KK6NLT.js";
-import "./chunk-KSFTFUF6.js";
+} from "./chunk-Z3C77T6M.js";
+import "./chunk-SO674Y5E.js";
+import "./chunk-3CUTSYCL.js";
 import "./chunk-LDODSSGN.js";
 export {
   BrowserModule,
