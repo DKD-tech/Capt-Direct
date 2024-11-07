@@ -207,6 +207,15 @@ io.on("connection", (socket) => {
 //   console.log(`Socket ${socket.id} est connecté`);
 // });
 
+// const redisClient = require('redis').createClient();
+// const ttl = 10; // Temps de vie en secondes
+
+// // Fonction pour ajouter un sous-titre dans Redis
+// function addSubtitleToRedis(projectId, segmentId, startTime, endTime, text) {
+//     const key = `sous_titre:${projectId}:${segmentId}:${startTime}:${endTime}`;
+//     redisClient.set(key, text, 'EX', ttl); // Expire après 10 secondes
+// }
+
 /**
  * Après que les fonctions de socket sont mises en place, un port pour l'ecouter
  */

@@ -1,0 +1,8 @@
+/src
+├── config          // Configurations pour PostgreSQL et Redis
+├── controllers     // Logique métier (services)
+├── models          // Modèles de données (PostgreSQL)
+├── routes          // Routes de l''API REST
+├── redis           // Gestion des sessions et sous-titres en Redis
+├── middlewares     // Middlewares pour la validation, auth, etc.
+└── app.js          // Fichier principal (serveur Express et Socket.io)
