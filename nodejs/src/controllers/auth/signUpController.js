@@ -9,10 +9,17 @@ const getRandomString = require("../../utils/getRandomString"); // Fonction pour
 async function signUpController(req, res) {
   const { email, password, username, role } = req.body;
 
+  const finalRole = role || "editor";
+
   // Validation des données d'inscription
-  const validation = validate({ email, password, username, role }, userSchema);
+  const validation = validate(
+    { email, password, username, role: finalRole },
+    userSchema
+  );
   if (!validation.isValid) {
-    return res.status(400).send(`Invalid ${validation.invalidKey}`);
+    return res
+      .status(400)
+      .json({ message: `Invalid ${validation.invalidKey}` });
   }
 
   try {
@@ -34,7 +41,7 @@ async function signUpController(req, res) {
       username: finalUsername,
       email,
       password: hashedPassword,
-      role: role || "viewer", // Rôle par défaut
+      role: role || "editor", // Rôle par défaut
       created_at: new Date(), // Ajout de la date de création
     });
 
@@ -44,8 +51,10 @@ async function signUpController(req, res) {
 
     res.status(200).json({ token });
   } catch (error) {
-    console.error(error);
-    return res.sendStatus(500);
+    // console.error(error);
+    // return res.sendStatus(500);
+    console.error("Erreur lors de l'inscription:", error);
+    return res.status(500).json({ message: "Internal server error" }); // Réponse JSON en cas d'erreur
   }
 }
 

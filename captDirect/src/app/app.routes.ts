@@ -3,6 +3,7 @@ import { NotFoundComponent } from './pages/not-found/not-found.component';
 import { LoginPageComponent } from './pages/login-page/login-page.component';
 import { RegisterPageComponent } from './pages/register-page/register-page.component';
 import { DashboardPageComponent } from './pages/dashboard-page/dashboard-page.component';
+import { authGuard } from './services/auth/auth.guard';
 
 export const routes: Routes = [
   {
@@ -20,6 +21,7 @@ export const routes: Routes = [
   },
   {
     path: 'dashboard-page',
+    canActivate: [authGuard],
     children: [
       {
         path: '',

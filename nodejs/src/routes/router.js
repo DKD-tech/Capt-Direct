@@ -12,6 +12,9 @@ router.get("/health", healthController);
 
 // Routes d'authentification
 router.use("/auth", authRouter);
+router.use("/user", userRouter);
+
+// router.use("/user", authRouter );
 
 // Route de session (protégée)
 router.get("/session", authMiddleware, sessionController);

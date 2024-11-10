@@ -8,9 +8,10 @@ import { Socket } from 'ngx-socket-io';
 import {
   HTTP_INTERCEPTORS,
   provideHttpClient,
+  withFetch,
   withInterceptorsFromDi,
 } from '@angular/common/http';
-import { AuthInterceptor } from './auth.interceptor';
+import { AuthInterceptor } from './services/auth/auth.interceptor';
 
 const socket = new Socket({ url: 'http://localhost:3000', options: {} });
 
@@ -22,8 +23,9 @@ export const appConfig: ApplicationConfig = {
     provideAnimationsAsync(),
     { provide: Socket, useValue: socket },
     provideHttpClient(
-      withInterceptorsFromDi() // Assure que l'intercepteur est enregistré
+      withInterceptorsFromDi(), // Assure que l'intercepteur est enregistré
+      withFetch()
     ),
-    { provide: HTTP_INTERCEPTORS, useValue: AuthInterceptor, multi: true },
+    { provide: HTTP_INTERCEPTORS, useClass: AuthInterceptor, multi: true },
   ],
 };

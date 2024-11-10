@@ -2,6 +2,9 @@ const Redis = require("../../redis/index");
 
 async function logoutController(req, res) {
   try {
+    if (!req.user || !req.user.id) {
+      return res.status(400).json({ message: "User not authenticated" });
+    }
     const userId = req.user.id;
 
     // Supprime la session de l'utilisateur de Redis

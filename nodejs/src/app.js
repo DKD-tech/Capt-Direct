@@ -10,12 +10,14 @@ const router = require("./routes/router");
 const signupController = require("./controllers/auth/signUpController");
 const loginController = require("./controllers/auth/loginController");
 const authMiddleware = require("./middlewares/authMiddleware");
+const logoutController = require("./controllers/user/logoutController");
 
 const app = express();
 const server = http.createServer(app);
 const io = socketIO(server, {
   cors: {
     origin: "*",
+    credentials: true,
   },
 });
 
@@ -37,6 +39,7 @@ app.get("/", (req, res) => {
 // Routes d'authentification
 app.post("/api/auth/signup", signupController);
 app.post("/api/auth/login", loginController);
+app.post("/api/user/logout", logoutController);
 
 // Route protégée exemple
 app.get("/api/protected-route", authMiddleware, (req, res) => {

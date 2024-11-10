@@ -12,14 +12,14 @@ async function authMiddleware(req, res, next) {
     const userSession = await jwt.verify(token);
 
     if (!userSession) {
-      return res.sendStatus(401);
+      return res.status(401).json({ error: "Token invalide" });
     }
 
     // Vérifie si le token existe encore dans Redis
     const storedToken = await Redis.getSession(userSession.id);
 
     if (!storedToken || storedToken !== token) {
-      return res.sendStatus(401);
+      return res.status(401).json({ error: "Session expirée ou invalide" });
     }
 
     // Ajoute les informations de l'utilisateur décodé à la requête
@@ -27,7 +27,9 @@ async function authMiddleware(req, res, next) {
     next();
   } catch (error) {
     console.error("JWT_ERROR", error);
-    return res.sendStatus(401);
+    return res
+      .status(401)
+      .json({ error: "Erreur lors de la vérification du token" });
   }
 }
 
