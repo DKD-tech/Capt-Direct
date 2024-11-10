@@ -1,58 +1,67 @@
 {
-  "hash": "be5a128c",
-  "configHash": "56cd9ab9",
+  "hash": "bd921548",
+  "configHash": "ae807d13",
   "lockfileHash": "8ec37b71",
-  "browserHash": "54b67f56",
+  "browserHash": "5a9e9225",
   "optimized": {
+    "@angular/common/http": {
+      "src": "../../../../../../node_modules/@angular/common/fesm2022/http.mjs",
+      "file": "@angular_common_http.js",
+      "fileHash": "ebd6e1a2",
+      "needsInterop": false
+    },
     "@angular/core": {
       "src": "../../../../../../node_modules/@angular/core/fesm2022/core.mjs",
       "file": "@angular_core.js",
-      "fileHash": "e89f2e11",
+      "fileHash": "3b4a31b2",
       "needsInterop": false
     },
     "@angular/forms": {
       "src": "../../../../../../node_modules/@angular/forms/fesm2022/forms.mjs",
       "file": "@angular_forms.js",
-      "fileHash": "2e2a6006",
+      "fileHash": "e904ae9e",
       "needsInterop": false
     },
     "@angular/material/icon": {
       "src": "../../../../../../node_modules/@angular/material/fesm2022/icon.mjs",
       "file": "@angular_material_icon.js",
-      "fileHash": "acb730dc",
+      "fileHash": "30c2cb36",
       "needsInterop": false
     },
     "@angular/platform-browser": {
       "src": "../../../../../../node_modules/@angular/platform-browser/fesm2022/platform-browser.mjs",
       "file": "@angular_platform-browser.js",
-      "fileHash": "249d602e",
+      "fileHash": "7b46349e",
       "needsInterop": false
     },
     "@angular/platform-browser/animations/async": {
       "src": "../../../../../../node_modules/@angular/platform-browser/fesm2022/animations/async.mjs",
       "file": "@angular_platform-browser_animations_async.js",
-      "fileHash": "acf37f15",
+      "fileHash": "a239f1d7",
       "needsInterop": false
     },
     "@angular/router": {
       "src": "../../../../../../node_modules/@angular/router/fesm2022/router.mjs",
       "file": "@angular_router.js",
-      "fileHash": "5c9a4334",
+      "fileHash": "7caa87be",
       "needsInterop": false
     },
     "ngx-socket-io": {
       "src": "../../../../../../node_modules/ngx-socket-io/fesm2022/ngx-socket-io.mjs",
       "file": "ngx-socket-io.js",
-      "fileHash": "c3e0e8ea",
+      "fileHash": "b53bcc14",
       "needsInterop": false
     }
   },
   "chunks": {
-    "chunk-FKVRC2SH": {
-      "file": "chunk-FKVRC2SH.js"
-    },
     "browser-OMT35ZKA": {
       "file": "browser-OMT35ZKA.js"
+    },
+    "chunk-ECALG3ZF": {
+      "file": "chunk-ECALG3ZF.js"
+    },
+    "chunk-RWQPNFNK": {
+      "file": "chunk-RWQPNFNK.js"
     },
     "chunk-CSAYQVME": {
       "file": "chunk-CSAYQVME.js"

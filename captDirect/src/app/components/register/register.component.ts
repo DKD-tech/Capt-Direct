@@ -1,6 +1,7 @@
 import { Component } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
+import { AuthService } from '../../services/auth/auth.service';
 
 @Component({
   selector: 'app-register',
@@ -10,13 +11,27 @@ import { Router } from '@angular/router';
   styleUrl: './register.component.scss',
 })
 export class RegisterComponent {
-  constructor(private router: Router) {}
+  username: string = '';
+  email: string = '';
+  password: string = '';
+
+  constructor(private authService: AuthService, private router: Router) {}
 
   onRegister() {
-    // Logique d'inscription ici (par exemple, envoyer les données du formulaire à une API)
-    console.log('Inscription effectuée');
-    // Après l'inscription, rediriger vers la page de connexion ou un tableau de bord
-    this.router.navigate(['/dashboard-page']);
+    const data = {
+      email: this.email,
+      password: this.password,
+      username: this.username,
+    };
+    this.authService.signup(data).subscribe(
+      () => {
+        this.router.navigate(['/dashboard-page']); // Redirection après enregistrement
+      },
+      (error: any) => {
+        console.error("Erreurr lors de l'enregistrement", error);
+        alert('Registration failed. Please try again.');
+      }
+    );
   }
   onLogin() {
     this.router.navigate(['/login-page']);

@@ -1,7 +1,9 @@
 import {
-  DomSanitizer,
+  DomSanitizer
+} from "./chunk-ECALG3ZF.js";
+import {
   HttpClient
-} from "./chunk-FKVRC2SH.js";
+} from "./chunk-RWQPNFNK.js";
 import {
   DOCUMENT,
   isPlatformBrowser

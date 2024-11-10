@@ -1,7 +1,15 @@
+require("dotenv").config();
+
 const express = require("express"); // Express instance
 const http = require("http");
 const socketIO = require("socket.io");
 const cors = require("cors");
+const router = require("./routes/router");
+
+// Importation des contrôleurs
+const signupController = require("./controllers/auth/signUpController");
+const loginController = require("./controllers/auth/loginController");
+const authMiddleware = require("./middlewares/authMiddleware");
 
 const app = express();
 const server = http.createServer(app);
@@ -11,13 +19,29 @@ const io = socketIO(server, {
   },
 });
 
+app.use(express.json());
 app.use(cors());
+app.use("/api", router);
 
 // Stockage des sous-titres, utilisateurs et sessions
 const subtitles = {};
 const users = {};
 
 const videos = {};
+
+// Test de la route principale
+app.get("/", (req, res) => {
+  res.send("Bienvenue sur le serveur de sous-titrage collaboratif");
+});
+
+// Routes d'authentification
+app.post("/api/auth/signup", signupController);
+app.post("/api/auth/login", loginController);
+
+// Route protégée exemple
+app.get("/api/protected-route", authMiddleware, (req, res) => {
+  res.json({ message: "Bienvenue sur la route protégée !" });
+});
 
 // /**
 //  * Utilisateur actives

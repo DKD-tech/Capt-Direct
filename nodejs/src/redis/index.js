@@ -17,4 +17,16 @@ client.on("error", (err) => console.error("Erreur de connexion Redis :", err));
   }
 })();
 
-module.exports = client;
+const setSession = async (userId, token) => {
+  return client.set(`session:${userId}`, token);
+};
+
+const getSession = async (userId) => {
+  return client.get(`session:${userId}`);
+};
+
+const deleteSession = async (userId) => {
+  return client.del(`session:${userId}`);
+};
+
+module.exports = { client, setSession, getSession, deleteSession };

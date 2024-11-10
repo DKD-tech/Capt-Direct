@@ -1,8 +1,10 @@
 import { createRequire } from 'module';const require = createRequire(import.meta.url);
 import {
-  DomSanitizer,
+  DomSanitizer
+} from "./chunk-URA4JCMC.js";
+import {
   HttpClient
-} from "./chunk-NKO74ZFF.js";
+} from "./chunk-QYGFSURB.js";
 import {
   DOCUMENT,
   isPlatformBrowser

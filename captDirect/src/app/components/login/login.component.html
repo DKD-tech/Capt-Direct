@@ -2,18 +2,29 @@
   <h2>Veuillez vous connecter</h2>
   <form (ngSubmit)="onLogin()" #loginForm="ngForm">
     <div class="form-group">
-      <input type="email" placeholder="Email" name="email" ngModel required />
+      <input
+        type="email"
+        placeholder="Email"
+        name="email"
+        [(ngModel)]="email"
+        required
+      />
     </div>
     <div class="form-group">
       <input
         type="password"
         placeholder="Mot de passe"
         name="password"
-        ngModel
+        [(ngModel)]="password"
         required
       />
     </div>
-    <button type="submit" class="btn btn-primary" [disabled]="!loginForm.valid">
+    <button
+      (click)="onLogin()"
+      type="submit"
+      class="btn btn-primary"
+      [disabled]="!loginForm.valid"
+    >
       Connexion
     </button>
     <button type="button" class="btn btn-secondary" (click)="onRegister()">
