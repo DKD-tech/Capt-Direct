@@ -14,10 +14,12 @@ import { Router } from '@angular/router';
 })
 export class DashboardComponent implements OnInit, OnDestroy {
   isAuthenticated: boolean = false;
+  isLoading = true;
   subtitleText = '';
   displayedSubtitle = '';
   userId = 'user1'; // Identifiant utilisateur fictif
   videoId = 'video1'; // Identifiant vidéo fictif
+  user: any;
 
   constructor(
     private socketService: SocketService,
@@ -27,7 +29,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   ngOnInit() {
     console.log('Initialisation de ngOnInit dans DashboardComponent'); // Vérifiez que ngOnInit est appelé
-
+    this.loadUserSession();
+    const authToken = localStorage.getItem('authToken');
     // Rejoindre une session vidéo
     this.socketService.joinVideoSession({
       userId: this.userId,
@@ -51,6 +54,24 @@ export class DashboardComponent implements OnInit, OnDestroy {
     });
   }
 
+  loadUserSession(): void {
+    this.authService.getUserSession().subscribe(
+      (response) => {
+        this.user = response;
+        this.isLoading = false;
+        console.log('Session utilisateur chargée:', this.user);
+      },
+      (error) => {
+        console.error(
+          'Erreur lors de la récupération de la session utilisateur:',
+          error
+        );
+        if (error.status === 401) {
+          this.router.navigate(['/login-page']);
+        }
+      }
+    );
+  }
   onSubtitleChange() {
     const timestamp = Date.now();
     this.socketService.sendSubtitle({

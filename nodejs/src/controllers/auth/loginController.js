@@ -15,6 +15,7 @@ async function loginController(req, res) {
     const user = await UserModel.findByEmail(email);
 
     if (user) {
+      console.log("Utilisateur récupéré:", user);
       const isValidPassword = await bcrypt.compare(password, user.password);
 
       if (!isValidPassword) {
@@ -22,10 +23,14 @@ async function loginController(req, res) {
       }
 
       // Générer le token JWT
-      const token = await jwt.sign({ id: user.id });
+      const token = await jwt.sign({
+        id: user.user_id,
+        username: user.username,
+      });
 
+      console.log("ID utilisateur pour setSession:", user.user_id);
       // Stocker la session dans Redis
-      await Redis.setSession(user.id, token);
+      await Redis.setSession(user.user_id, token, 7 * 24 * 60 * 60);
 
       res.status(200).json({ token });
     } else {

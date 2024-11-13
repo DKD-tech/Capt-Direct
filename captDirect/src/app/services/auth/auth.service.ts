@@ -15,8 +15,29 @@ interface AuthResponse {
 export class AuthService {
   private apiUrl = 'http://localhost:3000/api/auth'; // URL de l'API backend
   private apiUrlL = 'http://localhost:3000/api/user';
+  private apiUrlSession = 'http://localhost:3000/api/session';
   constructor(private http: HttpClient, private router: Router) {}
 
+  // Méthode pour récupérer la session de l'utilisateur
+  getUserSession(): Observable<any> {
+    const token = this.getToken();
+    if (!token) {
+      return throwError(() => new Error('Aucun token disponible'));
+    }
+
+    const httpOptions = {
+      headers: new HttpHeaders({
+        Authorization: `Bearer ${token}`,
+      }),
+    };
+
+    return this.http.get(this.apiUrlSession, httpOptions).pipe(
+      catchError((error) => {
+        console.error('Échec de la récupération de la session:', error.message);
+        return throwError(() => error);
+      })
+    );
+  }
   // Méthode de connexion
   login(email: string, password: string): Observable<any> {
     console.log('Données envoyées :', { email, password });
@@ -62,18 +83,27 @@ export class AuthService {
 
   // Méthode de déconnexion
   logout(): Observable<any> {
+    const token = this.getToken();
+    if (!token) {
+      console.error('Token non disponible pour la déconnexion');
+      return throwError(
+        () => new Error('Aucun token trouvé pour la déconnexion')
+      );
+    }
+
     const httpOptions = {
       headers: new HttpHeaders({
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${this.getToken()}`, // Token JWT ajouté ici
+        Authorization: `Bearer ${token}`,
       }),
     };
+
     return this.http.post(`${this.apiUrlL}/logout`, {}, httpOptions).pipe(
       tap(() => {
-        this.clearToken(); // Supprime le token localement après la déconnexion
+        this.clearToken(); // Efface le token après la déconnexion réussie
+        this.router.navigate(['/login']); // Redirige vers la page de connexion
       }),
       catchError((error) => {
-        console.error('Logout failed:', error.message);
+        console.error('Échec de la déconnexion:', error.message);
         return throwError(() => error);
       })
     );
@@ -90,20 +120,20 @@ export class AuthService {
   public getToken(): string | null {
     // Vérifie si `localStorage` est disponible avant d'essayer de l'utiliser
     if (typeof localStorage !== 'undefined') {
-      return localStorage.getItem('jwtToken');
+      return localStorage.getItem('authToken');
     }
     return null;
   }
 
   private setToken(token: string): void {
     if (typeof localStorage !== 'undefined') {
-      localStorage.setItem('jwtToken', token);
+      localStorage.setItem('authToken', token);
     }
   }
 
   private clearToken(): void {
     if (typeof localStorage !== 'undefined') {
-      localStorage.removeItem('jwtToken');
+      localStorage.removeItem('authToken');
     }
   }
 

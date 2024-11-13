@@ -20,10 +20,14 @@ const jwt = {
     });
   },
 
-  sign: (payload) => {
+  sign: (user) => {
     return new Promise((resolve, reject) => {
       try {
-        resolve(jsonwebtoken.sign(payload, JWT_SECRET));
+        const payload = {
+          id: user.id, // Assurez-vous que `user` a un attribut `id`
+          username: user.username, // Ajoutez d'autres informations si nécessaire
+        };
+        resolve(jsonwebtoken.sign(payload, JWT_SECRET, { expiresIn: "7d" }));
       } catch (error) {
         reject(error);
       }

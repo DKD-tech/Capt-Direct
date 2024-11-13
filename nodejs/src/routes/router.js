@@ -12,15 +12,14 @@ router.get("/health", healthController);
 
 // Routes d'authentification
 router.use("/auth", authRouter);
-router.use("/user", userRouter);
+
+// Routes utilisateur (protégées)
+router.use("/user", authMiddleware, userRouter);
 
 // router.use("/user", authRouter );
 
 // Route de session (protégée)
 router.get("/session", authMiddleware, sessionController);
-
-// Routes utilisateur (protégées)
-router.use("/user", authMiddleware, userRouter);
 
 // Gestion des erreurs 404 pour les routes non trouvées
 router.use((_, res) => {
