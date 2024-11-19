@@ -58,11 +58,41 @@ io.on("connection", (socket) => {
   // let previousId;
 
   // Rejoindre une session vidéo
-  socket.on("joinVideoSession", ({ userId, userName, videoId }) => {
-    socket.join(videoId);
-    users[userId] = { userName, videoId };
-    io.in(videoId).emit("userJoined", { userId, userName });
-    console.log(`User ${userName} joined video ${videoId}`);
+  // socket.on("joinVideoSession", ({ userId, userName, videoId }) => {
+  //   socket.join(videoId);
+  //   users[userId] = { userName, videoId };
+  //   io.in(videoId).emit("userJoined", { userId, userName });
+  //   console.log(`User ${userName} joined video ${videoId}`);
+  // });
+  socket.on("join-session", async ({ userId, sessionId }) => {
+    try {
+      const existingAssignment = await SegmentUserModel.findUserSegment(
+        userId,
+        sessionId
+      );
+
+      if (existingAssignment) {
+        socket.emit("segment-assigned", { segment: existingAssignment });
+        return;
+      }
+
+      const segment = await VideoSegmentModel.findAvailableSegment(sessionId);
+      if (!segment) {
+        socket.emit("no-segments-available");
+        return;
+      }
+
+      await VideoSegmentModel.markSegmentInProgress(segment.segment_id);
+      const assignment = await SegmentUserModel.assignUserToSegment(
+        userId,
+        segment.segment_id
+      );
+
+      socket.emit("segment-assigned", { segment: assignment });
+    } catch (error) {
+      console.error("Erreur lors de l'assignation de segment :", error);
+      socket.emit("error", { message: "Erreur lors de l'assignation" });
+    }
   });
 
   // Quitter une session vidéo

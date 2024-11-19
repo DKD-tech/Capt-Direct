@@ -12,7 +12,7 @@ class Model {
       ", "
     )}) VALUES (${Object.keys(data)
       .map((_, i) => `$${i + 1}`)
-      .join(", ")}) RETURNING user_id`;
+      .join(", ")}) RETURNING *`;
     const values = Object.values(data);
     const result = await pool.query(query, values);
     return result.rows[0];

@@ -2,7 +2,7 @@ const Model = require("./Model");
 
 class SessionModel extends Model {
   constructor() {
-    super("Sessions");
+    super("sessions");
   }
 
   // méthodes spécifiques au modèle Session si nécessaire

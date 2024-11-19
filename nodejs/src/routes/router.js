@@ -1,5 +1,6 @@
 const { Router } = require("express");
 const authRouter = require("./authRouter");
+const sessionRouter = require("./sessionRouter");
 const healthController = require("../controllers/healthController");
 const sessionController = require("../controllers/sessionController");
 const authMiddleware = require("../middlewares/authMiddleware");
@@ -20,6 +21,15 @@ router.use("/user", authMiddleware, userRouter);
 
 // Route de session (protégée)
 router.get("/session", authMiddleware, sessionController);
+
+// Routes pour les sessions
+router.use("/sessions", sessionRouter);
+
+// Route pour les segments vidéo
+router.use("/video-segment", sessionRouter);
+
+// Route pour les utilisateurs assignés à des segments
+router.use("/segment-users", sessionRouter);
 
 // Gestion des erreurs 404 pour les routes non trouvées
 router.use((_, res) => {
