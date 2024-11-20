@@ -19,13 +19,15 @@
   
       <div class="video-grid">
         <div class="video-card" *ngFor="let video of videos">
-          <div class="thumbnail"></div>
-          <div class="details">
-            <h3>Video Title</h3>
-            <p>Channel Name</p>
-            <p>Views • Time Ago</p>
+            <div class="thumbnail">
+              <div *ngIf="video.isLive" class="live-badge">LIVE</div>
+            </div>
+            <div class="details">
+              <h3>{{ video.title }}</h3>
+              <p>{{ video.channel }}</p>
+              <p>{{ video.views }} <span *ngIf="!video.isLive">• {{ video.time }}</span></p>
+            </div>
           </div>
-        </div>
       </div>
     </div>
   </div>
