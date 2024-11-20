@@ -4,7 +4,7 @@ const SessionModel = require("../../models/SessionModel");
 const createSessionController = async (req, res) => {
   const { session_name, description, video_url, status } = req.body;
 
-  if (!session_name || !video_url || !status) {
+  if (!session_name || !video_url) {
     return res.status(400).json({ message: "Champs obligatoires manquants" });
   }
 
@@ -14,7 +14,7 @@ const createSessionController = async (req, res) => {
       description,
       video_url,
       created_at: new Date(), // Génère automatiquement la date de création
-      status,
+      status: status || "active",
     });
 
     return res.status(201).json({

@@ -11,6 +11,9 @@ const signupController = require("./controllers/auth/signUpController");
 const loginController = require("./controllers/auth/loginController");
 const authMiddleware = require("./middlewares/authMiddleware");
 const logoutController = require("./controllers/user/logoutController");
+const {
+  assignUserToSegmentController,
+} = require("./controllers/stc/segmentUsersController");
 
 const app = express();
 const server = http.createServer(app);
@@ -64,36 +67,50 @@ io.on("connection", (socket) => {
   //   io.in(videoId).emit("userJoined", { userId, userName });
   //   console.log(`User ${userName} joined video ${videoId}`);
   // });
-  socket.on("join-session", async ({ userId, sessionId }) => {
+  socket.on("join-session", async ({ user_id, session_id }) => {
     try {
-      const existingAssignment = await SegmentUserModel.findUserSegment(
-        userId,
-        sessionId
-      );
+      const response = await assignDynamicSegment({
+        body: { user_id, session_id },
+      });
 
-      if (existingAssignment) {
-        socket.emit("segment-assigned", { segment: existingAssignment });
-        return;
-      }
+      socket.emit("segment-assigned", response);
 
-      const segment = await VideoSegmentModel.findAvailableSegment(sessionId);
-      if (!segment) {
-        socket.emit("no-segments-available");
-        return;
-      }
-
-      await VideoSegmentModel.markSegmentInProgress(segment.segment_id);
-      const assignment = await SegmentUserModel.assignUserToSegment(
-        userId,
-        segment.segment_id
-      );
-
-      socket.emit("segment-assigned", { segment: assignment });
+      // // Notifier tous les utilisateurs connectés à cette session
+      // io.to(sessionId).emit("updateSegments", response.assignedSegment || []);
     } catch (error) {
-      console.error("Erreur lors de l'assignation de segment :", error);
+      console.error("Erreur lors de l'assignation des segments :", error);
       socket.emit("error", { message: "Erreur lors de l'assignation" });
     }
   });
+
+  //     const existingAssignment = await SegmentUserModel.findUserSegment(
+  //       userId,
+  //       sessionId
+  //     );
+
+  //     if (existingAssignment) {
+  //       socket.emit("segment-assigned", { segment: existingAssignment });
+  //       return;
+  //     }
+
+  //     const segment = await VideoSegmentModel.findAvailableSegment(sessionId);
+  //     if (!segment) {
+  //       socket.emit("no-segments-available");
+  //       return;
+  //     }
+
+  //     await VideoSegmentModel.markSegmentInProgress(segment.segment_id);
+  //     const assignment = await SegmentUserModel.assignUserToSegment(
+  //       userId,
+  //       segment.segment_id
+  //     );
+
+  //     socket.emit("segment-assigned", { segment: assignment });
+  //   } catch (error) {
+  //     console.error("Erreur lors de l'assignation de segment :", error);
+  //     socket.emit("error", { message: "Erreur lors de l'assignation" });
+  //   }
+  // });
 
   // Quitter une session vidéo
   socket.on("leaveVideoSession", ({ userId, videoId }) => {

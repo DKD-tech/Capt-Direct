@@ -25,6 +25,49 @@ class SegmentUserModel extends Model {
   //   const result = await pool.query(query, [userId, sessionId]);
   //   return result.rows[0];
   // }
+  // Trouver les utilisateurs connectés à une session
+  async findUserSegment(user_id, session_id) {
+    //   const query = `
+    //     SELECT su.*
+    //     FROM ${this.tableName} su
+    //     INNER JOIN video_segments vs ON vs.segment_id = su.segment_id
+    //     WHERE su.user_id = $1 AND vs.session_id = $2
+    //   `;
+    //   const result = await this.pool.query(query, [user_id, session_id]);
+    //   return result.rows[0];
+    // }
+    const query = `
+      SELECT su.* FROM ${this.tableName} su
+      JOIN video_segments vs ON su.segment_id = vs.segment_id
+      WHERE su.user_id = $1 AND vs.session_id = $2
+    `;
+    const result = await pool.query(query, [user_id, session_id]);
+    return result.rows;
+  }
+
+  //
+  // Assigner un utilisateur à un segment
+  async assignUserToSegment(user_id, segment_id) {
+    const query = `
+    INSERT INTO ${this.tableName} (user_id, segment_id, assigned_at)
+    VALUES ($1, $2, NOW()) RETURNING *
+  `;
+    const result = await pool.query(query, [user_id, segment_id]);
+    return result.rows[0];
+  }
+  async findAssignmentsBySession(session_id) {
+    if (typeof session_id !== "number") {
+      throw new Error("session_id doit être un entier.");
+    }
+    const query = `
+      SELECT su.*
+      FROM ${this.tableName} su
+      JOIN video_segments vs ON su.segment_id = vs.segment_id
+      WHERE vs.session_id = $1
+    `;
+    const result = await pool.query(query, [session_id]);
+    return result.rows;
+  }
 }
 
 module.exports = new SegmentUserModel();

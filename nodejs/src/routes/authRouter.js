@@ -13,6 +13,6 @@ authRouter.post("/signup", signUpController);
 authRouter.post("/login", loginController);
 authRouter.post("/logout", logoutController);
 // Route pour assigner un segment
-authRouter.post("/assign-segment", assignSegmentController);
+// authRouter.post("/assign-segment", assignSegmentController);
 
 module.exports = authRouter;

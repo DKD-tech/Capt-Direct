@@ -48,6 +48,17 @@ class Model {
     const result = await pool.query(query, values);
     return result.rows[0];
   }
+  async findManyBy(conditions) {
+    const keys = Object.keys(conditions);
+    const values = Object.values(conditions);
+    const whereClause = keys
+      .map((key, i) => `${key} = $${i + 1}`)
+      .join(" AND ");
+
+    const query = `SELECT * FROM ${this.tableName} WHERE ${whereClause}`;
+    const result = await pool.query(query, values);
+    return result.rows;
+  }
 }
 
 module.exports = Model;
