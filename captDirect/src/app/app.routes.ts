@@ -5,6 +5,7 @@ import { RegisterPageComponent } from './pages/register-page/register-page.compo
 import { DashboardPageComponent } from './pages/dashboard-page/dashboard-page.component';
 import { HomeComponent } from './components/home/home.component';
 import { SideBarComponent } from './components/side-bar/side-bar.component';
+import { VideosListComponent } from './videos-list/videos-list.component';
 
 
 export const routes: Routes = [
@@ -27,6 +28,9 @@ export const routes: Routes = [
   },{
     path: '',
     component: HomeComponent,
+  },{
+    path: 'videos-list',
+    component: VideosListComponent,
   },
   {
     path: 'dashboard-page',

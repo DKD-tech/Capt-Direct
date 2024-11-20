@@ -1,0 +1,32 @@
+<div class="youtube-home">
+    <div class="header">
+      <div class="logo">Live videos</div>
+      <div class="search-bar">
+        <input type="text" placeholder="Search" />
+        <button>Search</button>
+      </div>
+
+    </div>
+  
+    <div class="main-content">
+      <div class="sidebar">
+        <ul>
+          <li>Acceuil</li>
+          <li>Paramètres</li>
+          
+        </ul>
+      </div>
+  
+      <div class="video-grid">
+        <div class="video-card" *ngFor="let video of videos">
+          <div class="thumbnail"></div>
+          <div class="details">
+            <h3>Video Title</h3>
+            <p>Channel Name</p>
+            <p>Views • Time Ago</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  

@@ -4,6 +4,8 @@ import { AppComponent } from './app.component';  // Composant principal de l'app
 import { HeaderComponent } from './components/header/header.component';
 import { FooterComponent } from './components/footer/footer.component';
 import { AppRoutingModule } from './app-routing.module'; 
+import { CommonModule } from '@angular/common';
+
 
 @NgModule({
   declarations: [
@@ -13,7 +15,8 @@ import { AppRoutingModule } from './app-routing.module';
   ],
   imports: [
     BrowserModule,      // Assurez-vous d'importer le BrowserModule
-    AppRoutingModule    // Ajoutez ici votre module de routage si nécessaire
+    AppRoutingModule,    // Ajoutez ici votre module de routage si nécessaire
+    CommonModule
   ],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   providers: [],
