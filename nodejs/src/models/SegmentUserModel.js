@@ -27,15 +27,6 @@ class SegmentUserModel extends Model {
   // }
   // Trouver les utilisateurs connectés à une session
   async findUserSegment(user_id, session_id) {
-    //   const query = `
-    //     SELECT su.*
-    //     FROM ${this.tableName} su
-    //     INNER JOIN video_segments vs ON vs.segment_id = su.segment_id
-    //     WHERE su.user_id = $1 AND vs.session_id = $2
-    //   `;
-    //   const result = await this.pool.query(query, [user_id, session_id]);
-    //   return result.rows[0];
-    // }
     const query = `
       SELECT su.* FROM ${this.tableName} su
       JOIN video_segments vs ON su.segment_id = vs.segment_id
@@ -62,6 +53,43 @@ class SegmentUserModel extends Model {
     const query = `
       SELECT su.*
       FROM ${this.tableName} su
+      JOIN video_segments vs ON su.segment_id = vs.segment_id
+      WHERE vs.session_id = $1
+    `;
+    const result = await pool.query(query, [session_id]);
+    return result.rows;
+  }
+  async findAssignmentsByUserAndSession(user_id, session_id) {
+    const query = `
+      SELECT su.*
+      FROM segment_users su
+      JOIN video_segments vs ON su.segment_id = vs.segment_id
+      WHERE su.user_id = $1 AND vs.session_id = $2
+    `;
+    const result = await pool.query(query, [user_id, session_id]);
+    return result.rows;
+  }
+
+  async findAssignmentsBySegment(segment_id) {
+    const query = `
+      SELECT * FROM segment_users
+      WHERE segment_id = $1
+    `;
+    const result = await pool.query(query, [segment_id]);
+    return result.rows;
+  }
+
+  async deleteAssignmentsByUser(user_id) {
+    const query = `
+      DELETE FROM segment_users
+      WHERE user_id = $1
+    `;
+    await pool.query(query, [user_id]);
+  }
+  async findConnectedUsers(session_id) {
+    const query = `
+      SELECT DISTINCT su.user_id
+      FROM segment_users su
       JOIN video_segments vs ON su.segment_id = vs.segment_id
       WHERE vs.session_id = $1
     `;

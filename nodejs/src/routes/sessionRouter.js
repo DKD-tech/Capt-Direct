@@ -47,12 +47,17 @@ const {
 } = require("../controllers/stc/videoSegmentController");
 const {
   assignDynamicSegment,
+  handleUserDisconnection,
 } = require("../controllers/stc/assignSegmentController");
+const {
+  segmentUserController,
+} = require("../controllers/stc/segmentUsersController");
 
 const sessionRouter = express.Router();
 
 sessionRouter.post("/create-session", createSessionController);
 sessionRouter.post("/create-segment", createVideoSegmentController);
 sessionRouter.post("/assign-user", assignDynamicSegment);
+sessionRouter.post("/disconnect-user", handleUserDisconnection);
 
 module.exports = sessionRouter;
