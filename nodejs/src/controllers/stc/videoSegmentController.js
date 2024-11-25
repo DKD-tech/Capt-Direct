@@ -170,8 +170,14 @@
 // }
 
 // module.exports = { createVideoSegmentController };
-
+const { exec } = require("child_process");
+const fs = require("fs");
+const path = require("path");
 const VideoSegmentModel = require("../../models/VideoSegmentModel");
+const SessionModel = require("../../models/SessionModel");
+const SubtitlesModel = require("../../models/SubtitleModel");
+const axios = require("axios");
+// const { requestHlsGeneration } = require("../../../../hls_service/hls_service");
 
 // async function segmentVideo(session_id, video_duration) {
 //   const segmentDuration = 60; // Durée d'un segment en secondes
@@ -218,7 +224,17 @@ const VideoSegmentModel = require("../../models/VideoSegmentModel");
 
 // module.exports = { createVideoSegmentController };
 
-const { convertSecondsToTime } = require("../../utils/timeUtils");
+const {
+  convertSecondsToTime,
+  convertTimeToSeconds,
+} = require("../../utils/timeUtils");
+
+/**
+ *
+ * @param {Object} req
+ * @param {Object} res
+ * @returns {Promise}
+ */
 
 async function createVideoSegmentController(req, res) {
   const { session_id, video_duration } = req.body;
@@ -262,4 +278,113 @@ async function createVideoSegmentController(req, res) {
   }
 }
 
-module.exports = { createVideoSegmentController };
+async function requestHlsGeneration(session_id, video_url, segments) {
+  try {
+    // Vérification des données avant l'appel
+    console.log("Données envoyées au service HLS :", {
+      session_id,
+      video_url,
+      segments,
+    });
+
+    const HLS_SERVICE_URL =
+      process.env.HLS_SERVICE_URL || "http://hls_service:5000";
+    const response = await axios.post(`${HLS_SERVICE_URL}/generate-hls`, {
+      session_id,
+      video_url,
+      segments,
+    });
+    console.log("Réponse du service HLS :", response.data);
+    return response.data;
+  } catch (error) {
+    console.error(
+      "Erreur lors de l'appel au service HLS :",
+      error.response?.data || error.message
+    );
+    throw new Error("Impossible de générer les segments HLS");
+  }
+}
+
+// Contrôleur pour générer des segments HLS
+async function createHlsSegmentsController(req, res) {
+  const { session_id, video_duration } = req.body;
+
+  if (!session_id || !video_duration) {
+    return res.status(400).json({
+      message: "Champs obligatoires manquants : session_id ou video_duration.",
+    });
+  }
+
+  try {
+    const session = await SessionModel.findOneById(session_id, "session_id");
+    if (!session || !session.video_url) {
+      return res
+        .status(404)
+        .json({ message: "Session introuvable ou sans vidéo associée." });
+    }
+
+    let finalVideoUrl = session.video_url;
+    if (!finalVideoUrl.startsWith("http")) {
+      finalVideoUrl = `/usr/src/app/videos/${finalVideoUrl}`;
+    }
+
+    // Appel au service HLS
+    const hlsResponse = await requestHlsGeneration(
+      session_id,
+      finalVideoUrl,
+      video_duration
+    );
+
+    return res.status(200).json({
+      message: "Segmentation demandée avec succès.",
+      hlsOutput: hlsResponse,
+    });
+  } catch (error) {
+    console.error("Erreur lors de la segmentation :", error);
+    return res.status(500).json({ message: "Erreur serveur" });
+  }
+}
+
+//Recuperation des segments
+async function getSegmentsWithSubtitles(req, res) {
+  const { session_id } = req.params;
+
+  if (!session_id) {
+    return res.status(400).json({ message: "Session ID est requis." });
+  }
+
+  try {
+    console.log(`Fetching segments for session ID: ${session_id}`);
+    // Récupérer les segments associés à la session
+    const segments = await VideoSegmentModel.findManyBy({ session_id });
+
+    // Récupérer les sous-titres associés à chaque segment
+    const segmentsWithSubtitles = await Promise.all(
+      segments.map(async (segment) => {
+        console.log(`Fetching subtitles for segment ID: ${segment.segment_id}`);
+        const subtitles = await SubtitlesModel.findManyBy({
+          segment_id: segment.segment_id,
+        });
+        return { ...segment, subtitles };
+      })
+    );
+
+    return res.status(200).json({
+      message: "Segments avec sous-titres récupérés.",
+      segments: segmentsWithSubtitles,
+    });
+  } catch (error) {
+    console.error(
+      "Erreur lors de la récupération des segments et sous-titres :",
+      error
+    );
+    return res.status(500).json({ message: "Erreur serveur." });
+  }
+}
+
+module.exports = {
+  createVideoSegmentController,
+  requestHlsGeneration,
+  createHlsSegmentsController,
+  getSegmentsWithSubtitles,
+};

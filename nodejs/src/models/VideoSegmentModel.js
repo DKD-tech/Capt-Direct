@@ -30,6 +30,10 @@ class VideoSegmentModel extends Model {
   // async markSegmentInProgress(segment_id) {
   //   return this.updateOneById(segment_id, { status: "in_progress" });
   // }
+  // Trouver un segment par son ID
+  async findById(segment_id) {
+    return await this.findOneById(segment_id, "segment_id");
+  }
 }
 
 module.exports = new VideoSegmentModel();

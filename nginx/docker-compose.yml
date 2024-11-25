@@ -1,0 +1,92 @@
+services:
+  nginx:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: stc_nginx
+    ports:
+      - "8090:80"
+      - "1935:1935"
+    volumes:
+      # - ./cookies.txt:/usr/local/bin/cookies.txt
+      - ./nginx.conf:/usr/local/nginx/conf/nginx.conf:ro
+      - ./hls_service/hls_output:/usr/src/app/hls_output
+      - ./stream_with_autorefresh.sh:/usr/local/bin/stream_with_autorefresh.sh
+      - ./nginx/hls_output:/opt/data/hls
+    depends_on:
+      - hls_service
+    networks:
+      - capt_direct_net
+    environment:
+      - PATH=/usr/local/nginx/sbin:$PATH
+    command: [ "/usr/local/nginx/sbin/nginx", "-g", "daemon off;" ]
+
+  backend:
+    build:
+      context: ../nodejs
+      dockerfile: Dockerfile
+    container_name: backend
+    ports:
+      - "3000:3000"
+    volumes:
+    - ./videos:/usr/src/app/videos
+    networks:
+      - capt_direct_net
+    environment:
+      NODE_ENV: development
+    depends_on:
+      - database
+      - redis
+      - hls_service
+
+  frontend:
+    build:
+      context: ../captDirect
+      dockerfile: Dockerfile
+    container_name: frontend
+    ports:
+      - "4200:80"
+    networks:
+      - capt_direct_net
+    depends_on:
+      - backend
+
+  hls_service:
+    build: 
+      context: ../hls_service
+    container_name: hls_service
+    ports:
+      - "5000:5000"
+    networks:
+      - capt_direct_net
+    volumes:
+      - ./hls_output:/usr/src/app/hls_output
+      - ./nginx/hls_output:/opt/data/hls
+      - ./videos:/usr/src/app/videos
+
+  database:
+    image: postgres:latest
+    container_name: database
+    ports:
+      - "5433:5432"
+    networks:
+      - capt_direct_net
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: Kh@didia74
+      POSTGRES_DB: stc_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+  redis:
+    image: redis:alpine
+    container_name: redis
+    ports:
+      - "6379:6379" # Corrected format for ports
+    networks:
+      - capt_direct_net
+networks:
+  capt_direct_net:
+    driver: bridge
+
+volumes:
+  postgres_data:

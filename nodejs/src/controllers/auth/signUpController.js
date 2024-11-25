@@ -1,4 +1,4 @@
-const bcrypt = require("bcrypt");
+const bcrypt = require("bcryptjs");
 const jwt = require("../../utils/jwt"); // Adapte le chemin selon la structure de ton projet
 const validate = require("../../helpers/validation/validate");
 const userSchema = require("../../helpers/schemas/userSchema");

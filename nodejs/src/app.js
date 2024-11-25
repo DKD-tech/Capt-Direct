@@ -113,14 +113,38 @@ io.on("connection", (socket) => {
   // });
 
   // Quitter une session vidéo
+  // socket.on("leaveVideoSession", ({ userId, videoId }) => {
+  //   socket.leave(videoId);
+  //   io.in(videoId).emit("userLeft", {
+  //     userId,
+  //     userName: users[userId].username,
+  //   });
+  //   delete users[userId];
+  //   console.log(`User ${userId} left video ${videoId}`);
+  // });
   socket.on("leaveVideoSession", ({ userId, videoId }) => {
+    console.log("Requête pour quitter la session vidéo :", { userId, videoId });
+
+    // Vérifiez si l'utilisateur existe
+    if (!users[userId]) {
+      console.error(
+        `Utilisateur avec ID ${userId} introuvable dans l'objet users.`
+      );
+      return socket.emit("error", {
+        message: `Utilisateur ${userId} introuvable.`,
+      });
+    }
+
+    // Retirez l'utilisateur de la session
     socket.leave(videoId);
     io.in(videoId).emit("userLeft", {
       userId,
       userName: users[userId].userName,
     });
+
+    // Optionnel : Supprimez l'utilisateur de la liste locale si nécessaire
     delete users[userId];
-    console.log(`User ${userId} left video ${videoId}`);
+    console.log(`Utilisateur ${userId} a quitté la session vidéo ${videoId}.`);
   });
 
   // Gestion des sous-titres en temps réel

@@ -6,7 +6,7 @@ async function sessionController(req, res) {
 
   try {
     // Récupère l'utilisateur depuis la base de données en utilisant l'ID extrait du token
-    const user = await UserModel.findOneById(req.user.id);
+    const user = await UserModel.findOneById(req.user.id, "user_id");
 
     if (user) {
       // Si l'utilisateur est trouvé, retourne ses informations

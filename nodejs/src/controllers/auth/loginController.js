@@ -1,6 +1,6 @@
 require("dotenv").config();
 const jwt = require("../../utils/jwt"); // Adapte le chemin selon la structure de ton projet
-const bcrypt = require("bcrypt");
+const bcrypt = require("bcryptjs");
 const UserModel = require("../../models/UserModel"); // Utilise le modèle utilisateur
 const Redis = require("../../redis/index"); // Connexion Redis
 
