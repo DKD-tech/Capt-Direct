@@ -177,6 +177,7 @@ const VideoSegmentModel = require("../../models/VideoSegmentModel");
 const SessionModel = require("../../models/SessionModel");
 const SubtitlesModel = require("../../models/SubtitleModel");
 const axios = require("axios");
+const { setAsync, getAsync } = require("../../redis/index");
 // const { requestHlsGeneration } = require("../../../../hls_service/hls_service");
 
 // async function segmentVideo(session_id, video_duration) {
@@ -237,21 +238,51 @@ const {
  */
 
 async function createVideoSegmentController(req, res) {
-  const { session_id, video_duration } = req.body;
+  const { session_id } = req.body;
 
-  if (!session_id || !video_duration) {
+  if (!session_id) {
     return res.status(400).json({ message: "Champs obligatoires manquants" });
   }
 
   try {
+    // // Récupérer la durée de la vidéo depuis Redis
+    // const redisKey = `session:${session_id}:video_duration`;
+    // const duration = await Redis.get(redisKey);
+    // Récupérer la durée depuis Redis
+    const redisKey = `video:duration:${session_id}`;
+    const duration = await getAsync(redisKey);
+
+    if (!duration) {
+      return res
+        .status(400)
+        .json({ message: "Durée non trouvée pour cette session." });
+    }
+
+    // if (!duration) {
+    //   return res.status(400).json({
+    //     message:
+    //       "Durée de la vidéo introuvable. Veuillez vérifier que la durée est enregistrée.",
+    //   });
+    // }
+
+    // Récupérer les utilisateurs connectés à la session
+    const usersInSession = await SegmentUserModel.findUsersBySessionId(
+      session_id
+    );
+
+    if (!usersInSession || usersInSession.length < 2) {
+      return res.status(400).json({
+        message: "Moins de deux utilisateurs connectés pour cette session.",
+      });
+    }
     const segmentDuration = 60; // Durée d'un segment en secondes
-    const numberOfSegments = Math.ceil(video_duration / segmentDuration);
+    const numberOfSegments = Math.ceil(duration / segmentDuration);
 
     const segments = [];
     for (let i = 0; i < numberOfSegments; i++) {
       const start_time = convertSecondsToTime(i * segmentDuration);
       const end_time = convertSecondsToTime(
-        Math.min((i + 1) * segmentDuration, video_duration)
+        Math.min((i + 1) * segmentDuration, duration)
       );
       segments.push({ session_id, start_time, end_time });
     }
@@ -268,12 +299,95 @@ async function createVideoSegmentController(req, res) {
       )
     );
 
+    // Assigner les segments
+    const assignments = await assignSegmentsToUsers(
+      session_id,
+      createdSegments
+    );
+
     return res.status(201).json({
-      message: "Segments vidéo créés avec succès",
+      message: "Segments vidéo créés et assignés avec succès.",
       segments: createdSegments,
     });
   } catch (error) {
     console.error("Erreur lors de la création des segments :", error);
+    return res.status(500).json({ message: "Erreur serveur" });
+  }
+}
+
+// Contrôleur pour sauvegarder la durée de la vidéo
+// async function saveVideoDuration(req, res) {
+//   const { session_id, duration } = req.body;
+
+//   if (!session_id || !duration) {
+//     return res
+//       .status(400)
+//       .json({ message: "Session ID et durée sont requis." });
+//   }
+
+//   try {
+//     const redisKey = `session:${session_id}:video_duration`;
+//     await Redis.set(redisKey, duration);
+
+//     res
+//       .status(200)
+//       .json({ message: "Durée de la vidéo sauvegardée avec succès." });
+//   } catch (error) {
+//     console.error(
+//       "Erreur lors de la sauvegarde de la durée dans Redis :",
+//       error
+//     );
+//     res.status(500).json({ message: "Erreur serveur." });
+//   }
+// }
+async function storeVideoDurationController(req, res) {
+  const { sessionId } = req.params;
+  const { duration } = req.body;
+
+  if (!duration || !sessionId) {
+    return res
+      .status(400)
+      .json({ message: "Session ID et durée sont requis." });
+  }
+
+  try {
+    const redisKey = `video:duration:${sessionId}`;
+    await setAsync(redisKey, duration); // Stocker la durée dans Redis avec une clé unique
+
+    return res
+      .status(200)
+      .json({ message: "Durée de la vidéo stockée avec succès." });
+  } catch (error) {
+    console.error(
+      "Erreur lors du stockage de la durée de la vidéo dans Redis :",
+      error
+    );
+    return res.status(500).json({ message: "Erreur serveur" });
+  }
+}
+
+// Route pour récupérer la durée
+async function getVideoDuration(req, res) {
+  const { sessionId } = req.params;
+
+  if (!sessionId) {
+    return res.status(400).json({ message: "Session ID est requis." });
+  }
+
+  try {
+    const redisKey = `video:duration:${sessionId}`;
+    const duration = await getAsync(redisKey);
+
+    if (!duration) {
+      return res.status(404).json({ message: "Durée non trouvée dans Redis." });
+    }
+
+    return res.status(200).json({ duration });
+  } catch (error) {
+    console.error(
+      "Erreur lors de la récupération de la durée de la vidéo depuis Redis :",
+      error
+    );
     return res.status(500).json({ message: "Erreur serveur" });
   }
 }
@@ -387,4 +501,7 @@ module.exports = {
   requestHlsGeneration,
   createHlsSegmentsController,
   getSegmentsWithSubtitles,
+  storeVideoDurationController,
+  getVideoDuration,
+  storeVideoDurationController,
 };

@@ -8,11 +8,22 @@ const createSessionController = async (req, res) => {
     return res.status(400).json({ message: "Champs obligatoires manquants" });
   }
 
+  // Vérifier si la vidéo existe (pour les vidéos locales) process.env.videoDirectory
+  const videoDirectory = "/videos/";
+  const videoPath = `${videoDirectory}${video_url}`;
+
+  if (!fs.existsSync(videoPath)) {
+    console.error(`La vidéo est introuvable dans : ${videoPath}`);
+    return res.status(400).json({
+      message: `La vidéo ${video_url} n'existe pas dans le chemin ${videoDirectory}.`,
+    });
+  }
+
   try {
     const newSession = await SessionModel.insert({
       session_name,
       description,
-      video_url,
+      video_url: videoPath,
       created_at: new Date(), // Génère automatiquement la date de création
       status: status || "active",
     });
@@ -32,7 +43,7 @@ const getSessionController = async (req, res) => {
   const { sessionId } = req.params;
 
   try {
-    const session = await SessionModel.findOneById(sessionId);
+    const session = await SessionModel.findOneById(sessionId, "session_id");
 
     if (!session) {
       return res.status(404).json({ message: "Session introuvable" });

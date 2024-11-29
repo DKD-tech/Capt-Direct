@@ -1,7 +1,7 @@
 # Utiliser une image officielle de Node.js
 FROM node:18.20.4
 
-# Installer FFmpeg
+# Installer ffmpeg (et donc ffprobe)
 RUN apt-get update && apt-get install -y ffmpeg
 
 # Définir le répertoire de travail

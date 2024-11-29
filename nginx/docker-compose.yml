@@ -1,26 +1,4 @@
 services:
-  nginx:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: stc_nginx
-    ports:
-      - "8090:80"
-      - "1935:1935"
-    volumes:
-      # - ./cookies.txt:/usr/local/bin/cookies.txt
-      - ./nginx.conf:/usr/local/nginx/conf/nginx.conf:ro
-      - ./hls_service/hls_output:/usr/src/app/hls_output
-      - ./stream_with_autorefresh.sh:/usr/local/bin/stream_with_autorefresh.sh
-      - ./nginx/hls_output:/opt/data/hls
-    depends_on:
-      - hls_service
-    networks:
-      - capt_direct_net
-    environment:
-      - PATH=/usr/local/nginx/sbin:$PATH
-    command: [ "/usr/local/nginx/sbin/nginx", "-g", "daemon off;" ]
-
   backend:
     build:
       context: ../nodejs
@@ -38,18 +16,6 @@ services:
       - database
       - redis
       - hls_service
-
-  frontend:
-    build:
-      context: ../captDirect
-      dockerfile: Dockerfile
-    container_name: frontend
-    ports:
-      - "4200:80"
-    networks:
-      - capt_direct_net
-    depends_on:
-      - backend
 
   hls_service:
     build: 

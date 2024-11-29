@@ -17,6 +17,27 @@ client.on("error", (err) => console.error("Erreur de connexion Redis :", err));
   }
 })();
 
+async function setAsync(key, value, options = {}) {
+  try {
+    return await client.set(key, value, options);
+  } catch (error) {
+    console.error("Erreur lors de la définition de la clé dans Redis:", error);
+    throw error;
+  }
+}
+
+async function getAsync(key) {
+  try {
+    return await client.get(key);
+  } catch (error) {
+    console.error(
+      "Erreur lors de la récupération de la clé dans Redis:",
+      error
+    );
+    throw error;
+  }
+}
+
 async function setSession(userId, token) {
   if (!userId) throw new Error("userId is required");
   if (!token) throw new Error("token is required");
@@ -60,4 +81,11 @@ async function deleteSession(userId) {
   }
 }
 
-module.exports = { client, setSession, getSession, deleteSession };
+module.exports = {
+  client,
+  setSession,
+  getSession,
+  deleteSession,
+  getAsync,
+  setAsync,
+};
