@@ -106,3 +106,22 @@
     text-transform: uppercase;
   }
   
+  .hover:hover{
+    
+  }
+ 
+
+  .thumbnail {
+    width: 100%; /* Prend la largeur du parent */
+    height: 200px; /* Une hauteur définie pour le cadre */
+    overflow: hidden; /* Cache l'excédent si l'image dépasse */
+    position: relative; /* Nécessaire pour positionner correctement l'image */
+  }
+  
+  .thumbnail img {
+    width: 100%; /* Adapte la largeur de l'image au cadre */
+    height: 100%; /* Adapte la hauteur au cadre */
+    object-fit: cover; /* Ajuste l'image pour remplir le cadre sans déformation */
+    display: block; /* Supprime les éventuels espaces blancs autour de l'image */
+  }
+  

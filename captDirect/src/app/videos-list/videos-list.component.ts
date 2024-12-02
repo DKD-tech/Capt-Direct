@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component } from '@angular/core';
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-videos-list',
@@ -9,6 +10,7 @@ import { Component } from '@angular/core';
   styleUrl: './videos-list.component.scss'
 })
 export class VideosListComponent {
+  constructor(private router: Router) {}
 
   videos = [
     { title: 'Live Stream 1', channel: 'Channel A', views: '10K watching', time: '', isLive: true },
@@ -16,5 +18,7 @@ export class VideosListComponent {
     { title: 'Live Stream 3', channel: 'Channel C', views: '25K watching', time: '', isLive: true },
     { title: 'Video 4', channel: 'Channel D', views: '1M views', time: '1 week ago', isLive: false }
   ];
-
+  onClick() {
+    this.router.navigate(['/dashboard-page']);
+  }
 }

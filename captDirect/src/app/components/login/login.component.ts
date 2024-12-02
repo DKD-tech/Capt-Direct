@@ -14,7 +14,7 @@ export class LoginComponent {
 
   onLogin() {
     console.log('Connexion effectuée');
-    this.router.navigate(['/dashboard-page']);
+    this.router.navigate(['/videos-list']);
   }
 
   onRegister() {
