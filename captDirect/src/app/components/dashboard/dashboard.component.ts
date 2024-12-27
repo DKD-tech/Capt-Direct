@@ -7,6 +7,7 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { SessionService } from '../../services/sessions/session.service';
 import { CommonModule } from '@angular/common';
+// import videojs from 'video.js';
 
 @Component({
   selector: 'app-dashboard',
@@ -15,99 +16,6 @@ import { CommonModule } from '@angular/common';
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.scss',
 })
-// export class DashboardComponent implements OnInit, OnDestroy {
-//   isAuthenticated: boolean = false;
-//   isLoading = true;
-//   subtitleText = '';
-//   displayedSubtitle = '';
-//   userId = ''; // Identifiant utilisateur récupéré dynamiquement
-//   videoUrl = ''; // URL de la vidéo récupérée dynamiquement
-//   sessionId: number = 1; // Session ID pour la session 1
-//   segments: any[] = [];
-//   collaborators: number = 1; // Nombre de collaborateurs en ligne
-//   user: any;
-
-//   constructor(
-//     private socketService: SocketService,
-//     private authService: AuthService,
-//     private router: Router,
-//     private sessionService: SessionService
-//   ) {}
-
-//   ngOnInit() {
-//     console.log('Initialisation de ngOnInit dans DashboardComponent'); // Vérifiez que ngOnInit est appelé
-//     this.loadUserSession();
-//     this.loadSessionVideo();
-//     const authToken = localStorage.getItem('authToken');
-//     // Rejoindre une session vidéo
-//     this.socketService.joinVideoSession({
-//       userId: this.userId,
-//       userName: 'John Doe',
-//       videoId: this.videoUrl,
-//     });
-
-//     // Écoute des événements
-//     this.socketService.onSubtitleUpdate().subscribe((subtitle) => {
-//       if (subtitle.videoId === this.videoId) {
-//         this.displayedSubtitle = subtitle.text;
-//       }
-//     });
-
-//     this.socketService.onUserJoined().subscribe((user) => {
-//       console.log(`${user.userName} a rejoint la session.`);
-//     });
-
-//     this.socketService.onUserLeft().subscribe((user) => {
-//       console.log(`${user.userName} a quitté la session.`);
-//     });
-//   }
-
-//   loadUserSession(): void {
-//     this.authService.getUserSession().subscribe(
-//       (response) => {
-//         this.user = response;
-//         this.isLoading = false;
-//         console.log('Session utilisateur chargée:', this.user);
-//       },
-//       (error) => {
-//         console.error(
-//           'Erreur lors de la récupération de la session utilisateur:',
-//           error
-//         );
-//         if (error.status === 401) {
-//           this.router.navigate(['/login-page']);
-//         }
-//       }
-//     );
-//   }
-
-//   onSubtitleChange() {
-//     const timestamp = Date.now();
-//     this.socketService.sendSubtitle({
-//       text: this.subtitleText,
-//       videoId: this.videoId,
-//       timestamp,
-//     });
-//   }
-
-//   ngOnDestroy() {
-//     this.socketService.leaveVideoSession({
-//       userId: this.userId,
-//       videoId: this.videoId,
-//     });
-//   }
-//   onLogout() {
-//     this.authService.logout().subscribe({
-//       next: () => {
-//         this.router.navigate(['/login-page']); // Redirige vers la page de connexion après la déconnexion
-//       },
-//       error: (error) => {
-//         console.error('Error during logout:', error);
-//         // Afficher un message d'erreur ou gérer l'erreur ici si nécessaire
-//       },
-//     });
-//   }
-// }
 export class DashboardComponent implements OnInit, OnDestroy {
   isAuthenticated: boolean = false;
   isLoading = true;
@@ -115,7 +23,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   displayedSubtitle = '';
   userId = ''; // Identifiant utilisateur récupéré dynamiquement
   videoUrl = ''; // URL de la vidéo récupérée dynamiquement
-  sessionId: number = 17; // ID de la session à afficher
+  sessionId: number = 6; // ID de la session à afficher
   segments: any[] = [];
   collaborators: number = 1; // Nombre de collaborateurs en ligne
   user: any;
@@ -175,6 +83,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.loadSessionDetails();
     this.connectToSocket();
     this.loadSessionInfo();
+    // const videoElement = document.getElementById('liveVideo') as HTMLVideoElement;
+    // videoElement.addEventListener('timeupdate', this.updateSubtitleDisplay.bind(this));
   }
 
   // Chargement des informations utilisateur
@@ -267,6 +177,69 @@ export class DashboardComponent implements OnInit, OnDestroy {
       },
     });
   }
+  // loadSessionDetails(): void {
+  //   this.sessionService.getSessionById(this.sessionId).subscribe({
+  //     next: (response: any) => {
+  //       if (response && response.video_url) {
+  //         this.videoUrl = `/videos/${response.video_url}`;
+  //         console.log('Vidéo URL récupérée:', this.videoUrl);
+
+  //         // Lancer le streaming en demandant au backend
+  //         this.sessionService.startStreaming(this.sessionId).subscribe({
+  //           next: () => {
+  //             console.log('Streaming démarré avec succès.');
+  //           },
+  //           error: (error) => {
+  //             console.error('Erreur lors du démarrage du streaming :', error);
+  //           },
+  //         });
+  //       } else {
+  //         console.error(
+  //           'URL de la vidéo introuvable dans la réponse de la session.'
+  //         );
+  //       }
+  //     },
+  //     error: (error: any) => {
+  //       console.error('Erreur lors du chargement de la session:', error);
+  //     },
+  //   });
+  // }
+
+  // onTimeUpdate(event: Event): void {
+  //   const videoElement = event.target as HTMLVideoElement;
+  //   const currentTime = videoElement.currentTime;
+
+  //   const currentSubtitle = this.subtitleService.getSubtitleForTime(currentTime);
+  //   if (currentSubtitle) {
+  //     this.displayedSubtitle = currentSubtitle.text;
+
+  //     // Respecter les durées minimum et maximum
+  //     const duration = currentSubtitle.endTime - currentSubtitle.startTime;
+  //     if (duration < 1) {
+  //       console.warn('Sous-titre trop court, ajustement requis');
+  //     } else if (duration > 10) {
+  //       console.warn('Sous-titre trop long, ajustement requis');
+  //     }
+  //   } else {
+  //     this.displayedSubtitle = '';
+  //   }
+  // }
+
+  // onSubtitleInput(event: Event): void {
+  //   const inputElement = event.target as HTMLTextAreaElement;
+  //   const subtitleText = inputElement.value;
+
+  //   // Obtenir le temps actuel de la vidéo
+  //   const videoElement = document.getElementById('liveVideo') as HTMLVideoElement;
+  //   const currentTime = videoElement.currentTime;
+
+  //   // Envoyer au backend via Socket.io
+  //   this.socket.emit('updateSubtitle', {
+  //     segment_id: this.currentSegmentId, // ID du segment
+  //     text: subtitleText,
+  //     time: currentTime, // Temps associé au sous-titre
+  //   });
+  // }
 
   loadSessionInfo(): void {
     this.sessionService.getSessionById(this.sessionId).subscribe({
@@ -374,6 +347,17 @@ export class DashboardComponent implements OnInit, OnDestroy {
       videoId: this.videoUrl,
     });
   }
+
+  // updateSubtitleDisplay() {
+  //   const videoElement = document.getElementById('liveVideo') as HTMLVideoElement;
+  //   const currentTime = videoElement.currentTime;
+
+  //   const currentSubtitle = this.subtitleList.find(
+  //     subtitle => currentTime >= subtitle.startTime && currentTime <= subtitle.endTime
+  //   );
+
+  //   this.displayedSubtitle = currentSubtitle ? currentSubtitle.text : '';
+  // }
 
   // Déconnexion utilisateur
   onLogout() {

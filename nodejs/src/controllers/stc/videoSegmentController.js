@@ -496,6 +496,183 @@ async function getSegmentsWithSubtitles(req, res) {
   }
 }
 
+async function addSegments(req, res) {
+  const { session_id, segments } = req.body;
+
+  if (!session_id || !Array.isArray(segments)) {
+    return res.status(400).json({ message: "Session ID et segments requis." });
+  }
+
+  try {
+    const insertedSegments = [];
+    for (const segment of segments) {
+      const newSegment = await VideoSegmentModel.insert({
+        session_id,
+        start_time: segment.start_time,
+        end_time: segment.end_time,
+        status: "available",
+        created_at: new Date(),
+      });
+      insertedSegments.push(newSegment);
+    }
+
+    return res.status(201).json({
+      message: "Segments ajoutés avec succès.",
+      segments: insertedSegments,
+    });
+  } catch (error) {
+    console.error("Erreur lors de l'ajout des segments :", error);
+    return res.status(500).json({ message: "Erreur serveur." });
+  }
+}
+
+async function saveSubtitlesToDB(req, res) {
+  const { segment_id } = req.params;
+  const redisKey = `segment:${segment_id}:subtitles`;
+
+  try {
+    const subtitles = await redisClient.lRange(redisKey, 0, -1);
+
+    // Sauvegarder dans PostgreSQL
+    for (const subtitle of subtitles) {
+      const parsed = JSON.parse(subtitle);
+      await SubtitleModel.addSubtitle(parsed);
+    }
+
+    // Supprimer les données de Redis
+    await redisClient.del(redisKey);
+
+    res.status(200).json({ message: "Sous-titres sauvegardés avec succès." });
+  } catch (error) {
+    console.error("Erreur lors de la sauvegarde des sous-titres :", error);
+    res.status(500).json({ message: "Erreur serveur." });
+  }
+}
+
+// async function startStreaming(req, res) {
+//   const { sessionId } = req.params;
+
+//   try {
+//     // Récupérer l'URL de la vidéo associée à la session
+//     const session = await SessionModel.findOneById(sessionId, ["video_url"]);
+//     if (!session || !session.video_url) {
+//       return res
+//         .status(404)
+//         .json({ message: "Vidéo introuvable pour cette session." });
+//     }
+
+//     const videoPath = path.join(
+//       process.env.VIDEO_DIRECTORY || "/usr/src/app/videos",
+//       session.video_url
+//     );
+//     if (!fs.existsSync(videoPath)) {
+//       return res
+//         .status(404)
+//         .json({ message: "Le fichier vidéo n’existe pas dans Docker." });
+//     }
+
+//     // Démarrer le script de streaming
+//     exec(
+//       `bash ./stream_video.sh ${sessionId} ${videoPath}`,
+//       (error, stdout, stderr) => {
+//         if (error) {
+//           console.error("Erreur lors du démarrage du streaming :", stderr);
+//           return res.status(500).json({ message: "Erreur lors du streaming." });
+//         }
+//         console.log("Streaming démarré :", stdout);
+//         res.status(200).json({ message: "Streaming démarré avec succès." });
+//       }
+//     );
+//   } catch (error) {
+//     console.error("Erreur lors du démarrage du streaming :", error);
+//     res.status(500).json({ message: "Erreur serveur." });
+//   }
+// }
+// Assurez-vous que VIDEO_DIRECTORY est chargé
+
+// async function startStreaming(req, res) {
+//   const { sessionId } = req.params;
+
+//   try {
+//     // Récupérer la session et valider les données
+//     const session = await SessionModel.findOneById(sessionId, ["video_url"]);
+//     console.log("Session trouvée :", session);
+//     if (!session || !session.video_url) {
+//       return res.status(404).json({ message: "Session ou vidéo introuvable." });
+//     }
+
+//     // Construire le chemin absolu de la vidéo
+//     const videoPath = path.join("/usr/src/app/videos", session.video_url);
+
+//     // Vérifiez que le fichier existe
+//     if (!fs.existsSync(videoPath)) {
+//       return res.status(404).json({
+//         message: `Le fichier vidéo ${session.video_url} est introuvable.`,
+//       });
+//     }
+
+//     // Commande pour exécuter le script de segmentation
+//     const command = `bash ./stream_with_autorefresh.sh ${sessionId} ${videoPath}`;
+
+//     exec(command, (error, stdout, stderr) => {
+//       if (error) {
+//         console.error("Erreur lors du streaming :", stderr);
+//         return res
+//           .status(500)
+//           .json({ message: "Erreur lors du démarrage du streaming." });
+//       }
+//       console.log("Streaming démarré :", stdout);
+//       res.status(200).json({
+//         message: "Streaming démarré avec succès.",
+//         hls_url: `/hls/session-${sessionId}/playlist.m3u8`,
+//       });
+//     });
+//   } catch (error) {
+//     console.error("Erreur backend :", error);
+//     res.status(500).json({ message: "Erreur serveur." });
+//   }
+// }
+async function startStreaming(req, res) {
+  const { sessionId } = req.params;
+  console.log("Session ID reçu :", sessionId); // Journal du sessionId
+
+  try {
+    const session = await SessionModel.findOneById(sessionId, ["video_url"]);
+    console.log("Session trouvée :", session); // Journal de la session trouvée
+
+    if (!session || !session.video_url) {
+      console.log("Session ou vidéo introuvable.");
+      return res.status(404).json({ message: "Session ou vidéo introuvable." });
+    }
+
+    const videoPath = path.join(VIDEO_DIRECTORY, session.video_url);
+    console.log("Chemin absolu de la vidéo :", videoPath); // Journal du chemin vidéo
+
+    if (!fs.existsSync(videoPath)) {
+      console.log("Le fichier vidéo n’existe pas :", videoPath);
+      return res
+        .status(404)
+        .json({ message: "Le fichier vidéo n’existe pas." });
+    }
+
+    // Lancer le script de streaming
+    exec(
+      `bash ./stream_video.sh ${sessionId} ${videoPath}`,
+      (error, stdout, stderr) => {
+        if (error) {
+          console.error("Erreur lors du streaming :", stderr);
+          return res.status(500).json({ message: "Erreur lors du streaming." });
+        }
+        console.log("Streaming démarré :", stdout);
+        res.status(200).json({ message: "Streaming démarré avec succès." });
+      }
+    );
+  } catch (error) {
+    console.error("Erreur serveur :", error);
+    res.status(500).json({ message: "Erreur serveur." });
+  }
+}
+
 module.exports = {
   createVideoSegmentController,
   requestHlsGeneration,
@@ -504,4 +681,7 @@ module.exports = {
   storeVideoDurationController,
   getVideoDuration,
   storeVideoDurationController,
+  addSegments,
+  saveSubtitlesToDB,
+  startStreaming,
 };

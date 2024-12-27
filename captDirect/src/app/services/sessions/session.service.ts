@@ -7,6 +7,7 @@ import { Observable, tap } from 'rxjs';
 })
 export class SessionService {
   private apiUrl = 'http://localhost:3000/api/sessions/info'; // URL de l'API backend
+  baseUrl = `http://localhost:3000:api/sessions`;
   // private apiUrl1 =
   // 'http://localhost:3000/api/sessions/sessionId/store-duration';
 
@@ -33,4 +34,18 @@ export class SessionService {
       duration,
     });
   }
+  // **Nouvelle méthode : démarrer le streaming**
+  startStreaming(sessionId: number): Observable<any> {
+    return this.http.post<any>(
+      `http://localhost:3000/api/sessions/stream/${sessionId}`,
+      {}
+    );
+  }
+
+  // startStreaming(sessionId: number): void {
+  //   this.http.post(`/api/sessions/stream/${sessionId}`, {}).subscribe({
+  //     next: (response) => console.log("Streaming démarré :", response),
+  //     error: (err) => console.error("Erreur lors du démarrage du streaming :", err),
+  //   });
+  // }
 }

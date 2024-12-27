@@ -66,70 +66,97 @@ async function assignUserToSegmentController(req, res) {
     return res.status(500).json({ message: "Erreur serveur" });
   }
 }
+// async function addSubtitle(req, res) {
+//   const { segment_id, text, created_by } = req.body;
+
+//   if (!segment_id || !text || !created_by) {
+//     return res.status(400).json({ message: "Champs obligatoires manquants" });
+//   }
+
+//   try {
+//     // Vérifier si le segment existe et est en cours (in_progress)
+//     // const segment = await VideoSegmentModel.findById(segment_id);
+
+//     // if (!segment || segment.status !== "in_progress") {
+//     //   return res
+//     //     .status(400)
+//     //     .json({ message: "Segment invalide ou non assigné." });
+//     // }
+
+//     // // Ajouter le sous-titre
+//     // const newSubtitle = await SubtitleModel.addSubtitle({
+//     //   segment_id,
+//     //   text,
+//     //   created_by,
+//     // });
+//     // Validation : l'utilisateur est-il assigné à ce segment ?
+//     const isUserAssigned = await SegmentUserModel.isUserAssignedToSegment(
+//       created_by,
+//       segment_id
+//     );
+
+//     if (!isUserAssigned) {
+//       return res.status(403).json({
+//         message: "Vous n'êtes pas autorisé à sous-titrer ce segment.",
+//       });
+//     }
+
+//     // Étape 2 : Vérifier si un sous-titre similaire existe déjà dans Redis
+//     const redisKey = `segment:${segment_id}:subtitles`;
+//     const existingSubtitles = await redisClient.lRange(redisKey, 0, -1);
+//     // Vérifier les doublons (optionnel selon les besoins)
+//     if (existingSubtitles.some((sub) => JSON.parse(sub).text === text)) {
+//       return res.status(400).json({
+//         message: "Un sous-titre similaire existe déjà pour ce segment.",
+//       });
+//     }
+
+//     // Étape 3 : Ajouter le sous-titre en base de données
+//     const newSubtitle = await SubtitleModel.addSubtitle({
+//       segment_id,
+//       text,
+//       created_by,
+//     });
+
+//     // Étape 4 : Mettre à jour le cache Redis
+//     await redisClient.lPush(redisKey, JSON.stringify(newSubtitle));
+//     await redisClient.expire(redisKey, 3600); // TTL : 1 heure, modifiable
+
+//     return res.status(201).json({
+//       message: "Sous-titre ajouté avec succès.",
+//       subtitle: newSubtitle,
+//     });
+//   } catch (error) {
+//     console.error("Erreur lors de l'ajout du sous-titre :", error);
+//     return res.status(500).json({ message: "Erreur serveur" });
+//   }
+// }
 async function addSubtitle(req, res) {
   const { segment_id, text, created_by } = req.body;
+  const redisKey = `segment:${segment_id}:subtitles`;
 
-  if (!segment_id || !text || !created_by) {
-    return res.status(400).json({ message: "Champs obligatoires manquants" });
+  // Vérifier si l'utilisateur est assigné au segment
+  const isUserAssigned = await SegmentUserModel.isUserAssignedToSegment(
+    created_by,
+    segment_id
+  );
+  if (!isUserAssigned) {
+    return res
+      .status(403)
+      .json({ message: "Non autorisé à sous-titrer ce segment." });
   }
 
-  try {
-    // Vérifier si le segment existe et est en cours (in_progress)
-    // const segment = await VideoSegmentModel.findById(segment_id);
-
-    // if (!segment || segment.status !== "in_progress") {
-    //   return res
-    //     .status(400)
-    //     .json({ message: "Segment invalide ou non assigné." });
-    // }
-
-    // // Ajouter le sous-titre
-    // const newSubtitle = await SubtitleModel.addSubtitle({
-    //   segment_id,
-    //   text,
-    //   created_by,
-    // });
-    // Validation : l'utilisateur est-il assigné à ce segment ?
-    const isUserAssigned = await SegmentUserModel.isUserAssignedToSegment(
-      created_by,
-      segment_id
-    );
-
-    if (!isUserAssigned) {
-      return res.status(403).json({
-        message: "Vous n'êtes pas autorisé à sous-titrer ce segment.",
-      });
-    }
-
-    // Étape 2 : Vérifier si un sous-titre similaire existe déjà dans Redis
-    const redisKey = `segment:${segment_id}:subtitles`;
-    const existingSubtitles = await redisClient.lRange(redisKey, 0, -1);
-    // Vérifier les doublons (optionnel selon les besoins)
-    if (existingSubtitles.some((sub) => JSON.parse(sub).text === text)) {
-      return res.status(400).json({
-        message: "Un sous-titre similaire existe déjà pour ce segment.",
-      });
-    }
-
-    // Étape 3 : Ajouter le sous-titre en base de données
-    const newSubtitle = await SubtitleModel.addSubtitle({
-      segment_id,
-      text,
-      created_by,
-    });
-
-    // Étape 4 : Mettre à jour le cache Redis
-    await redisClient.lPush(redisKey, JSON.stringify(newSubtitle));
-    await redisClient.expire(redisKey, 3600); // TTL : 1 heure, modifiable
-
-    return res.status(201).json({
-      message: "Sous-titre ajouté avec succès.",
-      subtitle: newSubtitle,
-    });
-  } catch (error) {
-    console.error("Erreur lors de l'ajout du sous-titre :", error);
-    return res.status(500).json({ message: "Erreur serveur" });
+  // Vérifier les doublons dans Redis
+  const existingSubtitles = await redisClient.lRange(redisKey, 0, -1);
+  if (existingSubtitles.some((sub) => JSON.parse(sub).text === text)) {
+    return res.status(400).json({ message: "Sous-titre similaire existant." });
   }
+
+  // Ajouter le sous-titre
+  await redisClient.lPush(redisKey, JSON.stringify({ text, created_by }));
+  redisClient.expire(redisKey, 3600); // 1 heure
+
+  res.status(201).json({ message: "Sous-titre ajouté avec succès." });
 }
 
 async function getSubtitlesBySegment(req, res) {

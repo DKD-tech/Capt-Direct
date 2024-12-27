@@ -156,9 +156,27 @@ io.on("connection", (socket) => {
   });
 
   // Suppression des sous-titres
-  socket.on("deleteSubtitle", ({ subtitleId, videoId }) => {
-    subtitles[videoId] = subtitles[videoId].filter((s) => s.id !== subtitleId);
-    io.in(videoId).emit("subtitleDeleted", { subtitleId });
+  // socket.on("deleteSubtitle", ({ subtitleId, videoId }) => {
+  //   subtitles[videoId] = subtitles[videoId].filter((s) => s.id !== subtitleId);
+  //   io.in(videoId).emit("subtitleDeleted", { subtitleId });
+  // });
+  socket.on("deleteSubtitle", async ({ segment_id, start_time }) => {
+    const redisKey = `segment:${segment_id}:subtitles`;
+
+    // Récupérer et filtrer les sous-titres
+    const subtitles = await redisClient.lRange(redisKey, 0, -1);
+    const updatedSubtitles = subtitles.filter((subtitle) => {
+      const parsed = JSON.parse(subtitle);
+      return parsed.start_time !== start_time;
+    });
+
+    // Remettre à jour Redis
+    await redisClient.del(redisKey);
+    updatedSubtitles.forEach((subtitle) =>
+      redisClient.lPush(redisKey, subtitle)
+    );
+
+    io.in(segment_id).emit("subtitleDeleted", { start_time });
   });
 
   // Gestion de la synchronisation vidéo
@@ -273,6 +291,23 @@ io.on("connection", (socket) => {
     // Diffuse le sous-titre à tous les utilisateurs dans la salle actuelle
     io.emit("updateSubtitle", subtitle);
     // io.in(subtitle.videoId).emit("updateSubtitle", subtitle);
+  });
+
+  socket.on("addSubtitle", async (subtitle) => {
+    const { segment_id, text, start_time, end_time, created_by } = subtitle;
+
+    // Clé unique pour Redis
+    const redisKey = `segment:${segment_id}:subtitles`;
+    const subtitleData = { text, start_time, end_time, created_by };
+
+    // Stocker dans Redis
+    await redisClient.lPush(redisKey, JSON.stringify(subtitleData));
+    redisClient.expire(redisKey, 3600); // Expire après 1 heure (modifiable)
+
+    // Diffuser en temps réel à tous les utilisateurs
+    io.in(segment_id).emit("newSubtitle", subtitleData);
+
+    console.log(`Sous-titre ajouté au cache Redis : ${text}`);
   });
 
   // // Gestion de la déconnexion de l'utilisateur

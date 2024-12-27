@@ -498,8 +498,42 @@ async function assignSegmentsToUsers(session_id, createdSegments) {
   }
 }
 
+async function assignSegment(req, res) {
+  const { user_id, session_id } = req.body;
+
+  if (!user_id || !session_id) {
+    return res.status(400).json({ message: "Champs obligatoires manquants." });
+  }
+
+  try {
+    const availableSegments = await VideoSegmentModel.findAvailableSegments(
+      session_id
+    );
+
+    if (availableSegments.length === 0) {
+      return res.status(404).json({ message: "Aucun segment disponible." });
+    }
+
+    const assignedSegment = availableSegments[0];
+    await SegmentUserModel.assignUserToSegment(
+      user_id,
+      assignedSegment.segment_id
+    );
+    await VideoSegmentModel.markSegmentInProgress(assignedSegment.segment_id);
+
+    return res.status(201).json({
+      message: "Segment assigné avec succès.",
+      segment: assignedSegment,
+    });
+  } catch (error) {
+    console.error("Erreur lors de l'assignation :", error);
+    return res.status(500).json({ message: "Erreur serveur." });
+  }
+}
+
 module.exports = {
   assignDynamicSegment,
   handleUserDisconnection,
   assignSegmentsToUsers,
+  assignSegment,
 };

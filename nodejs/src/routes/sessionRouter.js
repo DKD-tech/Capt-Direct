@@ -49,6 +49,7 @@ const {
   getSegmentsWithSubtitles,
   storeVideoDurationController,
   getVideoDuration,
+  startStreaming,
 } = require("../controllers/stc/videoSegmentController");
 const {
   assignDynamicSegment,
@@ -74,6 +75,7 @@ sessionRouter.get("/:session_id", getSegmentsWithSubtitles);
 sessionRouter.get("/info/:sessionId", getSessionController);
 sessionRouter.post("/store-duration/:sessionId", storeVideoDurationController);
 sessionRouter.post("/get-duration/:sessionId", getVideoDuration);
+sessionRouter.post("/stream/:sessionId", startStreaming);
 
 // Récupérer les segments assignés avec URLs HLS
 sessionRouter.get("/assigned-segments/:user_id", async (req, res) => {
