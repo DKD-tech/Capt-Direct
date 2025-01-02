@@ -7,6 +7,7 @@ import { Observable } from 'rxjs';
 })
 export class SocketService {
   constructor(private socket: Socket) {}
+  
 
   // Connexion à une session vidéo
   joinVideoSession(data: { userId: string; userName: string; videoId: string }) {
@@ -99,6 +100,11 @@ export class SocketService {
   onSeekVideo(): Observable<{ videoId: string; newTime: number }> {
     return this.socket.fromEvent('seekVideo');
   }
+  // Écouter les mises à jour de la liste des utilisateurs connectés
+  onUpdateUserList(): Observable<{ userId: string; userName: string }[]> {
+  return this.socket.fromEvent('updateUserList');
+}
+
 
   // Notifications utilisateur
   onUserTyping(): Observable<{ userId: string }> {
@@ -109,3 +115,4 @@ export class SocketService {
     return this.socket.fromEvent('notification');
   }
 }
+

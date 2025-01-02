@@ -34,6 +34,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   sessionDescription: string = '';
   sessionStatus: string = '';
   duration: number | null = null;
+  //connectedUsers: { userId: string; username: string }[] = [];
 
   // Synchronisation des sous-titres
   private startTime: number | null = null;
@@ -41,6 +42,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   // Liste des sous-titres capturés
   subtitles: { startTime: number; endTime: number; text: string }[] = [];
+ // Liste des utilisateurs connectés
+ connectedUsers: any[] = [];
 
   constructor(
     private socketService: SocketService,
@@ -56,6 +59,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.loadSessionDetails();
     this.connectToSocket();
     this.loadSessionInfo();
+    this.listenToConnectedUsers(); 
   }
 
   // Gestion des sous-titres en direct
@@ -163,6 +167,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       this.collaborators -= 1;
       console.log(`${user.userName} a quitté la session.`);
     });
+    
   }
 
   // Générer le contenu SRT
@@ -299,6 +304,13 @@ loadUserSession(): void {
     this.authService.logout().subscribe({
       next: () => this.router.navigate(['/login-page']),
       error: (error) => console.error('Erreur lors de la déconnexion :', error),
+    });
+  }
+  //plusieur utilisateurs connectés
+  listenToConnectedUsers(): void {
+    this.socketService.onUpdateUserList().subscribe((users) => {
+      this.connectedUsers = users;
+      console.log('Liste des utilisateurs connectés mise à jour :', this.connectedUsers);
     });
   }
 

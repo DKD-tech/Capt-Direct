@@ -33,14 +33,15 @@ export class AuthService {
   
     console.log('Requête envoyée avec headers :', httpOptions.headers);
   
-    return this.http.get(this.apiUrlSession, httpOptions).pipe(
-      tap((response) => console.log('Réponse brute de l\'API utilisateur :', response)),
-      catchError((error) => {
-        console.error('Échec de la récupération de la session:', error.message);
-        return throwError(() => error);
-      })
-    );
-  }
+    //  URL pour récupérer l'utilisateur connecté
+  return this.http.get(`${this.apiUrlL}/me`, httpOptions).pipe(
+    tap((response) => console.log('Réponse brute de l\'API utilisateur :', response)),
+    catchError((error) => {
+      console.error('Échec de la récupération de l\'utilisateur connecté :', error.message);
+      return throwError(() => error);
+    })
+  );
+}
   
   login(email: string, password: string): Observable<any> {
     console.log('Données envoyées :', { email, password });
