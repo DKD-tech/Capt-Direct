@@ -1,0 +1,79 @@
+<div class="dashboard-container">
+  <aside class="sidebar">
+    <div class="user-info">
+      <mat-icon class="user-icon">person</mat-icon>
+      <span class="user-name">{{ user?.username || "Utilisateur" }}</span>
+    </div>
+    <nav class="nav-links">
+      <ul>
+        <li><a href="#">Settings</a></li>
+        <li><a (click)="onLogout()">Déconnexion</a></li>
+      </ul>
+    </nav>
+  </aside>
+
+  <main class="main-content">
+    <div class="streaming-info">
+      <div class="status-header">
+        <span class="dot red"></span>
+        <span class="status-text">Session en cours</span>
+
+        <div class="clock">
+          <mat-icon>access_time</mat-icon>
+          <span id="clock">12:12 à 12:22</span>
+        </div>
+      </div>
+      <!-- Affichage des informations de la session -->
+      <!-- <div class="session-info">
+        <p><strong>Nom de la session :</strong> {{ sessionName }}</p>
+        <p><strong>Description :</strong> {{ sessionDescription }}</p>
+        <p><strong>Statut :</strong> {{ sessionStatus }}</p>
+        <p *ngIf="duration !== null">
+          <strong>Durée de la vidéo :</strong>
+          {{ duration | number : "1.0-2" }} secondes
+        </p>
+      </div> -->
+      <div class="collaborators-count">
+        <span>Vous êtes {{ collaborators }} collaborateurs en ligne</span>
+      </div>
+    </div>
+
+    <section class="live-video" *ngIf="videoUrl" (error)="onVideoError()">
+      <video
+        id="liveVideo"
+        class="live-stream"
+        width="100%"
+        height="500px"
+        controls
+        autoplay
+        muted
+        [src]="videoUrl"
+        (error)="onVideoError()"
+      >
+        <!-- <source [src]="videoUrl" type="application/x-mpegURL" /> -->
+        Votre navigateur ne prend pas en charge la lecture de vidéos.
+      </video>
+      <!-- Affichage de la durée de la vidéo -->
+      <p *ngIf="duration === null">Chargement de la durée de la vidéo...</p>
+      <span class="live-badge">LIVE</span>
+      <div class="subtitle-display">{{ displayedSubtitle }}</div>
+    </section>
+
+    <div class="transcription-info">
+      <div class="audio-wave">
+        <mat-icon class="audio-icon">graphic_eq</mat-icon>
+        <div class="audio-sections">
+          <div class="section green"></div>
+          <div class="section green"></div>
+          <div class="section green"></div>
+        </div>
+      </div>
+      <textarea
+        [(ngModel)]="subtitleText"
+        (keyup)="onSubtitleChange()"
+        placeholder="Saisir le texte"
+      ></textarea>
+    
+    </div>
+  </main>
+</div>

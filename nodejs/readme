@@ -1,0 +1,117 @@
+//Commande
+-- node src/app.js
+
+/src
+├── config          // Configurations pour PostgreSQL et Redis
+├── controllers     // Logique métier (services)
+├── models          // Modèles de données (PostgreSQL)
+├── routes          // Routes de l''API REST
+├── redis           // Gestion des sessions et sous-titres en Redis
+├── middlewares     // Middlewares pour la validation, auth, etc.
+└── app.js          // Fichier principal (serveur Express et Socket.io)
+
+/Commande pour tester la base de données
+
+1. Vérification des Assignations dans segment_users
+Requête : Nombre d''utilisateurs assignés par segment
+SELECT segment_id, COUNT(user_id) AS total_users
+FROM segment_users
+GROUP BY segment_id
+ORDER BY segment_id;
+
+Objectif : Vérifiez combien d''utilisateurs sont assignés à chaque segment.
+Attendu : Chaque segment doit avoir au moins un utilisateur assigné après redistribution.
+
+Requête : Segments assignés à chaque utilisateur
+SELECT user_id, COUNT(segment_id) AS total_segments
+FROM segment_users
+GROUP BY user_id
+ORDER BY user_id;
+
+Objectif : Vérifiez combien de segments sont assignés à chaque utilisateur.
+Attendu : Une répartition équitable des segments entre les utilisateurs après redistribution.
+
+2. Vérification des Statuts dans video_segments
+Requête : Vérifiez les statuts des segments pour une session
+SELECT segment_id, status
+FROM video_segments
+WHERE session_id = 8
+ORDER BY segment_id;
+
+Objectif : Vérifiez que les segments assignés à des utilisateurs sont en in_progress.
+Attendu : Tous les segments assignés doivent être en in_progress. Les segments non assignés doivent rester available.
+
+Requête : Compter les statuts des segments pour une session
+SELECT status, COUNT(*) AS total_segments
+FROM video_segments
+WHERE session_id = 8
+GROUP BY status;
+
+Objectif : Comptez combien de segments sont en in_progress et combien sont available.
+Attendu : Une correspondance avec les assignations dans segment_users. 
+
+3. Vérification des Données Chronologiques
+Requête : Trier les assignations par utilisateur et par segment
+SELECT *
+FROM segment_users
+WHERE segment_id IN (
+    SELECT segment_id
+    FROM video_segments
+    WHERE session_id = 8
+)
+ORDER BY assigned_at;
+
+Objectif : Vérifiez l''ordre chronologique des assignations pour une session donnée.
+Attendu : Les assignations les plus récentes doivent apparaître en dernier.
+
+4. Validation de la Redistribution
+Requête : Liste complète des assignations après redistribution 
+SELECT segment_id, user_id, assigned_at
+FROM segment_users
+WHERE segment_id IN (
+    SELECT segment_id
+    FROM video_segments
+    WHERE session_id = 8
+)
+ORDER BY segment_id, assigned_at;
+
+Objectif : Vérifiez que chaque segment est redistribué équitablement entre les utilisateurs.
+Attendu : Les utilisateurs doivent être distribués de manière uniforme parmi les segments.
+
+5. Vérification des Assignations Non Doublées
+Requête : Vérifiez s''il existe des doublons d''assignation
+SELECT segment_id, user_id, COUNT(*)
+FROM segment_users
+GROUP BY segment_id, user_id
+HAVING COUNT(*) > 1;
+
+Objectif : Assurez-vous qu''aucun utilisateur n''est assigné deux fois au même segment.
+Attendu : Cette requête ne doit retourner aucune ligne.
+
+6. Analyse de la Répartition Totale
+Requête : Vérifiez la répartition totale des segments par utilisateur
+SELECT user_id, segment_id
+FROM segment_users
+WHERE segment_id IN (
+    SELECT segment_id
+    FROM video_segments
+    WHERE session_id = 8
+)
+ORDER BY user_id, segment_id;
+
+Objectif : Assurez-vous que chaque utilisateur est bien assigné aux segments redistribués.
+Attendu : Une répartition logique et cohérente entre les utilisateurs.
+
+7. Validation des Segments Non Assignés
+Requête : Vérifiez les segments non assignés
+SELECT *
+FROM video_segments
+WHERE session_id = 8
+  AND segment_id NOT IN (
+    SELECT segment_id
+    FROM segment_users
+  );
+
+
+Objectif : Identifier les segments qui ne sont pas encore assignés après redistribution.
+Attendu : Si tous les segments ont été redistribués, cette requête ne doit retourner aucune ligne.
