@@ -21,12 +21,14 @@ export class DashboardComponent implements OnInit, OnDestroy {
   isLoading = true;
   subtitleText = '';
   displayedSubtitle = '';
-  userId = ''; // Identifiant utilisateur récupéré dynamiquement
+  userId: number = 0; // Identifiant utilisateur récupéré dynamiquement
   videoUrl = ''; // URL de la vidéo récupérée dynamiquement
-  sessionId: number = 6; // ID de la session à afficher
+  sessionId: number = 12; // ID de la session à afficher
   segments: any[] = [];
+  username: string = '';
   collaborators: number = 1; // Nombre de collaborateurs en ligne
   user: any;
+  users: string[] = [];
   sessionName: string = '';
   sessionDescription: string = '';
   sessionStatus: string = '';
@@ -83,10 +85,33 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.loadSessionDetails();
     this.connectToSocket();
     this.loadSessionInfo();
+    this.authService.getUserSession().subscribe((user) => {
+      this.username = user.username.trim();
+      this.userId = Number(user.user_id);
+
+      // Rejoindre la session via Socket.IO
+      this.socketService.joinSession(
+        this.sessionId,
+        this.username,
+        this.userId
+      );
+
+      // Écouter les mises à jour des utilisateurs connectés
+      this.socketService.getUsers().subscribe((users) => {
+        this.users = users;
+        console.log('Utilisateurs connectés à la session :', this.users);
+      });
+    });
     // const videoElement = document.getElementById('liveVideo') as HTMLVideoElement;
     // videoElement.addEventListener('timeupdate', this.updateSubtitleDisplay.bind(this));
-  }
 
+    // this.socketService.onSegmentAssigned((segment) => {
+    //   console.log('Segment assigné :', segment);
+    //   if (segment) {
+    //     this.segments.push(segment);
+    //   }
+    // });
+  }
   // Chargement des informations utilisateur
   loadUserSession(): void {
     this.authService.getUserSession().subscribe(
@@ -298,21 +323,51 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   // Connexion au socket pour recevoir les mises à jour
+  // connectToSocket(): void {
+  //   this.socketService.joinVideoSession({
+  //     userId: this.userId,
+  //     userName: this.user?.username || 'Collaborateur',
+  //     videoId: this.videoUrl,
+  //   });
+
+  //   // Recevoir les mises à jour des segments
+  //   this.socketService.onSegmentsUpdated().subscribe((segments) => {
+  //     console.log('Segments mis à jour :', segments);
+  //     this.segments = segments;
+  //   });
+  //   // Recevoir les mises à jour des sous-titres
+  //   this.socketService.onSubtitleUpdate().subscribe((subtitle) => {
+  //     if (subtitle.videoId === this.videoUrl) {
+  //       this.displayedSubtitle = subtitle.text;
+  //     }
+  //   });
+
+  //   // Gestion des utilisateurs connectés
+  //   this.socketService.onUserJoined().subscribe((user) => {
+  //     this.collaborators += 1;
+  //     console.log(`${user.userName} a rejoint la session.`);
+  //   });
+
+  //   this.socketService.onUserLeft().subscribe((user) => {
+  //     this.collaborators -= 1;
+  //     console.log(`${user.userName} a quitté la session.`);
+  //   });
+  // }
   connectToSocket(): void {
-    this.socketService.joinVideoSession({
-      userId: this.userId,
-      userName: this.user?.username || 'Collaborateur',
-      videoId: this.videoUrl,
+    // Émettre l'événement 'join-session' à Socket.IO
+    // this.socketService.joinVideoSession({
+    //   session_id: this.sessionId,
+    //   user_id: Number(this.userId),
+    //   userName: this.user?.username || 'Collaborateur',
+    // });
+
+    console.log('Rejoint la session via Socket.IO :', {
+      session_id: this.sessionId,
+      user_id: this.userId,
+      username: this.user?.username,
     });
 
-    // Recevoir les mises à jour des sous-titres
-    this.socketService.onSubtitleUpdate().subscribe((subtitle) => {
-      if (subtitle.videoId === this.videoUrl) {
-        this.displayedSubtitle = subtitle.text;
-      }
-    });
-
-    // Gestion des utilisateurs connectés
+    // Écouter les événements du serveur
     this.socketService.onUserJoined().subscribe((user) => {
       this.collaborators += 1;
       console.log(`${user.userName} a rejoint la session.`);

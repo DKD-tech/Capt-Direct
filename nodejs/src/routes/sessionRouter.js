@@ -50,10 +50,11 @@ const {
   storeVideoDurationController,
   getVideoDuration,
   startStreaming,
+  handleUserDisconnection,
+  redistributeSegments,
 } = require("../controllers/stc/videoSegmentController");
 const {
-  assignDynamicSegment,
-  handleUserDisconnection,
+  assignSegmentsToUsers,
 } = require("../controllers/stc/assignSegmentController");
 const {
   addSubtitle,
@@ -65,7 +66,8 @@ const sessionRouter = express.Router();
 
 sessionRouter.post("/create-session", createSessionController);
 sessionRouter.post("/create-segment", createVideoSegmentController);
-sessionRouter.post("/assign-user", assignDynamicSegment);
+sessionRouter.post("/assign-user", redistributeSegments);
+sessionRouter.post("/assign-user-seg", assignSegmentsToUsers);
 sessionRouter.post("/disconnect-user", handleUserDisconnection);
 sessionRouter.post("/add-subtitle", addSubtitle);
 sessionRouter.get("/get-subtitles/:segment_id", getSubtitlesBySegment);
@@ -77,25 +79,15 @@ sessionRouter.post("/store-duration/:sessionId", storeVideoDurationController);
 sessionRouter.post("/get-duration/:sessionId", getVideoDuration);
 sessionRouter.post("/stream/:sessionId", startStreaming);
 
-// Récupérer les segments assignés avec URLs HLS
-sessionRouter.get("/assigned-segments/:user_id", async (req, res) => {
-  const { user_id } = req.params;
+sessionRouter.get("/connected-users/:session_id", async (req, res) => {
+  const { session_id } = req.params;
 
   try {
-    const assignments = await SegmentUserModel.findAssignmentsByUser(user_id);
-
-    const segmentsWithHLS = assignments.map((assignment) => ({
-      ...assignment,
-      hls_url: `/hls/session-${assignment.session_id}/playlist-${assignment.segment_id}.m3u8`,
-    }));
-
-    res.status(200).json({
-      message: "Segments assignés récupérés avec succès.",
-      segments: segmentsWithHLS,
-    });
+    const connectedUsers = await findConnectedUsersRedis(session_id);
+    res.status(200).json({ connectedUsers });
   } catch (error) {
     console.error(
-      "Erreur lors de la récupération des segments assignés :",
+      "Erreur lors de la récupération des utilisateurs connectés :",
       error
     );
     res.status(500).json({ message: "Erreur serveur." });

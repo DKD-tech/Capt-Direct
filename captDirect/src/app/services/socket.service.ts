@@ -10,15 +10,31 @@ export class SocketService {
   constructor(private socket: Socket) {}
 
   // Méthodes pour envoyer des événements
-  joinVideoSession(data: {
-    userId: string;
-    userName: string;
-    videoId: string;
-  }) {
-    this.socket.emit('joinVideoSession', data);
-  }
+  // joinVideoSession(data: {
+  //   session_id: number;
+  //   user_id: number;
+  //   userName: string;
+  // }) {
+  //   this.socket.emit('join-session', data);
+  // }
 
-  leaveVideoSession(data: { userId: string; videoId: string }) {
+  // Rejoindre une session
+  joinSession(session_id: number, username: string, user_id: number): void {
+    this.socket.emit('join-session', { session_id, username, user_id });
+  }
+  // onSegmentAssigned(callback: (segment: any) => void) {
+  //   this.socket.on('segment-assigned', callback);
+  // }
+
+  // Recevoir les utilisateurs connectés
+  getUsers(): Observable<string[]> {
+    return new Observable((observer) => {
+      this.socket.on('update-users', (users: string[]) => {
+        observer.next(users);
+      });
+    });
+  }
+  leaveVideoSession(data: { userId: number; videoId: string }) {
     this.socket.emit('leaveVideoSession', data);
   }
 
@@ -58,6 +74,11 @@ export class SocketService {
   }> {
     return this.socket.fromEvent('updateSubtitle');
   }
+
+  onSegmentsUpdated(): Observable<any[]> {
+    return this.socket.fromEvent<any[]>('updateSegments');
+  }
+
   onUserJoined(): Observable<{ userId: string; userName: string }> {
     return this.socket.fromEvent('userJoined');
   }

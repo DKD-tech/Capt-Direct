@@ -1,5 +1,6 @@
 const pool = require("../config/db");
 const Model = require("./Model");
+const { client: redisClient } = require("../redis/index");
 
 class SegmentUserModel extends Model {
   constructor() {
@@ -87,14 +88,17 @@ class SegmentUserModel extends Model {
     await pool.query(query, [user_id]);
   }
   async findConnectedUsers(session_id) {
-    const query = `
-      SELECT DISTINCT su.user_id
-      FROM segment_users su
-      JOIN video_segments vs ON su.segment_id = vs.segment_id
-      WHERE vs.session_id = $1
-    `;
-    const result = await pool.query(query, [session_id]);
-    return result.rows;
+    // const query = `
+    //   SELECT DISTINCT su.user_id
+    //   FROM segment_users su
+    //   JOIN video_segments vs ON su.segment_id = vs.segment_id
+    //   WHERE vs.session_id = $1
+    // `;
+    // const result = await pool.query(query, [session_id]);
+    // return result.rows;
+    const redisKey = `session:${session_id}:users`;
+    const connectedUsers = await client.sMembers(redisKey); // Récupérer les utilisateurs de Redis
+    return connectedUsers.map((user_id) => ({ user_id }));
   }
   async isUserAssignedToSegment(user_id, segment_id) {
     const query = `

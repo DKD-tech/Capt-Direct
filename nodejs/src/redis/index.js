@@ -38,6 +38,15 @@ async function getAsync(key) {
   }
 }
 
+async function lRangeAsync(key, start, stop) {
+  try {
+    return await client.lRange(key, start, stop);
+  } catch (error) {
+    console.error("Erreur lors de l'utilisation de lRange dans Redis:", error);
+    throw error;
+  }
+}
+
 async function setSession(userId, token) {
   if (!userId) throw new Error("userId is required");
   if (!token) throw new Error("token is required");
@@ -88,4 +97,5 @@ module.exports = {
   deleteSession,
   getAsync,
   setAsync,
+  lRangeAsync,
 };

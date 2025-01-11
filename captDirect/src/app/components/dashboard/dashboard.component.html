@@ -35,6 +35,9 @@
       </div> -->
       <div class="collaborators-count">
         <span>Vous êtes {{ collaborators }} collaborateurs en ligne</span>
+        <ul>
+          <li *ngFor="let user of users">{{ user }}</li>
+        </ul>
       </div>
     </div>
 

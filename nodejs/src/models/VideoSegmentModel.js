@@ -18,6 +18,7 @@ class VideoSegmentModel extends Model {
   }
 
   async markSegmentInProgress(segment_id) {
+    console.log("Mise à jour du segment :", segment_id);
     const query = `
     UPDATE ${this.tableName}
     SET status = 'in_progress'
@@ -25,6 +26,7 @@ class VideoSegmentModel extends Model {
     RETURNING *
     `;
     const result = await pool.query(query, [segment_id]);
+    console.log("Résultat de la mise à jour :", result.rows[0]);
     return result.rows[0];
   }
   // async markSegmentInProgress(segment_id) {

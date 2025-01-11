@@ -1,5 +1,5 @@
 // const VideoSegmentModel = require("../../models/VideoSegmentModel");
-// const SegmentUserModel = require("../../models/SegmentUserModel");
+const SegmentUserModel = require("../../models/SegmentUserModel");
 
 // async function createVideoSegmentController(req, res) {
 //   // const { session_id, start_time, end_time, status } = req.body;
@@ -229,7 +229,9 @@ const {
   convertSecondsToTime,
   convertTimeToSeconds,
 } = require("../../utils/timeUtils");
-
+const { getConnectedUsers } = require("../../utils/socketUtils");
+const client = require("../../redis/index");
+const { assignSegmentsToUsers } = require("./assignSegmentController");
 /**
  *
  * @param {Object} req
@@ -237,83 +239,112 @@ const {
  * @returns {Promise}
  */
 
-async function createVideoSegmentController(req, res) {
-  const { session_id } = req.body;
+// async function createVideoSegmentController(req, res) {
+//   const { session_id } = req.body;
 
-  if (!session_id) {
-    return res.status(400).json({ message: "Champs obligatoires manquants" });
-  }
+//   if (!session_id) {
+//     return res.status(400).json({ message: "Champs obligatoires manquants" });
+//   }
 
-  try {
-    // // Récupérer la durée de la vidéo depuis Redis
-    // const redisKey = `session:${session_id}:video_duration`;
-    // const duration = await Redis.get(redisKey);
-    // Récupérer la durée depuis Redis
-    const redisKey = `video:duration:${session_id}`;
-    const duration = await getAsync(redisKey);
+//   try {
+//     // // Récupérer la durée de la vidéo depuis Redis
+//     // const redisKey = `session:${session_id}:video_duration`;
+//     // const duration = await Redis.get(redisKey);
+//     // Récupérer la durée depuis Redis
+//     const redisKey = `video:duration:${session_id}`;
+//     const duration = await getAsync(redisKey);
 
-    if (!duration) {
-      return res
-        .status(400)
-        .json({ message: "Durée non trouvée pour cette session." });
-    }
+//     if (!duration) {
+//       return res
+//         .status(400)
+//         .json({ message: "Durée non trouvée pour cette session." });
+//     }
 
-    // if (!duration) {
-    //   return res.status(400).json({
-    //     message:
-    //       "Durée de la vidéo introuvable. Veuillez vérifier que la durée est enregistrée.",
-    //   });
-    // }
+//     // if (!duration) {
+//     //   return res.status(400).json({
+//     //     message:
+//     //       "Durée de la vidéo introuvable. Veuillez vérifier que la durée est enregistrée.",
+//     //   });
+//     // }
 
-    // Récupérer les utilisateurs connectés à la session
-    const usersInSession = await SegmentUserModel.findUsersBySessionId(
-      session_id
-    );
+//     // Récupérer les utilisateurs connectés à la session
+//     const usersInSession = await SegmentUserModel.findConnectedUsers(
+//       session_id
+//     );
 
-    if (!usersInSession || usersInSession.length < 2) {
-      return res.status(400).json({
-        message: "Moins de deux utilisateurs connectés pour cette session.",
-      });
-    }
-    const segmentDuration = 60; // Durée d'un segment en secondes
-    const numberOfSegments = Math.ceil(duration / segmentDuration);
+//     if (!usersInSession || usersInSession.length < 2) {
+//       return res.status(400).json({
+//         message: "Moins de deux utilisateurs connectés pour cette session.",
+//       });
+//     }
 
-    const segments = [];
-    for (let i = 0; i < numberOfSegments; i++) {
-      const start_time = convertSecondsToTime(i * segmentDuration);
-      const end_time = convertSecondsToTime(
-        Math.min((i + 1) * segmentDuration, duration)
-      );
-      segments.push({ session_id, start_time, end_time });
-    }
+//     // la durée des segments
+//     const segmentDuration = 10; // Durée d'un segment en secondes
+//     const numberOfSegments = Math.ceil(duration / segmentDuration);
 
-    const createdSegments = await Promise.all(
-      segments.map(({ session_id, start_time, end_time }) =>
-        VideoSegmentModel.insert({
-          session_id,
-          start_time,
-          end_time,
-          status: "available",
-          created_at: new Date(),
-        })
-      )
-    );
+//     // Générer les segments
+//     const segments = [];
+//     for (let i = 0; i < numberOfSegments; i++) {
+//       const start_time = i * segmentDuration;
+//       const end_time = Math.min((i + 1) * segmentDuration, duration);
+//       segments.push({
+//         session_id,
+//         start_time: convertSecondsToTime(start_time),
+//         end_time: convertSecondsToTime(end_time),
+//         status: "available",
+//         created_at: new Date(),
+//       });
+//     }
 
-    // Assigner les segments
-    const assignments = await assignSegmentsToUsers(
-      session_id,
-      createdSegments
-    );
+//     // Insérer les segments dans la base de données
+//     const createdSegments = await Promise.all(
+//       segments.map((segment) => VideoSegmentModel.insert(segment))
+//     );
+//     // const createdSegments = await Promise.all(
+//     //   segments.map(({ session_id, start_time, end_time }) =>
+//     //     VideoSegmentModel.insert({
+//     //       session_id,
+//     //       start_time,
+//     //       end_time,
+//     //       status: "available",
+//     //       created_at: new Date(),
+//     //     })
+//     //   )
+//     // );
 
-    return res.status(201).json({
-      message: "Segments vidéo créés et assignés avec succès.",
-      segments: createdSegments,
-    });
-  } catch (error) {
-    console.error("Erreur lors de la création des segments :", error);
-    return res.status(500).json({ message: "Erreur serveur" });
-  }
-}
+//     // Assigner les segments aux uutilisateurs
+//     const totalUsers = usersInSession.length;
+//     // const assignments = await assignSegmentsToUsers(
+//     //   session_id,
+//     //   createdSegments
+//     // );
+//     const assignments = createdSegments.map((segment, index) => {
+//       const userId = usersInSession[index % totalUsers].user_id; // Répartition équitable
+//       return {
+//         user_id: userId,
+//         segment_id: segment.segment_id,
+//         assigned_at: new Date(),
+//       };
+//     });
+
+//     // Insérer les assignations dans la base de données
+//     for (const assignment of assignments) {
+//       await SegmentUserModel.insert(assignment);
+//       await VideoSegmentModel.updateOneById(assignment.segment_id, {
+//         status: "in_progress",
+//       });
+//     }
+
+//     return res.status(201).json({
+//       message: "Segments vidéo créés et assignés avec succès.",
+//       segments: createdSegments,
+//       assignments,
+//     });
+//   } catch (error) {
+//     console.error("Erreur lors de la création des segments :", error);
+//     return res.status(500).json({ message: "Erreur serveur" });
+//   }
+// }
 
 // Contrôleur pour sauvegarder la durée de la vidéo
 // async function saveVideoDuration(req, res) {
@@ -340,6 +371,379 @@ async function createVideoSegmentController(req, res) {
 //     res.status(500).json({ message: "Erreur serveur." });
 //   }
 // }
+
+// async function createVideoSegmentController(req, res) {
+//   const { session_id } = req.body;
+
+//   if (!session_id) {
+//     return res.status(400).json({ message: "Champs obligatoires manquants" });
+//   }
+
+//   try {
+//     console.log(
+//       "Début de la création des segments pour la session :",
+//       session_id
+//     );
+//     // // Récupérer les utilisateurs connectés à la session
+//     // const usersInSession = await SegmentUserModel.findConnectedUsers(
+//     //   session_id
+//     // );
+//     // Récupérer les utilisateurs connectés via Socket.IO
+//     // const usersInSession = await getConnectedUsers(session_id);
+
+//     // if (!usersInSession || usersInSession.length === 0) {
+//     //   return res.status(400).json({
+//     //     message: "Aucun utilisateur connecté pour cette session.",
+//     //   });
+//     // }
+
+//     // console.log("Utilisateurs connectés :", usersInSession);
+
+//     // Vérifier si des segments existent déjà dans Redis
+//     // const redisKey = `session:${session_id}:segments`;
+//     // const existingSegments = (await client.lRangeAsync(redisKey, 0, -1)) || [];
+
+//     // Vérifier si des segments existent déjà pour cette session
+//     const existingSegments = await VideoSegmentModel.findManyBy({ session_id });
+//     console.log("Segments existants :", existingSegments);
+
+//     if (existingSegments && existingSegments.length > 0) {
+//       console.log("Les segments existent déjà. Aucune assignation requise.");
+//       return res.status(200).json({
+//         message: "Les segments existent déjà pour cette session.",
+//         segments: existingSegments,
+//       });
+//     }
+
+//     // Récupérer la durée de la vidéo depuis Redis
+//     const durationKey = `video:duration:${session_id}`;
+//     const duration = await getAsync(durationKey);
+//     console.log("Durée de la vidéo :", duration);
+
+//     if (!duration) {
+//       return res
+//         .status(400)
+//         .json({ message: "Durée non trouvée pour cette session." });
+//     }
+
+//     const segmentDuration = 10; // Durée d'un segment en secondes
+//     const numberOfSegments = Math.ceil(duration / segmentDuration);
+
+//     // Générer les segments et les assigner dynamiquement
+//     const segments = [];
+//     // const totalUsers = usersInSession.length;
+
+//     for (let i = 0; i < numberOfSegments; i++) {
+//       const start_time = i * segmentDuration;
+//       const end_time = Math.min((i + 1) * segmentDuration, duration);
+
+//       segments.push({
+//         session_id,
+//         start_time: convertSecondsToTime(start_time),
+//         end_time: convertSecondsToTime(end_time),
+//         status: "available",
+//         created_at: new Date(),
+//       });
+//     }
+
+//     // Stocker les segments dans Redis
+//     // const segmentKey = `session:${session_id}:segments`;
+//     // const multi = client.multi();
+//     // segments.forEach((segment) =>
+//     //   pipeline.rPush(redisKey, JSON.stringify(segment))
+//     // );
+//     // multi.expire(redisKey, 3600); // TTL : 1 heure
+//     // await multi.exec();
+//     console.log("Segments générés :", segments);
+//     // // Insérer les segments dans la base de données
+//     const createdSegments = await Promise.all(
+//       segments.map((segment) => VideoSegmentModel.insert(segment))
+//     );
+
+//     console.log("Segments créés :", createdSegments);
+
+//     // Assigner les segments aux utilisateurs
+//     console.log("Appel de assignSegmentsToUsers...");
+//     const assignments = await assignSegmentsToUsers(
+//       session_id,
+//       createdSegments
+//     );
+
+//     console.log("Assignations effectuées :", assignments);
+//     // Assignation cyclique des utilisateurs
+//     // const assigned_to = usersInSession[i % totalUsers].user_id;
+//     // // Assigner les segments aux utilisateurs
+//     // const assignments = createdSegments.map((segment, index) => {
+//     //   const userId = usersInSession[index % totalUsers].user_id; // Répartition équitable
+//     //   return {
+//     //     user_id: userId,
+//     //     segment_id: segment.segment_id,
+//     //     assigned_at: new Date(),
+//     //   };
+//     // });
+
+//     // // Insérer les assignations dans la base de données et mettre à jour les segments
+//     // await Promise.all(
+//     //   assignments.map(async (assignment) => {
+//     //     await SegmentUserModel.assignUserToSegment(
+//     //       assignment.user_id,
+//     //       assignment.segment_id
+//     //     );
+//     //     await VideoSegmentModel.updateOneById(assignment.segment_id, {
+//     //       status: "in_progress",
+//     //     });
+//     //   })
+//     // );
+
+//     return res.status(201).json({
+//       message: "Segments créés et assignés avec succès.",
+//       segments: createdSegments,
+//       assignments,
+//     });
+//   } catch (error) {
+//     console.error(
+//       "Erreur lors de la segmentation et de l'assignation :",
+//       error
+//     );
+//     return res.status(500).json({ message: "Erreur serveur" });
+//   }
+// }
+// async function createVideoSegmentController(req, res) {
+//   const { session_id } = req.body;
+
+//   if (!session_id) {
+//     return res.status(400).json({ message: "Champs obligatoires manquants" });
+//   }
+
+//   try {
+//     console.log(
+//       "Début de la création des segments pour la session :",
+//       session_id
+//     );
+
+//     // Vérifier si des segments existent déjà pour cette session
+//     const existingSegments = await VideoSegmentModel.findManyBy({ session_id });
+//     console.log("Segments existants :", existingSegments);
+
+//     if (existingSegments && existingSegments.length > 0) {
+//       console.log("Les segments existent déjà. Aucune assignation requise.");
+//       return res.status(200).json({
+//         message: "Les segments existent déjà pour cette session.",
+//         segments: existingSegments,
+//       });
+//     }
+
+//     // Récupérer la durée de la vidéo depuis Redis
+//     const durationKey = `video:duration:${session_id}`;
+//     const duration = await getAsync(durationKey);
+//     console.log("Durée de la vidéo :", duration);
+
+//     if (!duration) {
+//       return res
+//         .status(400)
+//         .json({ message: "Durée non trouvée pour cette session." });
+//     }
+
+//     // Générer les segments
+//     const segmentDuration = 10; // Durée d'un segment en secondes
+//     const numberOfSegments = Math.ceil(duration / segmentDuration);
+//     const segments = [];
+
+//     for (let i = 0; i < numberOfSegments; i++) {
+//       const start_time = i * segmentDuration;
+//       const end_time = Math.min((i + 1) * segmentDuration, duration);
+
+//       segments.push({
+//         session_id,
+//         start_time: convertSecondsToTime(start_time),
+//         end_time: convertSecondsToTime(end_time),
+//         status: "available",
+//         created_at: new Date(),
+//       });
+//     }
+
+//     console.log("Segments générés :", segments);
+
+//     // Insérer les segments dans la base de données
+//     const createdSegments = await Promise.all(
+//       segments.map((segment) => VideoSegmentModel.insert(segment))
+//     );
+//     console.log("Segments créés :", createdSegments);
+
+//     // Assigner les segments aux utilisateurs
+//     console.log("Appel de assignSegmentsToUsers...");
+//     const assignments = await assignSegmentsToUsers(
+//       session_id,
+//       createdSegments
+//     );
+//     console.log("Assignations effectuées :", assignments);
+
+//     return res.status(201).json({
+//       message: "Segments créés et assignés avec succès.",
+//       segments: createdSegments,
+//       assignments,
+//     });
+//   } catch (error) {
+//     console.error(
+//       "Erreur lors de la segmentation et de l'assignation :",
+//       error
+//     );
+//     return res.status(500).json({ message: "Erreur serveur" });
+//   }
+// }
+
+async function createVideoSegmentController(req, res) {
+  const { session_id } = req.body;
+
+  if (!session_id) {
+    return res.status(400).json({ message: "Champs obligatoires manquants." });
+  }
+
+  try {
+    console.log(
+      "Début de la création des segments pour la session :",
+      session_id
+    );
+
+    // Vérifier si des segments existent déjà pour cette session
+    const existingSegments = await VideoSegmentModel.findManyBy({ session_id });
+    console.log("Segments existants :", existingSegments);
+
+    if (existingSegments && existingSegments.length > 0) {
+      console.log(
+        "Les segments existent déjà. Vérification des assignations..."
+      );
+      const availableSegments = existingSegments.filter(
+        (segment) => segment.status === "available"
+      );
+
+      if (availableSegments.length > 0) {
+        console.log("Assignation des segments disponibles...");
+        const assignments = await assignSegmentsToUsers(
+          session_id,
+          availableSegments
+        );
+        return res.status(201).json({
+          message: "Segments existants assignés avec succès.",
+          segments: availableSegments,
+          assignments,
+        });
+      }
+
+      return res.status(200).json({
+        message: "Aucun segment disponible à assigner.",
+        segments: existingSegments,
+      });
+    }
+
+    // Récupérer la durée de la vidéo depuis Redis
+    const durationKey = `video:duration:${session_id}`;
+    const duration = await getAsync(durationKey);
+    console.log("Durée de la vidéo :", duration);
+
+    if (!duration) {
+      return res
+        .status(400)
+        .json({ message: "Durée non trouvée pour cette session." });
+    }
+
+    // Générer les segments
+    const segmentDuration = 10; // Durée d'un segment en secondes
+    const numberOfSegments = Math.ceil(duration / segmentDuration);
+    const segments = [];
+
+    for (let i = 0; i < numberOfSegments; i++) {
+      const start_time = i * segmentDuration;
+      const end_time = Math.min((i + 1) * segmentDuration, duration);
+
+      segments.push({
+        session_id,
+        start_time: convertSecondsToTime(start_time),
+        end_time: convertSecondsToTime(end_time),
+        status: "available",
+        created_at: new Date(),
+      });
+    }
+
+    console.log("Segments générés :", segments);
+
+    // Insérer les segments dans la base de données
+    const createdSegments = await Promise.all(
+      segments.map((segment) => VideoSegmentModel.insert(segment))
+    );
+    console.log("Segments créés :", createdSegments);
+
+    // Assigner les segments aux utilisateurs
+    console.log("Appel de assignSegmentsToUsers...");
+    const assignments = await assignSegmentsToUsers(
+      session_id,
+      createdSegments
+    );
+    console.log("Assignations effectuées :", assignments);
+
+    return res.status(201).json({
+      message: "Segments créés et assignés avec succès.",
+      segments: createdSegments,
+      assignments,
+    });
+  } catch (error) {
+    console.error(
+      "Erreur lors de la segmentation et de l'assignation :",
+      error
+    );
+    return res.status(500).json({ message: "Erreur serveur." });
+  }
+}
+
+// async function redistributeSegments(session_id) {
+//   try {
+//     // Étape 1 : Récupérer les utilisateurs connectés
+//     const connectedUsers = await SegmentUserModel.findConnectedUsers(
+//       session_id
+//     );
+//     if (!connectedUsers || connectedUsers.length === 0) {
+//       console.log("Aucun utilisateur connecté, aucun segment redistribué.");
+//       return { message: "Aucun utilisateur connecté." };
+//     }
+
+//     // Étape 2 : Récupérer les segments disponibles dans Redis
+//     const redisKey = `session:${session_id}:segments`;
+//     const segments = await client.lRange(redisKey, 0, -1);
+//     const availableSegments = segments
+//       .map(JSON.parse)
+//       .filter((segment) => segment.status === "available");
+
+//     if (availableSegments.length === 0) {
+//       console.log("Aucun segment à redistribuer.");
+//       return { message: "Aucun segment à redistribuer." };
+//     }
+
+//     // Étape 3 : Redistribution des segments disponibles
+//     const totalUsers = connectedUsers.length;
+//     availableSegments.forEach((segment, index) => {
+//       const userToAssign = connectedUsers[index % totalUsers].user_id;
+//       segment.assigned_to = userToAssign;
+//       segment.status = "in_progress"; // Mettre le segment en traitement
+//     });
+
+//     // Étape 4 : Mise à jour des segments dans Redis
+//     const pipeline = client.pipeline();
+//     await client.del(redisKey); // Supprimer les segments existants
+//     availableSegments.forEach((segment) =>
+//       pipeline.rPush(redisKey, JSON.stringify(segment))
+//     );
+//     await pipeline.exec();
+
+//     return {
+//       message: "Redistribution effectuée avec succès.",
+//       redistributedSegments: availableSegments,
+//     };
+//   } catch (error) {
+//     console.error("Erreur lors de la redistribution :", error);
+//     throw new Error("Erreur lors de la redistribution des segments.");
+//   }
+// }
+
 async function storeVideoDurationController(req, res) {
   const { sessionId } = req.params;
   const { duration } = req.body;
@@ -392,32 +796,32 @@ async function getVideoDuration(req, res) {
   }
 }
 
-async function requestHlsGeneration(session_id, video_url, segments) {
-  try {
-    // Vérification des données avant l'appel
-    console.log("Données envoyées au service HLS :", {
-      session_id,
-      video_url,
-      segments,
-    });
+// async function requestHlsGeneration(session_id, video_url, segments) {
+//   try {
+//     // Vérification des données avant l'appel
+//     console.log("Données envoyées au service HLS :", {
+//       session_id,
+//       video_url,
+//       segments,
+//     });
 
-    const HLS_SERVICE_URL =
-      process.env.HLS_SERVICE_URL || "http://hls_service:5000";
-    const response = await axios.post(`${HLS_SERVICE_URL}/generate-hls`, {
-      session_id,
-      video_url,
-      segments,
-    });
-    console.log("Réponse du service HLS :", response.data);
-    return response.data;
-  } catch (error) {
-    console.error(
-      "Erreur lors de l'appel au service HLS :",
-      error.response?.data || error.message
-    );
-    throw new Error("Impossible de générer les segments HLS");
-  }
-}
+//     const HLS_SERVICE_URL =
+//       process.env.HLS_SERVICE_URL || "http://hls_service:5000";
+//     const response = await axios.post(`${HLS_SERVICE_URL}/generate-hls`, {
+//       session_id,
+//       video_url,
+//       segments,
+//     });
+//     console.log("Réponse du service HLS :", response.data);
+//     return response.data;
+//   } catch (error) {
+//     console.error(
+//       "Erreur lors de l'appel au service HLS :",
+//       error.response?.data || error.message
+//     );
+//     throw new Error("Impossible de générer les segments HLS");
+//   }
+// }
 
 // Contrôleur pour générer des segments HLS
 async function createHlsSegmentsController(req, res) {
@@ -495,6 +899,96 @@ async function getSegmentsWithSubtitles(req, res) {
     return res.status(500).json({ message: "Erreur serveur." });
   }
 }
+async function handleUserDisconnection(req, res) {
+  const { user_id, session_id } = req.body;
+
+  if (!user_id || !session_id) {
+    return res
+      .status(400)
+      .json({ message: "Les champs obligatoires sont manquants" });
+  }
+
+  try {
+    // Étape 1 : Récupérer les segments associés à cette session
+    const redisKey = `session:${session_id}:segments`;
+    const segments = await client.lRange(redisKey, 0, -1);
+
+    // Étape 2 : Identifier les segments à redistribuer
+    const segmentsToRedistribute = [];
+    const updatedSegments = segments.map((segment) => {
+      const parsedSegment = JSON.parse(segment);
+
+      if (parsedSegment.assigned_to === user_id) {
+        // Segments assignés à l'utilisateur déconnecté
+        if (parsedSegment.status === "in_progress") {
+          console.log(
+            `Segment ${parsedSegment.segment_id} est en cours. Non redistribué.`
+          );
+          return parsedSegment; // Les segments en cours ne sont pas modifiés
+        }
+
+        // Marquer comme disponible pour redistribution
+        parsedSegment.status = "available";
+        parsedSegment.assigned_to = null;
+        segmentsToRedistribute.push(parsedSegment);
+      }
+
+      return parsedSegment;
+    });
+
+    // Mise à jour des segments dans Redis
+    const pipeline = client.pipeline();
+    pipeline.del(redisKey); // Supprimer l'ancienne liste
+    updatedSegments.forEach((segment) =>
+      pipeline.rPush(redisKey, JSON.stringify(segment))
+    );
+    await pipeline.exec();
+
+    // Étape 3 : Redistribuer les segments disponibles
+    if (segmentsToRedistribute.length > 0) {
+      const connectedUsers = await SegmentUserModel.findConnectedUsers(
+        session_id
+      );
+
+      if (!connectedUsers || connectedUsers.length === 0) {
+        console.log(
+          "Aucun utilisateur connecté. Les segments restent disponibles."
+        );
+        return res.status(200).json({
+          message: "Aucun utilisateur connecté. Redistribution non effectuée.",
+          availableSegments: segmentsToRedistribute,
+        });
+      }
+
+      // Réassigner les segments disponibles
+      const totalUsers = connectedUsers.length;
+      segmentsToRedistribute.forEach((segment, index) => {
+        const userToAssign = connectedUsers[index % totalUsers].user_id;
+        segment.assigned_to = userToAssign;
+        segment.status = "in_progress"; // Les segments deviennent en cours
+      });
+
+      // Mise à jour Redis après redistribution
+      const pipelineRedistribution = client.pipeline();
+      segmentsToRedistribute.forEach((segment) =>
+        pipelineRedistribution.rPush(redisKey, JSON.stringify(segment))
+      );
+      await pipelineRedistribution.exec();
+
+      return res.status(200).json({
+        message: "Segments redistribués avec succès.",
+        redistributedSegments: segmentsToRedistribute,
+      });
+    }
+
+    return res.status(200).json({
+      message: "Aucun segment à redistribuer.",
+    });
+  } catch (error) {
+    console.error("Erreur lors de la gestion de la déconnexion :", error);
+    return res.status(500).json({ message: "Erreur serveur." });
+  }
+}
 
 async function addSegments(req, res) {
   const { session_id, segments } = req.body;
@@ -531,7 +1025,7 @@ async function saveSubtitlesToDB(req, res) {
   const redisKey = `segment:${segment_id}:subtitles`;
 
   try {
-    const subtitles = await redisClient.lRange(redisKey, 0, -1);
+    const subtitles = await client.lRange(redisKey, 0, -1);
 
     // Sauvegarder dans PostgreSQL
     for (const subtitle of subtitles) {
@@ -540,7 +1034,7 @@ async function saveSubtitlesToDB(req, res) {
     }
 
     // Supprimer les données de Redis
-    await redisClient.del(redisKey);
+    await client.del(redisKey);
 
     res.status(200).json({ message: "Sous-titres sauvegardés avec succès." });
   } catch (error) {
@@ -675,7 +1169,6 @@ async function startStreaming(req, res) {
 
 module.exports = {
   createVideoSegmentController,
-  requestHlsGeneration,
   createHlsSegmentsController,
   getSegmentsWithSubtitles,
   storeVideoDurationController,
@@ -684,4 +1177,5 @@ module.exports = {
   addSegments,
   saveSubtitlesToDB,
   startStreaming,
+  handleUserDisconnection,
 };
