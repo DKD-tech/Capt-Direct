@@ -104,15 +104,14 @@ io.on("connection", (socket) => {
       return;
     }
 
-    // Ajouter le socket à la room correspondant à la session
-    socket.join(`session:${session_id}`);
-    socket.data.user_id = user_id;
-    socket.data.username = username;
-
-    console.log(`${username} a rejoint la session ${session_id}`);
-
-    // Liste des utilisateurs connectés à la session
     try {
+      // Ajouter le socket à la room correspondant à la session
+      socket.join(`session:${session_id}`);
+      socket.data.user_id = user_id;
+      socket.data.username = username;
+
+      console.log(`${username} a rejoint la session ${session_id}`);
+      // Liste des utilisateurs connectés à la session
       const clientsInRoom = await io.in(`session:${session_id}`).allSockets();
       const users = [...clientsInRoom].map((socketId) => {
         const clientSocket = io.sockets.sockets.get(socketId);
@@ -232,12 +231,43 @@ io.on("connection", (socket) => {
 
   // Déconnexion de l'utilisateur
 
-  socket.on("disconnect", () => {
+  // socket.on("disconnect", () => {
+  //   const { user_id, session_id } = socket.data || {};
+  //   if (user_id && session_id) {
+  //     console.log(
+  //       `Utilisateur ${user_id} déconnecté de la session ${session_id}`
+  //     );
+  //   } else {
+  //     console.log(`Socket déconnecté sans données utilisateur : ${socket.id}`);
+  //   }
+  // });
+  socket.on("disconnect", async () => {
     const { user_id, session_id } = socket.data || {};
+
     if (user_id && session_id) {
       console.log(
         `Utilisateur ${user_id} déconnecté de la session ${session_id}`
       );
+
+      // Étape 1 : Supprimer les assignations des segments de cet utilisateur
+      const {
+        handleUserDisconnection,
+      } = require("./controllers/stc/assignSegmentController");
+      const { getConnectedUsers } = require("./utils/socketUtils");
+
+      const userSegments = await handleUserDisconnection({
+        user_id,
+        session_id,
+      });
+
+      // Étape 2 : Récupérer la liste mise à jour des utilisateurs connectés
+      const connectedUsers = await getConnectedUsers(session_id);
+
+      // Étape 3 : Émettre des événements pour informer les autres utilisateurs
+      io.to(`session:${session_id}`).emit("update-users", connectedUsers);
+      io.to(`session:${session_id}`).emit("segments-redistributed", {
+        updatedSegments: userSegments,
+      });
     } else {
       console.log(`Socket déconnecté sans données utilisateur : ${socket.id}`);
     }

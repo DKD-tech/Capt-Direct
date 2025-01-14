@@ -40,7 +40,14 @@
         </ul>
       </div>
     </div>
-
+    <section class="segments">
+      <h3>Segments assignés</h3>
+      <ul>
+        <li *ngFor="let segment of segments">
+          Segment {{ segment.segment_id }} - {{ segment.status }}
+        </li>
+      </ul>
+    </section>
     <section class="live-video" *ngIf="videoUrl" (error)="onVideoError()">
       <video
         id="liveVideo"

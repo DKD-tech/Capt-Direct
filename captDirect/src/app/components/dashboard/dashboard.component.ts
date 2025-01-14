@@ -23,7 +23,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   displayedSubtitle = '';
   userId: number = 0; // Identifiant utilisateur récupéré dynamiquement
   videoUrl = ''; // URL de la vidéo récupérée dynamiquement
-  sessionId: number = 12; // ID de la session à afficher
+  sessionId: number = 13; // ID de la session à afficher
   segments: any[] = [];
   username: string = '';
   collaborators: number = 1; // Nombre de collaborateurs en ligne
@@ -102,15 +102,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
         console.log('Utilisateurs connectés à la session :', this.users);
       });
     });
-    // const videoElement = document.getElementById('liveVideo') as HTMLVideoElement;
-    // videoElement.addEventListener('timeupdate', this.updateSubtitleDisplay.bind(this));
-
-    // this.socketService.onSegmentAssigned((segment) => {
-    //   console.log('Segment assigné :', segment);
-    //   if (segment) {
-    //     this.segments.push(segment);
-    //   }
-    // });
   }
   // Chargement des informations utilisateur
   loadUserSession(): void {
@@ -132,30 +123,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
       }
     );
   }
-
-  // Chargement des informations de la session (vidéo et segments)
-  // loadSessionDetails(): void {
-  //   // Récupérer la session par ID (session 1 par défaut)
-  //   this.sessionService.getSessionById(this.sessionId).subscribe({
-  //     next: (response: any) => {
-  //       if (response && response.video_url) {
-  //         this.videoUrl = response.video_url; // Affecter la vidéo à afficher
-
-  //         console.log('Vidéo URL récupérée:', this.videoUrl);
-  //         // Charger la durée de la vidéo après avoir défini son URL
-  //         // this.loadVideoDuration();
-  //         // this.loadSegments(); // Charger les segments après avoir récupéré la vidéo
-  //       } else {
-  //         console.error(
-  //           'URL de la vidéo introuvable dans la réponse de la session.'
-  //         );
-  //       }
-  //     },
-  //     error: (error: any) => {
-  //       console.error('Erreur lors du chargement de la session:', error);
-  //     },
-  //   });
-  // }
 
   loadSessionDetails(): void {
     this.sessionService.getSessionById(this.sessionId).subscribe({
@@ -202,69 +169,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
       },
     });
   }
-  // loadSessionDetails(): void {
-  //   this.sessionService.getSessionById(this.sessionId).subscribe({
-  //     next: (response: any) => {
-  //       if (response && response.video_url) {
-  //         this.videoUrl = `/videos/${response.video_url}`;
-  //         console.log('Vidéo URL récupérée:', this.videoUrl);
-
-  //         // Lancer le streaming en demandant au backend
-  //         this.sessionService.startStreaming(this.sessionId).subscribe({
-  //           next: () => {
-  //             console.log('Streaming démarré avec succès.');
-  //           },
-  //           error: (error) => {
-  //             console.error('Erreur lors du démarrage du streaming :', error);
-  //           },
-  //         });
-  //       } else {
-  //         console.error(
-  //           'URL de la vidéo introuvable dans la réponse de la session.'
-  //         );
-  //       }
-  //     },
-  //     error: (error: any) => {
-  //       console.error('Erreur lors du chargement de la session:', error);
-  //     },
-  //   });
-  // }
-
-  // onTimeUpdate(event: Event): void {
-  //   const videoElement = event.target as HTMLVideoElement;
-  //   const currentTime = videoElement.currentTime;
-
-  //   const currentSubtitle = this.subtitleService.getSubtitleForTime(currentTime);
-  //   if (currentSubtitle) {
-  //     this.displayedSubtitle = currentSubtitle.text;
-
-  //     // Respecter les durées minimum et maximum
-  //     const duration = currentSubtitle.endTime - currentSubtitle.startTime;
-  //     if (duration < 1) {
-  //       console.warn('Sous-titre trop court, ajustement requis');
-  //     } else if (duration > 10) {
-  //       console.warn('Sous-titre trop long, ajustement requis');
-  //     }
-  //   } else {
-  //     this.displayedSubtitle = '';
-  //   }
-  // }
-
-  // onSubtitleInput(event: Event): void {
-  //   const inputElement = event.target as HTMLTextAreaElement;
-  //   const subtitleText = inputElement.value;
-
-  //   // Obtenir le temps actuel de la vidéo
-  //   const videoElement = document.getElementById('liveVideo') as HTMLVideoElement;
-  //   const currentTime = videoElement.currentTime;
-
-  //   // Envoyer au backend via Socket.io
-  //   this.socket.emit('updateSubtitle', {
-  //     segment_id: this.currentSegmentId, // ID du segment
-  //     text: subtitleText,
-  //     time: currentTime, // Temps associé au sous-titre
-  //   });
-  // }
 
   loadSessionInfo(): void {
     this.sessionService.getSessionById(this.sessionId).subscribe({
@@ -291,20 +195,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
       },
     });
   }
-  // loadVideoDuration(): void {
-  //   this.videoService
-  //     .getVideoDuration(this.videoUrl)
-  //     .then((duration) => {
-  //       this.videoDuration = Math.floor(duration); // Durée en secondes
-  //       console.log('Durée de la vidéo (en secondes) :', this.videoDuration);
-  //     })
-  //     .catch((error) => {
-  //       console.error(
-  //         'Erreur lors de la récupération de la durée de la vidéo :',
-  //         error
-  //       );
-  //     });
-  // }
 
   // Charger les segments associés à la session
   loadSegments(): void {
@@ -322,45 +212,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     });
   }
 
-  // Connexion au socket pour recevoir les mises à jour
-  // connectToSocket(): void {
-  //   this.socketService.joinVideoSession({
-  //     userId: this.userId,
-  //     userName: this.user?.username || 'Collaborateur',
-  //     videoId: this.videoUrl,
-  //   });
-
-  //   // Recevoir les mises à jour des segments
-  //   this.socketService.onSegmentsUpdated().subscribe((segments) => {
-  //     console.log('Segments mis à jour :', segments);
-  //     this.segments = segments;
-  //   });
-  //   // Recevoir les mises à jour des sous-titres
-  //   this.socketService.onSubtitleUpdate().subscribe((subtitle) => {
-  //     if (subtitle.videoId === this.videoUrl) {
-  //       this.displayedSubtitle = subtitle.text;
-  //     }
-  //   });
-
-  //   // Gestion des utilisateurs connectés
-  //   this.socketService.onUserJoined().subscribe((user) => {
-  //     this.collaborators += 1;
-  //     console.log(`${user.userName} a rejoint la session.`);
-  //   });
-
-  //   this.socketService.onUserLeft().subscribe((user) => {
-  //     this.collaborators -= 1;
-  //     console.log(`${user.userName} a quitté la session.`);
-  //   });
-  // }
   connectToSocket(): void {
-    // Émettre l'événement 'join-session' à Socket.IO
-    // this.socketService.joinVideoSession({
-    //   session_id: this.sessionId,
-    //   user_id: Number(this.userId),
-    //   userName: this.user?.username || 'Collaborateur',
-    // });
-
     console.log('Rejoint la session via Socket.IO :', {
       session_id: this.sessionId,
       user_id: this.userId,
@@ -376,6 +228,33 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.socketService.onUserLeft().subscribe((user) => {
       this.collaborators -= 1;
       console.log(`${user.userName} a quitté la session.`);
+    });
+
+    // Abonnement aux mises à jour des utilisateurs connectés
+    this.socketService.onUsersUpdated().subscribe((users: string[]) => {
+      this.users = users; // Met à jour la liste des utilisateurs
+      console.log('Liste mise à jour des utilisateurs connectés :', this.users);
+    });
+
+    // Abonnement aux mises à jour des segments redistribués
+    this.socketService
+      .onSegmentsRedistributed()
+      .subscribe((segments: any[]) => {
+        this.segments = segments; // Met à jour la liste des segments
+        console.log('Segments redistribués reçus :', this.segments);
+      });
+    // Abonnement aux mises à jour des utilisateurs
+    this.socketService.getUsers().subscribe((users) => {
+      this.users = users;
+      console.log('Utilisateurs connectés à la session :', this.users);
+    });
+
+    // Abonnement aux mises à jour des segments redistribués
+    this.socketService.onSegmentsUpdated().subscribe((data) => {
+      console.log('Mise à jour des segments reçue :', data);
+      if (data.segments) {
+        this.segments = data.segments; // Met à jour les segments affichés
+      }
     });
   }
 
@@ -399,20 +278,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
   ngOnDestroy() {
     this.socketService.leaveVideoSession({
       userId: this.userId,
-      videoId: this.videoUrl,
+      sessionId: this.sessionId,
     });
   }
-
-  // updateSubtitleDisplay() {
-  //   const videoElement = document.getElementById('liveVideo') as HTMLVideoElement;
-  //   const currentTime = videoElement.currentTime;
-
-  //   const currentSubtitle = this.subtitleList.find(
-  //     subtitle => currentTime >= subtitle.startTime && currentTime <= subtitle.endTime
-  //   );
-
-  //   this.displayedSubtitle = currentSubtitle ? currentSubtitle.text : '';
-  // }
 
   // Déconnexion utilisateur
   onLogout() {

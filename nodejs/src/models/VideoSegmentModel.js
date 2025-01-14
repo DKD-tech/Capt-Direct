@@ -29,6 +29,35 @@ class VideoSegmentModel extends Model {
     console.log("Résultat de la mise à jour :", result.rows[0]);
     return result.rows[0];
   }
+  async updateSegmentStatus(segment_id, newStatus) {
+    console.log(
+      `Mise à jour du segment ${segment_id} avec le statut : ${newStatus}`
+    );
+    const query = `
+      UPDATE ${this.tableName}
+      SET status = $1
+      WHERE segment_id = $2
+      RETURNING *;
+    `;
+    try {
+      const result = await pool.query(query, [newStatus, segment_id]);
+
+      if (result.rowCount === 0) {
+        console.error(`Aucun segment trouvé avec l'ID ${segment_id}`);
+        return null;
+      }
+
+      console.log("Segment mis à jour avec succès :", result.rows[0]);
+      return result.rows[0];
+    } catch (error) {
+      console.error(
+        `Erreur lors de la mise à jour du statut pour le segment ${segment_id} :`,
+        error
+      );
+      throw error;
+    }
+  }
+
   // async markSegmentInProgress(segment_id) {
   //   return this.updateOneById(segment_id, { status: "in_progress" });
   // }

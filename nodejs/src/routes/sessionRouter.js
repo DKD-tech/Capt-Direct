@@ -50,11 +50,10 @@ const {
   storeVideoDurationController,
   getVideoDuration,
   startStreaming,
-  handleUserDisconnection,
-  redistributeSegments,
 } = require("../controllers/stc/videoSegmentController");
 const {
   assignSegmentsToUsers,
+  handleUserDisconnection,
 } = require("../controllers/stc/assignSegmentController");
 const {
   addSubtitle,
@@ -66,7 +65,7 @@ const sessionRouter = express.Router();
 
 sessionRouter.post("/create-session", createSessionController);
 sessionRouter.post("/create-segment", createVideoSegmentController);
-sessionRouter.post("/assign-user", redistributeSegments);
+// sessionRouter.post("/assign-user", redistributeSegments);
 sessionRouter.post("/assign-user-seg", assignSegmentsToUsers);
 sessionRouter.post("/disconnect-user", handleUserDisconnection);
 sessionRouter.post("/add-subtitle", addSubtitle);
