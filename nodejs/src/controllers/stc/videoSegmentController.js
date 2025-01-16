@@ -876,9 +876,19 @@ async function getSegmentsWithSubtitles(req, res) {
     // Récupérer les segments associés à la session
     const segments = await VideoSegmentModel.findManyBy({ session_id });
 
+    // Trier les segments par start_time
+    const sortedSegments = segments.sort((a, b) => {
+      const timeToSeconds = (time) => {
+        const [hours, minutes, seconds] = time.split(":").map(Number);
+        return hours * 3600 + minutes * 60 + seconds;
+      };
+
+      return timeToSeconds(a.start_time) - timeToSeconds(b.start_time);
+    });
+
     // Récupérer les sous-titres associés à chaque segment
     const segmentsWithSubtitles = await Promise.all(
-      segments.map(async (segment) => {
+      sortedSegments.map(async (segment) => {
         console.log(`Fetching subtitles for segment ID: ${segment.segment_id}`);
         const subtitles = await SubtitlesModel.findManyBy({
           segment_id: segment.segment_id,

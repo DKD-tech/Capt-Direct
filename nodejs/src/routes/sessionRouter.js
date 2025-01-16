@@ -54,6 +54,7 @@ const {
 const {
   assignSegmentsToUsers,
   handleUserDisconnection,
+  redistributeSegments,
 } = require("../controllers/stc/assignSegmentController");
 const {
   addSubtitle,
@@ -65,7 +66,7 @@ const sessionRouter = express.Router();
 
 sessionRouter.post("/create-session", createSessionController);
 sessionRouter.post("/create-segment", createVideoSegmentController);
-// sessionRouter.post("/assign-user", redistributeSegments);
+sessionRouter.post("/assign-user", redistributeSegments);
 sessionRouter.post("/assign-user-seg", assignSegmentsToUsers);
 sessionRouter.post("/disconnect-user", handleUserDisconnection);
 sessionRouter.post("/add-subtitle", addSubtitle);
@@ -90,6 +91,30 @@ sessionRouter.get("/connected-users/:session_id", async (req, res) => {
       error
     );
     res.status(500).json({ message: "Erreur serveur." });
+  }
+});
+
+sessionRouter.post("/segments/:segment_id/subtitles", async (req, res) => {
+  const { segment_id } = req.params;
+  const { text } = req.body;
+
+  if (!segment_id || !text) {
+    return res.status(400).json({ message: "Segment ID et texte requis." });
+  }
+
+  try {
+    console.log(`Ajout du sous-titre pour le segment ${segment_id}`);
+
+    const subtitle = await SubtitlesModel.insert({
+      segment_id,
+      text,
+      created_at: new Date(),
+    });
+
+    return res.status(201).json({ message: "Sous-titre ajouté.", subtitle });
+  } catch (error) {
+    console.error("Erreur lors de l'ajout du sous-titre :", error);
+    return res.status(500).json({ message: "Erreur serveur." });
   }
 });
 

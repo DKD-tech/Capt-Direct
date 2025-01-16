@@ -36,7 +36,18 @@ class SegmentUserModel extends Model {
     const result = await pool.query(query, [user_id, session_id]);
     return result.rows;
   }
+  async removeAssignmentsForSegments(segmentIds) {
+    // segmentIds est un tableau d'IDs de segments
+    // On utilise la clause ANY($1::int[]) pour gérer la liste
+    const query = `
+      DELETE FROM segment_users
+      WHERE segment_id = ANY($1::int[])
+    `;
 
+    await pool.query(query, [segmentIds]);
+    // Pas besoin de récupérer de retour particulier,
+    // on veut juste supprimer
+  }
   //
   // Assigner un utilisateur à un segment
   async assignUserToSegment(user_id, segment_id) {

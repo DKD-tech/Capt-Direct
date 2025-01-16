@@ -673,9 +673,9 @@ async function assignSegmentsToUsers(session_id, createdSegments) {
         );
 
         // Mettre à jour le statut du segment
-        // const updatedSegment = await VideoSegmentModel.markSegmentInProgress(
-        //   assignment.segment_id
-        // );
+        const updatedSegment = await VideoSegmentModel.markSegmentInProgress(
+          assignment.segment_id
+        );
         console.log(`Segment mis à jour :`, updatedSegment);
 
         console.log(
@@ -691,60 +691,110 @@ async function assignSegmentsToUsers(session_id, createdSegments) {
   }
 }
 
-async function redistributeSegments(session_id) {
-  try {
-    // Étape 1 : Récupérer les utilisateurs connectés
-    const usersInSession = await getConnectedUsers(session_id);
+// async function redistributeSegments(session_id) {
+//   // 1. Obtenir la liste des utilisateurs connectés
+//   const usersInSession = await getConnectedUsers(session_id);
+//   if (!usersInSession || usersInSession.length === 0) {
+//     throw new Error("Aucun utilisateur connecté pour cette session.");
+//   }
 
-    if (!usersInSession || usersInSession.length === 0) {
-      throw new Error("Aucun utilisateur connecté pour cette session.");
-    }
+//   // 2. Récupérer tous les segments déjà assignés
+//   const assignedSegments = await VideoSegmentModel.getSegmentsByStatus(
+//     session_id,
+//     "assigned"
+//   );
 
-    console.log("Redistribution : utilisateurs connectés :", usersInSession);
+//   if (!assignedSegments || assignedSegments.length === 0) {
+//     // Pas de segments à réattribuer, on arrête là
+//     return [];
+//   }
 
-    // Étape 2 : Récupérer tous les segments assignés ou disponibles
-    const existingSegments = await VideoSegmentModel.findManyBy({ session_id });
+//   // 3. Supprimer les anciennes attributions pour ces segments
+//   await SegmentUserModel.removeAssignmentsForSegments(
+//     assignedSegments.map((seg) => seg.segment_id)
+//   );
 
-    if (!existingSegments || existingSegments.length === 0) {
-      console.log("Aucun segment à redistribuer.");
-      return [];
-    }
+//   // 4. Répartir ces segments de façon cyclique
+//   const assignments = [];
+//   const totalUsers = usersInSession.length;
 
-    const assignments = [];
-    const totalUsers = usersInSession.length;
+//   assignedSegments.forEach((segment, index) => {
+//     const userId = usersInSession[index % totalUsers].user_id;
+//     assignments.push({
+//       user_id: userId,
+//       segment_id: segment.segment_id,
+//       assigned_at: new Date(),
+//     });
+//   });
 
-    // Étape 3 : Redistribuer les segments de manière équitable
-    existingSegments.forEach((segment, index) => {
-      const userId = usersInSession[index % totalUsers].user_id;
-      assignments.push({
-        user_id: userId,
-        segment_id: segment.segment_id,
-        assigned_at: new Date(),
-      });
-    });
+//   // 5. Enregistrer les nouvelles attributions
+//   await Promise.all(
+//     assignments.map(async (assignment) => {
+//       await SegmentUserModel.assignUserToSegment(
+//         assignment.user_id,
+//         assignment.segment_id
+//       );
+//       await VideoSegmentModel.markSegmentAssigned(assignment.segment_id);
+//     })
+//   );
 
-    console.log("Redistribution des segments :", assignments);
+//   return assignments;
+// }
 
-    // Étape 4 : Mettre à jour les assignations et les statuts
-    await Promise.all(
-      assignments.map(async (assignment) => {
-        await SegmentUserModel.assignUserToSegment(
-          assignment.user_id,
-          assignment.segment_id
-        );
-        await VideoSegmentModel.updateSegmentStatus(
-          assignment.segment_id,
-          "assigned"
-        );
-      })
-    );
+// async function redistributeSegments(session_id) {
+//   try {
+//     // Étape 1 : Récupérer les utilisateurs connectés
+//     const usersInSession = await getConnectedUsers(session_id);
 
-    return assignments;
-  } catch (error) {
-    console.error("Erreur lors de la redistribution des segments :", error);
-    throw error;
-  }
-}
+//     if (!usersInSession || usersInSession.length === 0) {
+//       throw new Error("Aucun utilisateur connecté pour cette session.");
+//     }
+
+//     console.log("Redistribution : utilisateurs connectés :", usersInSession);
+
+//     // Étape 2 : Récupérer tous les segments assignés ou disponibles
+//     const existingSegments = await VideoSegmentModel.findManyBy({ session_id });
+
+//     if (!existingSegments || existingSegments.length === 0) {
+//       console.log("Aucun segment à redistribuer.");
+//       return [];
+//     }
+
+//     const assignments = [];
+//     const totalUsers = usersInSession.length;
+
+//     // Étape 3 : Redistribuer les segments de manière équitable
+//     existingSegments.forEach((segment, index) => {
+//       const userId = usersInSession[index % totalUsers].user_id;
+//       assignments.push({
+//         user_id: userId,
+//         segment_id: segment.segment_id,
+//         assigned_at: new Date(),
+//       });
+//     });
+
+//     console.log("Redistribution des segments :", assignments);
+
+//     // Étape 4 : Mettre à jour les assignations et les statuts
+//     await Promise.all(
+//       assignments.map(async (assignment) => {
+//         await SegmentUserModel.assignUserToSegment(
+//           assignment.user_id,
+//           assignment.segment_id
+//         );
+//         await VideoSegmentModel.updateSegmentStatus(
+//           assignment.segment_id,
+//           "assigned"
+//         );
+//       })
+//     );
+
+//     return assignments;
+//   } catch (error) {
+//     console.error("Erreur lors de la redistribution des segments :", error);
+//     throw error;
+//   }
+// }
 
 async function assignSegment(req, res) {
   const { user_id, session_id } = req.body;
@@ -785,5 +835,4 @@ module.exports = {
   assignSegmentsToUsers,
   redistributeSegments,
   assignSegment,
-  redistributeSegments,
 };

@@ -23,7 +23,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   displayedSubtitle = '';
   userId: number = 0; // Identifiant utilisateur récupéré dynamiquement
   videoUrl = ''; // URL de la vidéo récupérée dynamiquement
-  sessionId: number = 13; // ID de la session à afficher
+  sessionId: number = 14; // ID de la session à afficher
   segments: any[] = [];
   username: string = '';
   collaborators: number = 1; // Nombre de collaborateurs en ligne
@@ -85,6 +85,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.loadSessionDetails();
     this.connectToSocket();
     this.loadSessionInfo();
+    this.loadSegments();
     this.authService.getUserSession().subscribe((user) => {
       this.username = user.username.trim();
       this.userId = Number(user.user_id);
@@ -197,19 +198,61 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   // Charger les segments associés à la session
+  // loadSegments(): void {
+  //   this.sessionService.getSegmentsWithSession(this.sessionId).subscribe({
+  //     next: (response) => {
+  //       this.segments = response.segments; // Adaptez si la structure diffère
+  //       console.log('Segments chargés pour la session :', this.segments);
+  //     },
+  //     error: (error) => {
+  //       console.error('Erreur lors du chargement des segments :', error);
+  //       alert('Impossible de charger les segments pour cette session.');
+  //     },
+  //   });
+  // }
+
   loadSegments(): void {
-    this.sessionService.getSegmentsWithSubtitles(this.sessionId).subscribe({
+    this.sessionService.getSegmentsWithSession(this.sessionId).subscribe({
       next: (response) => {
-        this.segments = response.segments;
-        console.log('Segments chargés:', this.segments);
+        this.segments = response.segments.map((segment: any) => ({
+          ...segment,
+          subtitleText: '', // Initialisation locale pour la saisie
+        }));
+        console.log('Segments chargés :', this.segments);
       },
       error: (error) => {
-        console.error('Erreur lors du chargement des segments:', error);
-        alert(
-          'Impossible de charger les segments. Vérifiez votre connexion au backend.'
-        );
+        console.error('Erreur lors du chargement des segments :', error);
       },
     });
+  }
+  addSubtitleToSegment(segment: any): void {
+    if (!segment.subtitleText || segment.subtitleText.trim() === '') {
+      alert('Veuillez saisir un texte avant de l’enregistrer.');
+      return;
+    }
+
+    this.sessionService
+      .addSubtitle(segment.segment_id, segment.subtitleText, this.userId)
+      .subscribe({
+        next: (response) => {
+          console.log('Sous-titre ajouté avec succès :', response);
+          alert('Sous-titre ajouté avec succès.');
+
+          // Réinitialiser la zone de texte après l’ajout
+          segment.subtitleText = '';
+
+          // Ajouter le sous-titre au tableau local pour affichage immédiat
+          segment.subtitles.push({
+            text: response.text,
+            created_by: this.userId,
+            created_at: new Date().toISOString(),
+          });
+        },
+        error: (error) => {
+          console.error('Erreur lors de l’ajout du sous-titre :', error);
+          alert('Erreur lors de l’ajout du sous-titre.');
+        },
+      });
   }
 
   connectToSocket(): void {

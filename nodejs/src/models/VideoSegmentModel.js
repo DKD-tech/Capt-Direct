@@ -21,13 +21,27 @@ class VideoSegmentModel extends Model {
     console.log("Mise à jour du segment :", segment_id);
     const query = `
     UPDATE ${this.tableName}
-    SET status = 'in_progress'
+    SET status = 'assigned'
     WHERE segment_id = $1
     RETURNING *
     `;
     const result = await pool.query(query, [segment_id]);
     console.log("Résultat de la mise à jour :", result.rows[0]);
     return result.rows[0];
+  }
+  async getSegmentsByStatus(session_id, status) {
+    // On sélectionne tous les segments de la session
+    // dont le statut est égal à status
+    const query = `
+      SELECT *
+      FROM video_segments
+      WHERE session_id = $1
+        AND status = $2
+    `;
+    const values = [session_id, status];
+
+    const { rows } = await pool.query(query, values);
+    return rows; // rows est un tableau d'objets
   }
   async updateSegmentStatus(segment_id, newStatus) {
     console.log(

@@ -44,10 +44,28 @@
       <h3>Segments assignés</h3>
       <ul>
         <li *ngFor="let segment of segments">
-          Segment {{ segment.segment_id }} - {{ segment.status }}
+          <p>
+            Segment {{ segment.segment_id }} - Début : {{ segment.start_time }},
+            Fin : {{ segment.end_time }}, Statut : {{ segment.status }}
+          </p>
+
+          <!-- Zone de texte pour saisir un sous-titre -->
+          <textarea
+            [(ngModel)]="segment.subtitleText"
+            placeholder="Saisir un sous-titre"
+          ></textarea>
+          <button (click)="addSubtitleToSegment(segment)">Enregistrer</button>
+
+          <!-- Afficher les sous-titres existants -->
+          <ul>
+            <li *ngFor="let subtitle of segment.subtitles">
+              {{ subtitle.text }} (Créé par : {{ subtitle.created_by }})
+            </li>
+          </ul>
         </li>
       </ul>
     </section>
+
     <section class="live-video" *ngIf="videoUrl" (error)="onVideoError()">
       <video
         id="liveVideo"

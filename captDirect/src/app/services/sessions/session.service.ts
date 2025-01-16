@@ -42,6 +42,42 @@ export class SessionService {
     );
   }
 
+  getSegmentsWithSession(sessionId: number): Observable<any> {
+    const segurl = `http://localhost:3000/api/sessions/${sessionId}`;
+    return this.http.get<any>(segurl).pipe(
+      tap((response) => {
+        console.log('Segments récupérés pour la session :', response);
+      })
+    );
+  }
+
+  saveSubtitle(segmentId: number, text: string): Observable<any> {
+    const suburl = `http://localhost:3000/api/sessions/segments/${segmentId}/subtitles`;
+    return this.http.post<any>(suburl, { text }).pipe(
+      tap((response) => {
+        console.log('Sous-titre sauvegardé :', response);
+      })
+    );
+  }
+
+  addSubtitle(
+    segmentId: number,
+    text: string,
+    createdBy: number
+  ): Observable<any> {
+    const url = `http://localhost:3000/api/sessions/add-subtitle`;
+    const payload = {
+      segment_id: segmentId,
+      text: text,
+      created_by: createdBy,
+    };
+    return this.http.post<any>(url, payload).pipe(
+      tap((response) => {
+        console.log('Sous-titre ajouté :', response);
+      })
+    );
+  }
+
   // startStreaming(sessionId: number): void {
   //   this.http.post(`/api/sessions/stream/${sessionId}`, {}).subscribe({
   //     next: (response) => console.log("Streaming démarré :", response),
