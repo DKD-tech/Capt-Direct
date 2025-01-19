@@ -79,6 +79,33 @@ class VideoSegmentModel extends Model {
   async findById(segment_id) {
     return await this.findOneById(segment_id, "segment_id");
   }
+
+  async findManyByWithUsers(session_id) {
+    const query = `
+      SELECT 
+        s.segment_id,
+        s.start_time,
+        s.end_time,
+        s.status,
+        u.username AS assigned_to,
+        s.session_id
+      FROM public.video_segments AS s
+      LEFT JOIN public.segment_users AS su ON su.segment_id = s.segment_id
+      LEFT JOIN public.users AS u ON su.user_id = u.user_id
+      WHERE s.session_id = $1
+      ORDER BY s.start_time ASC;
+    `;
+    try {
+      const result = await pool.query(query, [session_id]);
+      return result.rows;
+    } catch (error) {
+      console.error(
+        `Erreur lors de la récupération des segments avec utilisateurs pour la session ${session_id} :`,
+        error
+      );
+      throw error;
+    }
+  }
 }
 
 module.exports = new VideoSegmentModel();

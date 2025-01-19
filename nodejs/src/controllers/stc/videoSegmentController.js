@@ -473,7 +473,10 @@ async function getSegmentsWithSubtitles(req, res) {
   try {
     console.log(`Fetching segments for session ID: ${session_id}`);
     // Récupérer les segments associés à la session
-    const segments = await VideoSegmentModel.findManyBy({ session_id });
+    // const segments = await VideoSegmentModel.findManyBy({ session_id });
+
+    // Récupérer les segments associés à la session avec les noms des utilisateurs assignés
+    const segments = await VideoSegmentModel.findManyByWithUsers(session_id);
 
     // Trier les segments par start_time
     const sortedSegments = mergeSortSegments(segments);
