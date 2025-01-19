@@ -1,13 +1,16 @@
+import { SubtitleService } from './../../services/sessions/subtitle.service';
 import { VideoService } from './../../services/sessions/video.service';
 import { AuthService } from './../../services/auth/auth.service';
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import { SocketService } from '../../services/socket.service';
+// import { SubtitleService } from '../../services/sessions/subtitle.service';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { SessionService } from '../../services/sessions/session.service';
 import { CommonModule } from '@angular/common';
 // import videojs from 'video.js';
+// import WaveSurfer from 'wavesurfer.js';
 
 @Component({
   selector: 'app-dashboard',
@@ -77,7 +80,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
     private authService: AuthService,
     private router: Router,
     private sessionService: SessionService,
-    private videoService: VideoService
+    private videoService: VideoService,
+    private SubtitleService: SubtitleService
   ) {}
 
   ngOnInit() {
@@ -211,48 +215,297 @@ export class DashboardComponent implements OnInit, OnDestroy {
   //   });
   // }
 
+  // loadSegments(): void {
+  //   this.sessionService.getSegmentsWithSession(this.sessionId).subscribe({
+  //     next: (response) => {
+  //       this.segments = response.segments.map((segment: any) => ({
+  //         ...segment,
+  //         subtitleText: '', // Initialisation locale pour la saisie
+  //       }));
+  //       console.log('Segments chargés :', this.segments);
+
+  //       // Démarrer les timers pour chaque segment
+  //     this.startTimers();
+  //     },
+  //     error: (error) => {
+  //       console.error('Erreur lors du chargement des segments :', error);
+  //     },
+  //   });
+  // }
   loadSegments(): void {
     this.sessionService.getSegmentsWithSession(this.sessionId).subscribe({
       next: (response) => {
-        this.segments = response.segments.map((segment: any) => ({
-          ...segment,
-          subtitleText: '', // Initialisation locale pour la saisie
-        }));
-        console.log('Segments chargés :', this.segments);
+        this.segments = this.mergeSort(response.segments).map(
+          (segment: any) => {
+            // Calcul de la durée en secondes
+            const duration = this.calculateDurationInSeconds(
+              segment.start_time,
+              segment.end_time
+            );
+
+            return {
+              ...segment,
+              subtitleText: '', // Texte en cours de saisie
+              timeRemaining: duration, // Temps restant pour le segment
+              timer: null, // Référence au timer pour arrêter si nécessaire
+              isDisabled: false, // Indique si la saisie est désactivée
+              assigned_to: segment.assigned_to || 'Utilisateur inconnu', // Nom de l'utilisateur assigné
+            };
+          }
+        );
+
+        console.log('Segments chargés avec timers :', this.segments);
+
+        // Démarrer les timers
+        this.startTimers();
       },
       error: (error) => {
         console.error('Erreur lors du chargement des segments :', error);
       },
     });
   }
-  addSubtitleToSegment(segment: any): void {
-    if (!segment.subtitleText || segment.subtitleText.trim() === '') {
-      alert('Veuillez saisir un texte avant de l’enregistrer.');
-      return;
+
+  calculateDurationInSeconds(startTime: string, endTime: string): number {
+    const [startHours, startMinutes, startSeconds] = startTime
+      .split(':')
+      .map(Number);
+    const [endHours, endMinutes, endSeconds] = endTime.split(':').map(Number);
+
+    // Convertir les heures, minutes et secondes en secondes totales
+    const startTotalSeconds =
+      startHours * 3600 + startMinutes * 60 + startSeconds;
+    const endTotalSeconds = endHours * 3600 + endMinutes * 60 + endSeconds;
+
+    // Retourner la différence en secondes
+    return endTotalSeconds - startTotalSeconds;
+  }
+
+  startTimers(): void {
+    let currentSegmentIndex = 0; // Démarrer par le premier segment
+
+    const startSegmentTimer = (index: number) => {
+      if (index >= this.segments.length) {
+        console.log('Tous les segments ont été exécutés.');
+        this.onAllSegmentsComplete();
+        return; // Tous les segments ont été joués
+      }
+
+      const segment = this.segments[index];
+      console.log(`Démarrage du timer pour le segment ${segment.segment_id}`);
+
+      // Initialiser un timer pour le segment actuel
+      segment.timer = setInterval(() => {
+        if (segment.timeRemaining > 0) {
+          segment.timeRemaining--;
+        } else {
+          // Sauvegarder automatiquement à la fin
+          clearInterval(segment.timer);
+          this.autoSaveSubtitle(segment);
+
+          // Démarrer le timer du segment suivant
+          startSegmentTimer(index + 1);
+        }
+      }, 1000); // Décompte toutes les secondes
+    };
+
+    // Démarrer le timer pour le premier segment
+    startSegmentTimer(currentSegmentIndex);
+  }
+
+  // addSubtitleToSegment(segment: any): void {
+  //   if (!segment.subtitleText || segment.subtitleText.trim() === '') {
+  //     alert('Veuillez saisir un texte avant de l’enregistrer.');
+  //     return;
+  //   }
+
+  //   this.sessionService
+  //     .addSubtitle(segment.segment_id, segment.subtitleText, this.userId)
+  //     .subscribe({
+  //       next: (response) => {
+  //         console.log('Sous-titre ajouté avec succès :', response);
+  //         alert('Sous-titre ajouté avec succès.');
+
+  //         // Réinitialiser la zone de texte après l’ajout
+  //         segment.subtitleText = '';
+
+  //         // Ajouter le sous-titre au tableau local pour affichage immédiat
+  //         segment.subtitles.push({
+  //           text: response.text,
+  //           created_by: this.userId,
+  //           created_at: new Date().toISOString(),
+  //         });
+  //       },
+  //       error: (error) => {
+  //         console.error('Erreur lors de l’ajout du sous-titre :', error);
+  //         alert('Erreur lors de l’ajout du sous-titre.');
+  //       },
+  //     });
+  // }
+
+  autoSaveSubtitle(segment: any): void {
+    // Normaliser et ajuster le texte
+    segment.subtitleText = this.normalizeSubtitle(segment.subtitleText);
+    console.log('Texte après normalisation :', segment.subtitleText);
+
+    segment.subtitleText = this.adjustSubtitleToSegment(segment);
+    console.log('Texte après ajustement :', segment.subtitleText);
+
+    if (segment.subtitleText.trim() !== '') {
+      // Ajoutez un log pour voir les données avant de les envoyer
+      console.log(
+        'Préparation de la sauvegarde automatique avec les données :',
+        {
+          segment_id: segment.segment_id,
+          text: segment.subtitleText,
+          created_by: this.userId,
+        }
+      );
+      // Sauvegarder automatiquement le sous-titre s'il n'est pas vide
+      this.sessionService
+        .addSubtitle(segment.segment_id, segment.subtitleText, this.userId)
+        .subscribe({
+          next: (response) => {
+            console.log(
+              `Sous-titre sauvegardé automatiquement pour le segment ${segment.segment_id} :`,
+              response
+            );
+
+            // Ajouter le sous-titre sauvegardé à la liste des sous-titres
+            segment.subtitles.push({
+              text: response.text,
+              created_by: this.userId,
+              created_at: new Date().toISOString(),
+            });
+
+            // Réinitialiser la zone de texte après la sauvegarde
+            segment.subtitleText = '';
+          },
+          error: (error) => {
+            console.error(
+              `Erreur lors de la sauvegarde automatique pour le segment ${segment.segment_id} :`,
+              error
+            );
+          },
+        });
+    } else {
+      console.log(
+        `Aucun texte à sauvegarder pour le segment ${segment.segment_id}.`
+      );
     }
 
-    this.sessionService
-      .addSubtitle(segment.segment_id, segment.subtitleText, this.userId)
-      .subscribe({
-        next: (response) => {
-          console.log('Sous-titre ajouté avec succès :', response);
-          alert('Sous-titre ajouté avec succès.');
+    // Désactiver la saisie pour ce segment
+    segment.isDisabled = true;
+  }
 
-          // Réinitialiser la zone de texte après l’ajout
-          segment.subtitleText = '';
+  calculateWaveWidth(
+    timeRemaining: number,
+    endTime: string,
+    startTime: string
+  ): string {
+    const totalDuration = this.calculateDurationInSeconds(startTime, endTime);
+    const percentage = ((totalDuration - timeRemaining) / totalDuration) * 100;
+    return `${percentage}%`; // Renvoie la largeur en pourcentage
+  }
 
-          // Ajouter le sous-titre au tableau local pour affichage immédiat
-          segment.subtitles.push({
-            text: response.text,
-            created_by: this.userId,
-            created_at: new Date().toISOString(),
-          });
-        },
-        error: (error) => {
-          console.error('Erreur lors de l’ajout du sous-titre :', error);
-          alert('Erreur lors de l’ajout du sous-titre.');
-        },
-      });
+  mergeSort(array: any[]): any[] {
+    if (array.length <= 1) {
+      return array; // Rien à trier si la liste contient un seul élément
+    }
+
+    const middle = Math.floor(array.length / 2); // Division au milieu
+    const left = this.mergeSort(array.slice(0, middle)); // Récursion pour la moitié gauche
+    const right = this.mergeSort(array.slice(middle)); // Récursion pour la moitié droite
+
+    return this.merge(left, right); // Fusion des deux moitiés triées
+  }
+
+  merge(left: any[], right: any[]): any[] {
+    const result = [];
+    let i = 0,
+      j = 0;
+
+    while (i < left.length && j < right.length) {
+      // Convertir start_time en secondes pour comparer
+      const leftStartTime = this.convertTimeToSeconds(left[i].start_time);
+      const rightStartTime = this.convertTimeToSeconds(right[j].start_time);
+
+      if (leftStartTime <= rightStartTime) {
+        result.push(left[i++]);
+      } else {
+        result.push(right[j++]);
+      }
+    }
+
+    // Ajouter les éléments restants
+    return result.concat(left.slice(i)).concat(right.slice(j));
+  }
+
+  convertTimeToSeconds(time: string): number {
+    const [hours, minutes, seconds] = time.split(':').map(Number);
+    return hours * 3600 + minutes * 60 + seconds;
+  }
+
+  // Normaliser le texte des sous-titres (supprime espaces inutiles, etc.)
+  normalizeSubtitle(text: string): string {
+    // Supprime les espaces multiples et normalise le texte
+    return text
+      .trim()
+      .replace(/\s+/g, ' ') // Réduit les espaces multiples à un seul espace
+      .replace(/[^\p{L}\p{N}\s\p{P}]/gu, ''); // Autorise lettres, chiffres, espaces et ponctuation
+  }
+
+  // Ajuster les sous-titres à la durée du segment
+  adjustSubtitleToSegment(segment: any): string {
+    const words = segment.subtitleText.split(' ');
+    const maxWords = Math.floor(segment.timeRemaining / 2); // Exemple : 2 mots par seconde
+
+    // Ajuste la longueur du texte sans retourner un résultat vide
+    const adjustedText = words.slice(0, maxWords).join(' ');
+
+    // Si aucun mot n'est sélectionné, retournez le texte original avec "..."
+    return adjustedText.trim() === ''
+      ? segment.subtitleText + '...'
+      : adjustedText;
+  }
+
+  // Compiler les sous-titres en une sortie finale (exemple pour SRT)
+  compileFinalSubtitles(): string {
+    return this.segments
+      .filter((segment) => segment.subtitles.length > 0)
+      .map(
+        (segment) =>
+          `${segment.start_time} --> ${segment.end_time}\n${segment.subtitleText}`
+      )
+      .join('\n\n');
+  }
+
+  // Exporter les sous-titres au format SRT
+  exportToSRT(): string {
+    return this.segments
+      .map((segment, index) => {
+        return `${index + 1}
+${segment.start_time} --> ${segment.end_time}
+${segment.subtitleText}`;
+      })
+      .join('\n\n');
+  }
+
+  // Méthode pour déclencher le téléchargement
+  downloadSubtitles(): void {
+    const srtContent = this.exportToSRT();
+    const blob = new Blob([srtContent], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'subtitles.srt';
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  onAllSegmentsComplete(): void {
+    const finalSubtitles = this.compileFinalSubtitles();
+    console.log('Sous-titres finaux générés :', finalSubtitles);
+    alert('Sous-titres finaux prêts. Vous pouvez les exporter.');
   }
 
   connectToSocket(): void {

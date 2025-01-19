@@ -201,3 +201,20 @@ body {
   box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.4); /* Légère ombre pour plus de lisibilité */
   line-height: 1.4; /* Espacement pour une meilleure lisibilité */
 }
+
+.audio-wave-container {
+  width: 100%; /* Largeur de la barre complète */
+  height: 20px;
+  background-color: #ddd; /* Couleur de fond */
+  position: relative;
+  margin: 10px 0;
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+.audio-wave {
+  height: 100%;
+  width: 0; /* Commence à 0%, sera mis à jour dynamiquement */
+  background-color: #4caf50; /* Couleur de l'onde */
+  transition: width 1s linear; /* Animation fluide */
+}

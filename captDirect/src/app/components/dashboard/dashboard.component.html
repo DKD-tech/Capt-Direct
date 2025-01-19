@@ -44,19 +44,63 @@
       <h3>Segments assignés</h3>
       <ul>
         <li *ngFor="let segment of segments">
-          <p>
+          <!-- <p>
             Segment {{ segment.segment_id }} - Début : {{ segment.start_time }},
             Fin : {{ segment.end_time }}, Statut : {{ segment.status }}
+          </p> -->
+
+          <p>
+            <!-- Nom de l'utilisateur assigné -->
+            <strong>Utilisateur assigné :</strong>
+            {{ segment.assigned_to || "Non spécifié" }}
           </p>
+          <div class="audio-wave-container">
+            <div
+              class="audio-wave"
+              [style.width]="
+                calculateWaveWidth(
+                  segment.timeRemaining,
+                  segment.end_time,
+                  segment.start_time
+                )
+              "
+              [style.backgroundColor]="
+                segment.timeRemaining > 0 ? '#4caf50' : '#f44336'
+              "
+            ></div>
+          </div>
+
+          <!-- Barre de progression
+          <div class="progress-container">
+            <div
+              class="progress-bar"
+              [style.width.%]="
+                100 - (segment.timeRemaining / segment.duration) * 100
+              "
+            ></div>
+          </div> -->
+
+          <p>Temps restant : {{ segment.timeRemaining }} secondes</p>
 
           <!-- Zone de texte pour saisir un sous-titre -->
           <textarea
             [(ngModel)]="segment.subtitleText"
             placeholder="Saisir un sous-titre"
+            [disabled]="
+              segment.isDisabled ||
+              segment.timeRemaining <= 0 ||
+              segment.isLocked
+            "
           ></textarea>
-          <button (click)="addSubtitleToSegment(segment)">Enregistrer</button>
+          <!-- <button
+            (click)="addSubtitleToSegment(segment)"
+            [disabled]="segment.isDisabled || segment.timeRemaining <= 0"
+          >
+            Enregistrer
+          </button> -->
 
           <!-- Afficher les sous-titres existants -->
+
           <ul>
             <li *ngFor="let subtitle of segment.subtitles">
               {{ subtitle.text }} (Créé par : {{ subtitle.created_by }})
@@ -64,6 +108,7 @@
           </ul>
         </li>
       </ul>
+      <button (click)="downloadSubtitles()">Exporter les sous-titres</button>
     </section>
 
     <section class="live-video" *ngIf="videoUrl" (error)="onVideoError()">
