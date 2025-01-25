@@ -106,6 +106,49 @@ class VideoSegmentModel extends Model {
       throw error;
     }
   }
+  async getPreviousSegment(segment_id) {
+    const query = `
+      SELECT * 
+      FROM ${this.tableName} 
+      WHERE end_time <= (
+        SELECT start_time 
+        FROM ${this.tableName} 
+        WHERE segment_id = $1
+      )
+      AND segment_id != $1
+      AND session_id = (
+        SELECT session_id 
+        FROM ${this.tableName} 
+        WHERE segment_id = $1
+      )
+      ORDER BY end_time DESC
+      LIMIT 1;
+    `;
+    const result = await pool.query(query, [segment_id]);
+    return result.rows[0]; // Retourne le segment précédent ou `undefined`
+  }
+
+  async getNextSegment(segment_id) {
+    const query = `
+      SELECT * 
+      FROM ${this.tableName} 
+      WHERE start_time >= (
+        SELECT end_time 
+        FROM ${this.tableName} 
+        WHERE segment_id = $1
+      )
+      AND segment_id != $1
+      AND session_id = (
+        SELECT session_id 
+        FROM ${this.tableName} 
+        WHERE segment_id = $1
+      )
+      ORDER BY start_time ASC
+      LIMIT 1;
+    `;
+    const result = await pool.query(query, [segment_id]);
+    return result.rows[0]; // Retourne le segment suivant ou `undefined`
+  }
 }
 
 module.exports = new VideoSegmentModel();

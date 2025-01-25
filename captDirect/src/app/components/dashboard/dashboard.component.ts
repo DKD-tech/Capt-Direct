@@ -26,7 +26,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   displayedSubtitle = '';
   userId: number = 0; // Identifiant utilisateur récupéré dynamiquement
   videoUrl = ''; // URL de la vidéo récupérée dynamiquement
-  sessionId: number = 14; // ID de la session à afficher
+  sessionId: number = 5; // ID de la session à afficher
   segments: any[] = [];
   username: string = '';
   collaborators: number = 1; // Nombre de collaborateurs en ligne
@@ -343,6 +343,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   // }
 
   autoSaveSubtitle(segment: any): void {
+    console.log('Texte brut :', segment.subtitleText);
     // Normaliser et ajuster le texte
     segment.subtitleText = this.normalizeSubtitle(segment.subtitleText);
     console.log('Texte après normalisation :', segment.subtitleText);
@@ -360,6 +361,12 @@ export class DashboardComponent implements OnInit, OnDestroy {
           created_by: this.userId,
         }
       );
+      console.log('Données envoyées au backend :', {
+        segment_id: segment.segment_id,
+        text: segment.subtitleText,
+        created_by: this.userId,
+      });
+
       // Sauvegarder automatiquement le sous-titre s'il n'est pas vide
       this.sessionService
         .addSubtitle(segment.segment_id, segment.subtitleText, this.userId)
@@ -376,6 +383,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
               created_by: this.userId,
               created_at: new Date().toISOString(),
             });
+            console.log(
+              'Texte sauvegardé automatiquement :',
+              segment.subtitleText
+            );
 
             // Réinitialiser la zone de texte après la sauvegarde
             segment.subtitleText = '';
@@ -483,6 +494,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
   exportToSRT(): string {
     return this.segments
       .map((segment, index) => {
+        console.log('Segments avant l’exportation SRT :', this.segments);
+        this.segments.map((segment) => console.log(segment.subtitleText));
+
         return `${index + 1}
 ${segment.start_time} --> ${segment.end_time}
 ${segment.subtitleText}`;
