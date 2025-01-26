@@ -3,6 +3,10 @@ const VideoSegmentModel = require("../../models/VideoSegmentModel");
 const SubtitleModel = require("../../models/SubtitleModel");
 const { client: redisClient } = require("../../redis/index");
 const levenshtein = require("fast-levenshtein"); // Librairie pour Levenshtein
+const {
+  isDuplicateInSegment,
+  adjustTextWithNeighbors,
+} = require("../../utils/algo_textes");
 
 async function assignUserToSegmentController(req, res) {
   const { user_id, segment_id } = req.body;
@@ -182,55 +186,34 @@ async function addSubtitle(req, res) {
     return res.status(400).json({ message: "Champs obligatoires manquants." });
   }
 
-  // Vérifier si l'utilisateur est assigné au segment
-  const isUserAssigned = await SegmentUserModel.isUserAssignedToSegment(
-    created_by,
-    segment_id
-  );
-  if (!isUserAssigned) {
-    return res
-      .status(403)
-      .json({ message: "Non autorisé à sous-titrer ce segment." });
-  }
-
-  // Récupérer les informations du segment actuel
-  const currentSegment = await VideoSegmentModel.findById(segment_id);
-  if (!currentSegment) {
-    return res.status(404).json({ message: "Segment introuvable." });
-  }
-
-  // Initialiser un cache local
-  const cache = {};
-
-  // Vérifications des doublons
-  const isInternalDuplicate = await isDuplicateInSegment(
-    segment_id,
-    text,
-    created_by,
-    cache
-  );
-  const isNeighborDuplicate = await isDuplicateBetweenNeighbors(
-    currentSegment,
-    text,
-    cache
-  );
-
-  if (isInternalDuplicate || isNeighborDuplicate) {
-    return res.status(400).json({ message: "Sous-titre similaire détecté." });
-  }
-
-  // Ajouter directement le sous-titre dans PostgreSQL
   try {
+    // Vérifie si le segment existe
+    const currentSegment = await VideoSegmentModel.findById(segment_id);
+    if (!currentSegment) {
+      return res.status(404).json({ message: "Segment introuvable." });
+    }
+
+    // Vérifie les chevauchements avec les voisins
+    const adjustedText = await adjustTextWithNeighbors(currentSegment, text);
+
+    console.log(
+      `Texte après ajustement pour le segment ${segment_id} : "${adjustedText}"`
+    );
+
+    // Ajoute le sous-titre ajusté
     const newSubtitle = await SubtitleModel.addSubtitle({
       segment_id,
-      text,
+      text: adjustedText,
       created_by,
     });
 
-    return res.status(201).json({ message: "Sous-titre ajouté avec succès." });
+    return res.status(201).json({
+      message: "Sous-titre ajouté avec succès.",
+      subtitle: newSubtitle,
+    });
   } catch (error) {
     console.error("Erreur lors de l'ajout du sous-titre :", error);
-    return res.status(500).json({ message: "Erreur serveur" });
+    return res.status(500).json({ message: "Erreur serveur." });
   }
 }
 
@@ -242,7 +225,7 @@ async function getSubtitlesBySegment(req, res) {
   }
 
   try {
-    // Récupérer directement les sous-titres depuis PostgreSQL
+    // Récupérer directement les sous-titres depuis la base de données
     const subtitles = await SubtitleModel.getSubtitlesBySegment(segment_id);
     return res.status(200).json({
       message: "Sous-titres récupérés avec succès.",
@@ -250,83 +233,12 @@ async function getSubtitlesBySegment(req, res) {
     });
   } catch (error) {
     console.error("Erreur lors de la récupération des sous-titres :", error);
-    return res.status(500).json({ message: "Erreur serveur" });
+    return res.status(500).json({ message: "Erreur serveur." });
   }
-}
-
-async function isDuplicateInSegment(
-  segment_id,
-  newText,
-  created_by,
-  cache = {}
-) {
-  // Vérifier si les sous-titres pour ce segment sont déjà en cache
-  if (!cache[segment_id]) {
-    cache[segment_id] = await SubtitleModel.getSubtitlesBySegment(segment_id);
-  }
-
-  const existingSubtitles = cache[segment_id];
-  const maxAllowedDistance = Math.floor(newText.length * 0.3); // 30% de différence maximum
-
-  for (let subtitle of existingSubtitles) {
-    // Ignorer les textes soumis par le même utilisateur
-    if (subtitle.created_by === created_by) {
-      continue;
-    }
-
-    // Vérifier la similarité avec Levenshtein
-    const distance = levenshtein.get(newText, subtitle.text);
-    if (distance <= maxAllowedDistance) {
-      console.log(
-        `Doublon détecté dans le même segment : "${newText}" vs "${subtitle.text}" par un autre utilisateur.`
-      );
-      return true; // Texte trop similaire
-    }
-  }
-
-  return false; // Aucun doublon détecté
-}
-
-async function isDuplicateBetweenNeighbors(currentSegment, text, cache = {}) {
-  const previousSegment = await VideoSegmentModel.getPreviousSegment(
-    currentSegment.segment_id
-  );
-  const nextSegment = await VideoSegmentModel.getNextSegment(
-    currentSegment.segment_id
-  );
-
-  const neighbors = [previousSegment, nextSegment].filter(Boolean);
-  const maxAllowedDistance = 1; // Distance très faible (par exemple, Hamming ou 1 caractère d'écart maximum)
-
-  for (let segment of neighbors) {
-    // Vérifier si les sous-titres pour ce segment sont déjà en cache
-    if (!cache[segment.segment_id]) {
-      cache[segment.segment_id] = await SubtitleModel.getSubtitlesBySegment(
-        segment.segment_id
-      );
-    }
-
-    const subtitles = cache[segment.segment_id];
-    for (let subtitle of subtitles) {
-      if (Math.abs(text.length - subtitle.text.length) > maxAllowedDistance) {
-        continue;
-      }
-
-      const distance = levenshtein.get(text, subtitle.text);
-      if (distance <= maxAllowedDistance) {
-        console.log(`Doublon voisin détecté : "${text}" vs "${subtitle.text}"`);
-        return true;
-      }
-    }
-  }
-
-  return false; // Aucun doublon détecté
 }
 
 module.exports = {
   assignUserToSegmentController,
   addSubtitle,
   getSubtitlesBySegment,
-  isDuplicateInSegment,
-  isDuplicateBetweenNeighbors,
 };

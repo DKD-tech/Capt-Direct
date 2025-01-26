@@ -9,6 +9,7 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { SessionService } from '../../services/sessions/session.service';
 import { CommonModule } from '@angular/common';
+import test from 'node:test';
 // import videojs from 'video.js';
 // import WaveSurfer from 'wavesurfer.js';
 
@@ -162,6 +163,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
               'Erreur lors de la récupération de la durée de la vidéo :',
               error
             );
+            alert('Impossible de récupérer la durée de la vidéo.');
           }
         } else {
           console.error(
@@ -312,88 +314,52 @@ export class DashboardComponent implements OnInit, OnDestroy {
     startSegmentTimer(currentSegmentIndex);
   }
 
-  // addSubtitleToSegment(segment: any): void {
-  //   if (!segment.subtitleText || segment.subtitleText.trim() === '') {
-  //     alert('Veuillez saisir un texte avant de l’enregistrer.');
-  //     return;
-  //   }
-
-  //   this.sessionService
-  //     .addSubtitle(segment.segment_id, segment.subtitleText, this.userId)
-  //     .subscribe({
-  //       next: (response) => {
-  //         console.log('Sous-titre ajouté avec succès :', response);
-  //         alert('Sous-titre ajouté avec succès.');
-
-  //         // Réinitialiser la zone de texte après l’ajout
-  //         segment.subtitleText = '';
-
-  //         // Ajouter le sous-titre au tableau local pour affichage immédiat
-  //         segment.subtitles.push({
-  //           text: response.text,
-  //           created_by: this.userId,
-  //           created_at: new Date().toISOString(),
-  //         });
-  //       },
-  //       error: (error) => {
-  //         console.error('Erreur lors de l’ajout du sous-titre :', error);
-  //         alert('Erreur lors de l’ajout du sous-titre.');
-  //       },
-  //     });
-  // }
-
   autoSaveSubtitle(segment: any): void {
-    console.log('Texte brut :', segment.subtitleText);
-    // Normaliser et ajuster le texte
-    segment.subtitleText = this.normalizeSubtitle(segment.subtitleText);
-    console.log('Texte après normalisation :', segment.subtitleText);
-
-    segment.subtitleText = this.adjustSubtitleToSegment(segment);
-    console.log('Texte après ajustement :', segment.subtitleText);
+    console.log(
+      `Texte saisi pour le segment ${segment.segment_id} :`,
+      segment.subtitleText
+    );
 
     if (segment.subtitleText.trim() !== '') {
-      // Ajoutez un log pour voir les données avant de les envoyer
-      console.log(
-        'Préparation de la sauvegarde automatique avec les données :',
-        {
-          segment_id: segment.segment_id,
-          text: segment.subtitleText,
-          created_by: this.userId,
-        }
-      );
-      console.log('Données envoyées au backend :', {
-        segment_id: segment.segment_id,
-        text: segment.subtitleText,
-        created_by: this.userId,
-      });
-
-      // Sauvegarder automatiquement le sous-titre s'il n'est pas vide
       this.sessionService
         .addSubtitle(segment.segment_id, segment.subtitleText, this.userId)
         .subscribe({
           next: (response) => {
             console.log(
-              `Sous-titre sauvegardé automatiquement pour le segment ${segment.segment_id} :`,
+              `Réponse du backend pour le segment ${segment.segment_id} :`,
               response
             );
 
-            // Ajouter le sous-titre sauvegardé à la liste des sous-titres
-            segment.subtitles.push({
-              text: response.text,
-              created_by: this.userId,
-              created_at: new Date().toISOString(),
-            });
-            console.log(
-              'Texte sauvegardé automatiquement :',
-              segment.subtitleText
-            );
+            // Ajoute ici un log pour vérifier si `response.subtitle` est correct
+            if (response && response.subtitle) {
+              console.log(
+                'Sous-titre sauvegardé avec succès :',
+                response.subtitle
+              );
 
-            // Réinitialiser la zone de texte après la sauvegarde
+              // Mets à jour `segment.subtitles`
+              segment.subtitles.push({
+                text: response.subtitle.text,
+                created_by: this.userId,
+                created_at: response.subtitle.created_at,
+              });
+
+              console.log(
+                `Sous-titres actuels pour le segment ${segment.segment_id} :`,
+                segment.subtitles
+              );
+            } else {
+              console.error(
+                `Problème dans la réponse du backend pour le segment ${segment.segment_id}.`
+              );
+            }
+
+            // Réinitialise la zone de texte
             segment.subtitleText = '';
           },
           error: (error) => {
             console.error(
-              `Erreur lors de la sauvegarde automatique pour le segment ${segment.segment_id} :`,
+              `Erreur lors de la sauvegarde pour le segment ${segment.segment_id} :`,
               error
             );
           },
@@ -403,9 +369,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
         `Aucun texte à sauvegarder pour le segment ${segment.segment_id}.`
       );
     }
-
-    // Désactiver la saisie pour ce segment
-    segment.isDisabled = true;
   }
 
   calculateWaveWidth(
@@ -456,50 +419,70 @@ export class DashboardComponent implements OnInit, OnDestroy {
     return hours * 3600 + minutes * 60 + seconds;
   }
 
-  // Normaliser le texte des sous-titres (supprime espaces inutiles, etc.)
-  normalizeSubtitle(text: string): string {
-    // Supprime les espaces multiples et normalise le texte
-    return text
-      .trim()
-      .replace(/\s+/g, ' ') // Réduit les espaces multiples à un seul espace
-      .replace(/[^\p{L}\p{N}\s\p{P}]/gu, ''); // Autorise lettres, chiffres, espaces et ponctuation
-  }
+  // // Normaliser le texte des sous-titres (supprime espaces inutiles, etc.)
+  // normalizeSubtitle(text: string): string {
+  //   // Supprime les espaces multiples et normalise le texte
+  //   return text
+  //     .trim()
+  //     .replace(/\s+/g, ' ') // Réduit les espaces multiples à un seul espace
+  //     .replace(/[^\p{L}\p{N}\s\p{P}]/gu, ''); // Autorise lettres, chiffres, espaces et ponctuation
+  // }
 
-  // Ajuster les sous-titres à la durée du segment
-  adjustSubtitleToSegment(segment: any): string {
-    const words = segment.subtitleText.split(' ');
-    const maxWords = Math.floor(segment.timeRemaining / 2); // Exemple : 2 mots par seconde
+  // // Ajuster les sous-titres à la durée du segment
+  // adjustSubtitleToSegment(segment: any): string {
+  //   const words = segment.subtitleText.split(' ');
+  //   const maxWords = Math.floor(segment.timeRemaining / 2); // Exemple : 2 mots par seconde
 
-    // Ajuste la longueur du texte sans retourner un résultat vide
-    const adjustedText = words.slice(0, maxWords).join(' ');
+  //   // Ajuste la longueur du texte sans retourner un résultat vide
+  //   const adjustedText = words.slice(0, maxWords).join(' ');
 
-    // Si aucun mot n'est sélectionné, retournez le texte original avec "..."
-    return adjustedText.trim() === ''
-      ? segment.subtitleText + '...'
-      : adjustedText;
-  }
+  //   // Si aucun mot n'est sélectionné, retournez le texte original avec "..."
+  //   return adjustedText.trim() === ''
+  //     ? segment.subtitleText + '...'
+  //     : adjustedText;
+  // }
 
   // Compiler les sous-titres en une sortie finale (exemple pour SRT)
   compileFinalSubtitles(): string {
+    console.log(
+      'Compilation des sous-titres finaux. Segments :',
+      this.segments
+    );
+
     return this.segments
       .filter((segment) => segment.subtitles.length > 0)
-      .map(
-        (segment) =>
-          `${segment.start_time} --> ${segment.end_time}\n${segment.subtitleText}`
-      )
+      .map((segment) => {
+        const combinedText = segment.subtitles
+          .map((s: { text: any }) => s.text)
+          .join(' ');
+        console.log(
+          `Segment ${segment.segment_id} : Texte combiné :`,
+          combinedText
+        );
+
+        return `${segment.start_time} --> ${segment.end_time}\n${combinedText}`;
+      })
       .join('\n\n');
   }
 
   // Exporter les sous-titres au format SRT
   exportToSRT(): string {
+    console.log('Segments avant génération du fichier SRT :', this.segments);
+
     return this.segments
+      .filter((segment) => segment.subtitles.length > 0) // Ne garde que les segments avec sous-titres
       .map((segment, index) => {
-        console.log('Segments avant l’exportation SRT :', this.segments);
-        this.segments.map((segment) => console.log(segment.subtitleText));
+        const text = segment.subtitles
+          .map((s: { text: any }) => s.text)
+          .join(' ');
+        console.log(
+          `Sous-titres pour le segment ${segment.segment_id} :`,
+          text
+        );
 
         return `${index + 1}
-${segment.start_time} --> ${segment.end_time}
-${segment.subtitleText}`;
+  ${segment.start_time} --> ${segment.end_time}
+  ${text}`;
       })
       .join('\n\n');
   }
