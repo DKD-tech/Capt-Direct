@@ -179,6 +179,43 @@ async function assignUserToSegmentController(req, res) {
 //   }
 // }
 
+// async function addSubtitle(req, res) {
+//   const { segment_id, text, created_by } = req.body;
+
+//   if (!segment_id || !text || !created_by) {
+//     return res.status(400).json({ message: "Champs obligatoires manquants." });
+//   }
+
+//   try {
+//     // Vérifie si le segment existe
+//     const currentSegment = await VideoSegmentModel.findById(segment_id);
+//     if (!currentSegment) {
+//       return res.status(404).json({ message: "Segment introuvable." });
+//     }
+
+//     // Vérifie les chevauchements avec les voisins
+//     const adjustedText = await adjustTextWithNeighbors(currentSegment, text);
+
+//     console.log(
+//       `Texte après ajustement pour le segment ${segment_id} : "${adjustedText}"`
+//     );
+
+//     // Ajoute le sous-titre ajusté
+//     const newSubtitle = await SubtitleModel.addSubtitle({
+//       segment_id,
+//       text: adjustedText,
+//       created_by,
+//     });
+
+//     return res.status(201).json({
+//       message: "Sous-titre ajouté avec succès.",
+//       subtitle: newSubtitle,
+//     });
+//   } catch (error) {
+//     console.error("Erreur lors de l'ajout du sous-titre :", error);
+//     return res.status(500).json({ message: "Erreur serveur." });
+//   }
+// }
 async function addSubtitle(req, res) {
   const { segment_id, text, created_by } = req.body;
 
@@ -194,8 +231,10 @@ async function addSubtitle(req, res) {
     }
 
     // Vérifie les chevauchements avec les voisins
+    console.log(
+      `Ajustement pour le segment ${segment_id}. Texte initial : "${text}"`
+    );
     const adjustedText = await adjustTextWithNeighbors(currentSegment, text);
-
     console.log(
       `Texte après ajustement pour le segment ${segment_id} : "${adjustedText}"`
     );
@@ -212,11 +251,10 @@ async function addSubtitle(req, res) {
       subtitle: newSubtitle,
     });
   } catch (error) {
-    console.error("Erreur lors de l'ajout du sous-titre :", error);
+    console.error("Erreur lors de l’ajout du sous-titre :", error);
     return res.status(500).json({ message: "Erreur serveur." });
   }
 }
-
 async function getSubtitlesBySegment(req, res) {
   const { segment_id } = req.params;
 
