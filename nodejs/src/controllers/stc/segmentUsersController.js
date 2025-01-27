@@ -4,7 +4,7 @@ const SubtitleModel = require("../../models/SubtitleModel");
 const { client: redisClient } = require("../../redis/index");
 const levenshtein = require("fast-levenshtein"); // Librairie pour Levenshtein
 const {
-  isDuplicateInSegment,
+  correctWordUsingDatamuse,
   adjustTextWithNeighbors,
 } = require("../../utils/algo_textes");
 

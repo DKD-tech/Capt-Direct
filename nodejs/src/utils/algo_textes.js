@@ -1,3 +1,4 @@
+const axios = require;
 const SubtitleModel = require("../models/SubtitleModel"); // Ajuste le chemin si nécessaire
 const VideoSegmentModel = require("../models/VideoSegmentModel"); // Pour accéder aux segments voisins
 
