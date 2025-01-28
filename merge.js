@@ -76,7 +76,7 @@ class Merge {
         if (this.separateurs.includes(char)) {
             if (temp !== "") {
             		nbSeparateurs++;
-            	  chaines.push(temp);
+            	  chaines.push(temp.trim());
                 temp = "";
             }
         } else {
@@ -86,7 +86,7 @@ class Merge {
 
     // Ajouter la dernière sous-chaîne si elle n'est pas vide
     if (temp !== "") {
-    		chaines.push(temp); 
+    		chaines.push(temp.trim()); 
     }
 
     let relativeTime = parseInt(time / (nbSeparateurs + 1), 10);
@@ -159,9 +159,9 @@ function mergeTest(){
 	merge.addText(1, 11, 9, "aurevoir");
 	merge.addText(2, 12, 11, "aurevukd");
 	merge.addText(3, 9, 12, "/^¨()&");
-	merge.addText(0, 20, 7, "bonjour, kudevoir");
-	merge.addText(1, 21, 9, "filjour | aurevilm");
-	merge.addText(2, 19, 11, "bonjegl ; aurevoir");
+	merge.addText(0, 20, 7, "  bonjour,  kudevoir  ");
+	merge.addText(1, 21, 9, "  filjour  |  aurevilm  ");
+	merge.addText(2, 19, 11, "  bonjegl  ; aurevoir  ");
 	
 	console.log(merge);
 	console.log(merge.getResult(0, 10).text);
