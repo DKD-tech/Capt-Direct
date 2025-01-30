@@ -3,10 +3,9 @@ const VideoSegmentModel = require("../../models/VideoSegmentModel");
 const SubtitleModel = require("../../models/SubtitleModel");
 const { client: redisClient } = require("../../redis/index");
 const levenshtein = require("fast-levenshtein"); // Librairie pour Levenshtein
-const {
-  correctWordUsingDatamuse,
-  adjustTextWithNeighbors,
-} = require("../../utils/algo_textes");
+const { adjustTextWithNeighbors } = require("../../utils/algo_textes");
+
+const { predictNextWord, trigramModel } = require("../../utils/correction");
 
 async function assignUserToSegmentController(req, res) {
   const { user_id, segment_id } = req.body;
@@ -69,6 +68,54 @@ async function assignUserToSegmentController(req, res) {
   } catch (error) {
     console.error("Erreur lors de l'assignation dynamique :", error);
     return res.status(500).json({ message: "Erreur serveur" });
+  }
+}
+
+async function addSubtitle(req, res) {
+  let { segment_id, text, created_by } = req.body;
+
+  if (!segment_id || !text || !created_by) {
+    return res.status(400).json({ message: "Champs obligatoires manquants." });
+  }
+
+  try {
+    // Vérifie si le segment existe
+    const currentSegment = await VideoSegmentModel.findById(segment_id);
+    if (!currentSegment) {
+      return res.status(404).json({ message: "Segment introuvable." });
+    }
+
+    console.log(
+      `Ajustement pour le segment ${segment_id}. Texte initial : "${text}"`
+    );
+
+    // Correction avec les n-grams pour prédire le mot suivant
+    const predictedWord = predictNextWord(text, trigramModel);
+    if (predictedWord) {
+      text = `${text} ${predictedWord}`;
+      console.log(`Correction automatique avec n-gram : "${text}"`);
+    }
+
+    // Vérifie les chevauchements avec les segments voisins
+    const adjustedText = await adjustTextWithNeighbors(currentSegment, text);
+    console.log(
+      `Texte après ajustement pour le segment ${segment_id} : "${adjustedText}"`
+    );
+
+    // Ajoute le sous-titre ajusté en base de données
+    const newSubtitle = await SubtitleModel.addSubtitle({
+      segment_id,
+      text: adjustedText,
+      created_by,
+    });
+
+    return res.status(201).json({
+      message: "Sous-titre ajouté avec succès.",
+      subtitle: newSubtitle,
+    });
+  } catch (error) {
+    console.error("Erreur lors de l’ajout du sous-titre :", error);
+    return res.status(500).json({ message: "Erreur serveur." });
   }
 }
 // async function addSubtitle(req, res) {
@@ -216,45 +263,45 @@ async function assignUserToSegmentController(req, res) {
 //     return res.status(500).json({ message: "Erreur serveur." });
 //   }
 // }
-async function addSubtitle(req, res) {
-  const { segment_id, text, created_by } = req.body;
+// async function addSubtitle(req, res) {
+//   const { segment_id, text, created_by } = req.body;
 
-  if (!segment_id || !text || !created_by) {
-    return res.status(400).json({ message: "Champs obligatoires manquants." });
-  }
+//   if (!segment_id || !text || !created_by) {
+//     return res.status(400).json({ message: "Champs obligatoires manquants." });
+//   }
 
-  try {
-    // Vérifie si le segment existe
-    const currentSegment = await VideoSegmentModel.findById(segment_id);
-    if (!currentSegment) {
-      return res.status(404).json({ message: "Segment introuvable." });
-    }
+//   try {
+//     // Vérifie si le segment existe
+//     const currentSegment = await VideoSegmentModel.findById(segment_id);
+//     if (!currentSegment) {
+//       return res.status(404).json({ message: "Segment introuvable." });
+//     }
 
-    // Vérifie les chevauchements avec les voisins
-    console.log(
-      `Ajustement pour le segment ${segment_id}. Texte initial : "${text}"`
-    );
-    const adjustedText = await adjustTextWithNeighbors(currentSegment, text);
-    console.log(
-      `Texte après ajustement pour le segment ${segment_id} : "${adjustedText}"`
-    );
+//     // Vérifie les chevauchements avec les voisins
+//     console.log(
+//       `Ajustement pour le segment ${segment_id}. Texte initial : "${text}"`
+//     );
+//     const adjustedText = await adjustTextWithNeighbors(currentSegment, text);
+//     console.log(
+//       `Texte après ajustement pour le segment ${segment_id} : "${adjustedText}"`
+//     );
 
-    // Ajoute le sous-titre ajusté
-    const newSubtitle = await SubtitleModel.addSubtitle({
-      segment_id,
-      text: adjustedText,
-      created_by,
-    });
+//     // Ajoute le sous-titre ajusté
+//     const newSubtitle = await SubtitleModel.addSubtitle({
+//       segment_id,
+//       text: adjustedText,
+//       created_by,
+//     });
 
-    return res.status(201).json({
-      message: "Sous-titre ajouté avec succès.",
-      subtitle: newSubtitle,
-    });
-  } catch (error) {
-    console.error("Erreur lors de l’ajout du sous-titre :", error);
-    return res.status(500).json({ message: "Erreur serveur." });
-  }
-}
+//     return res.status(201).json({
+//       message: "Sous-titre ajouté avec succès.",
+//       subtitle: newSubtitle,
+//     });
+//   } catch (error) {
+//     console.error("Erreur lors de l’ajout du sous-titre :", error);
+//     return res.status(500).json({ message: "Erreur serveur." });
+//   }
+// }
 async function getSubtitlesBySegment(req, res) {
   const { segment_id } = req.params;
 

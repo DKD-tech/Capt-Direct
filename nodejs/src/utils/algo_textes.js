@@ -1,6 +1,7 @@
 const axios = require;
 const SubtitleModel = require("../models/SubtitleModel"); // Ajuste le chemin si nécessaire
 const VideoSegmentModel = require("../models/VideoSegmentModel"); // Pour accéder aux segments voisins
+const { verifierTexte } = require("../utils/correction");
 
 // function handleOverlap(text1, text2) {
 //   // Utilise des mots pour détecter le chevauchement
