@@ -2,13 +2,111 @@
 
 html,
 body {
+  margin: 0;
+  font-family: Roboto, "Helvetica Neue", sans-serif;
+  background-color: rgb(246, 247, 248);
+}
+
+/* Global Styles */
+html, body {
   height: 100%;
   margin: 0;
   padding: 0;
-  overflow: hidden; /* Éviter le défilement global */
+  display: flex;
+  flex-direction: column;
 }
-body {
-  margin: 0;
-  font-family: Roboto, "Helvetica Neue", sans-serif;
-  background-color: bisque;
+
+.dashboard-container {
+  display: flex;
+  flex: 1;
+  height: 100%;
 }
+
+.main-content {
+  flex: 1;
+  padding: 20px;
+  overflow-y: auto;
+}
+
+.app-header,
+.app-footer {
+  width: 100%;
+}
+
+footer {
+  margin-top: auto; /* Fixe le pied de page en bas de la page */
+}
+
+.live-video iframe {
+  max-height: 60vh;
+  width: 100%;
+  border-radius: 8px;
+}
+
+textarea {   
+  display: inline-block;   
+   border: inset 1px gray;    
+   white-space: pre-wrap;    
+   width: attr(cols, ex, 10em);    
+   height: attr(rows, em);    
+   overflow: hidden
+ }
+
+ .c-button {  
+   position: relative;  
+   background: none;  
+   border: 1px solid transparent;  
+   padding: 0;  display: inline-flex;  
+   align-items: center;  
+   justify-content: center;  
+   min-height: 3rem;  
+   padding: 0 2.4rem;  
+   font-size: 1.6rem;  
+   font-weight: 600;  
+   text-align: center;  
+   color: #1a1a1a;  
+   user-select: none;  
+   cursor: pointer;  
+   text-decoration: none;  
+   box-sizing: border-box;  /* Remove IOS Style */  
+ }
+   .c-button--primary {  
+     background-color: #1a1a1a;  
+     --text-color: #fff;  
+     color: var(--text-color);  
+     border-radius: 100rem;  
+     text-decoration: none;
+   }
+   .c-input, input.c-input { 
+     width: 90%; 
+     min-height: 4.8rem;
+     border-radius: 1.2rem !important; 
+     padding: 0 1.6rem; 
+     border: 1px solid #aca3a0 !important; 
+     font-size: 1rem; 
+     font-weight: 600; 
+     background-color: #fff; 
+     text-align: left; 
+   }
+   .c-button--sm {
+      min-height: 3.2rem; 
+      padding: 0 1.6rem; 
+      font-size: 1rem; 
+     }
+     ul{
+       list-style-type: none;
+       padding-left: 0 !important;
+     }
+
+     .c-button--secondary {  
+      background-color: #ffffff;  
+      --text-color: #1a1a1a;  
+      color: var(--text-color);  
+      border: 1px solid #1a1a1a;  
+      border-radius: 100rem;  
+      text-decoration: none;
+    }
+    .c-input_login {
+      min-height: 2.8rem !important;
+      font-weight: 200 !important;
+    }

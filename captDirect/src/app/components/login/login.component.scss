@@ -1,10 +1,13 @@
 .login-container {
   max-width: 400px;
-  margin: 0 auto;
+  margin: 40px auto; /* Ajoute un espace de 40px en haut et en bas */
   padding: 20px;
   border: 1px solid #ddd;
   border-radius: 8px;
   box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
+}
+body {
+  padding: 20px 0; /* Ajoute un padding de 20px en haut et en bas pour espacer le contenu */
 }
 
 .login-container h2 {
@@ -40,25 +43,9 @@
   color: white;
   border: none;
 }
-
-.popup-error {
-  position: fixed;
-  top: 20%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  background-color: #f8d7da;
-  padding: 20px;
-  border: 1px solid #f5c2c7;
-  color: #721c24;
-  border-radius: 5px;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-}
-
-.popup-error button {
-  margin-top: 10px;
-  background-color: #f5c2c7;
-  border: none;
-  padding: 5px 10px;
-  cursor: pointer;
-  border-radius: 3px;
+.widthText {
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 10px;
+  font-size: 1rem;
 }

@@ -8,7 +8,7 @@
         name="email"
         [(ngModel)]="email"
         required
-      />
+      class="c-input c-input_login"/>
     </div>
     <div class="form-group">
       <input
@@ -16,13 +16,13 @@
         placeholder="Mot de passe"
         name="password"
         [(ngModel)]="password"
-        required
+        class="c-input c-input_login" required
       />
     </div>
-    <button type="submit" class="btn btn-primary" [disabled]="!loginForm.valid">
+    <button type="submit" class="c-button c-button--primary widthText" [disabled]="!loginForm.valid">
       Se connecter
     </button>
-    <button type="button" class="btn btn-secondary" (click)="onRegister()">
+    <button type="button" class="c-button c-button--secondary widthText" (click)="onRegister()">
       S'inscrire
     </button>
   </form>

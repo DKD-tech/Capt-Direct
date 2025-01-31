@@ -9,13 +9,14 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { SessionService } from '../../services/sessions/session.service';
 import { CommonModule } from '@angular/common';
+import { MatListModule } from '@angular/material/list';
 // import videojs from 'video.js';
 // import WaveSurfer from 'wavesurfer.js';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [MatIconModule, FormsModule, CommonModule],
+  imports: [MatIconModule, FormsModule, CommonModule, MatListModule],
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.scss',
 })
@@ -26,7 +27,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   displayedSubtitle = '';
   userId: number = 0; // Identifiant utilisateur récupéré dynamiquement
   videoUrl = ''; // URL de la vidéo récupérée dynamiquement
-  sessionId: number = 14; // ID de la session à afficher
+  sessionId: number = 2; // ID de la session à afficher
   segments: any[] = [];
   username: string = '';
   collaborators: number = 1; // Nombre de collaborateurs en ligne
@@ -39,6 +40,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
   duration: number | null = null;
   // duration: number;
 
+
+  //VAR EDIT SIDE BAR
+
+  isOpen = false;
   // // Méthode pour calculer la durée de la vidéo
   // calculateVideoDuration(videoUrl: string): void {
   //   const videoElement = document.createElement('video');
@@ -589,4 +594,13 @@ ${segment.subtitleText}`;
       },
     });
   }
+  
+  // Side Bar - asma edit 
+
+
+  toggleSidebar() {
+    this.isOpen = !this.isOpen;
+  }
+
+  
 }

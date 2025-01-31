@@ -1,0 +1,35 @@
+<div class="youtube-home">
+    <div class="header">
+      <div class="logo">Vidéos</div>
+      <!-- <div class="search-container">
+        <input type="text" placeholder="Search" class="search-input">
+        <button class="search-btn">
+          <i class="fas fa-search"></i> 
+        </button>
+      </div> -->
+
+    </div>
+  
+    <div class="main-content">
+      <!-- <div class="sidebar">
+        <ul>
+          <li>Acceuil</li>
+          <li>Paramètres</li>
+          
+        </ul>
+      </div> -->
+  
+      <div class="video-grid">
+        <div class="video-card" *ngFor="let video of videos">
+            <div class="thumbnail">
+              <div *ngIf="video.isLive" class="live-badge">LIVE</div>
+            </div>
+            <div class="details">
+              <h3>{{ video.title }}</h3>
+              <p>{{ video.channel }}</p>
+              <p>{{ video.views }} <span *ngIf="!video.isLive">• {{ video.time }}</span></p>
+            </div>
+          </div>
+      </div>
+    </div>
+  </div>

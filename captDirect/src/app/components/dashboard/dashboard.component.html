@@ -6,7 +6,7 @@
     </div>
     <nav class="nav-links">
       <ul>
-        <li><a href="#">Settings</a></li>
+        <li><a href="#">Paramètres</a></li>
         <li><a (click)="onLogout()">Déconnexion</a></li>
       </ul>
     </nav>
@@ -15,9 +15,10 @@
   <main class="main-content">
     <div class="streaming-info">
       <div class="status-header">
-        <span class="dot red"></span>
-        <span class="status-text">Session en cours</span>
-
+        <div>
+          <span class="dot red"></span>
+          <span class="status-text">Session en cours</span>
+        </div>
         <div class="clock">
           <mat-icon>access_time</mat-icon>
           <span id="clock">12:12 à 12:22</span>
@@ -34,10 +35,21 @@
         </p>
       </div> -->
       <div class="collaborators-count">
-        <span>Vous êtes {{ collaborators }} collaborateurs en ligne</span>
-        <ul>
+        <div>
+          <mat-icon>group</mat-icon>
+          <span> Vous êtes {{ collaborators }} collaborateurs en ligne:</span>
+        </div>
+        <!-- <ul>
+          
+          <mat-icon>person</mat-icon>
           <li *ngFor="let user of users">{{ user }}</li>
-        </ul>
+        </ul> -->
+        <mat-list>
+          <mat-list-item *ngFor="let user of users">
+            <mat-icon class="icon-size" matListIcon>person</mat-icon> {{ user }}
+          </mat-list-item>
+        </mat-list>
+        
       </div>
     </div>
     <section class="segments">
@@ -91,7 +103,7 @@
               segment.timeRemaining <= 0 ||
               segment.isLocked
             "
-          ></textarea>
+          class="c-input widthText"></textarea>
           <!-- <button
             (click)="addSubtitleToSegment(segment)"
             [disabled]="segment.isDisabled || segment.timeRemaining <= 0"
@@ -108,7 +120,7 @@
           </ul>
         </li>
       </ul>
-      <button (click)="downloadSubtitles()">Exporter les sous-titres</button>
+      <button class="c-button c-button--primary c-button--sm" style="margin-bottom: 100px;" (click)="downloadSubtitles()">Exporter les sous-titres</button>
     </section>
 
     <section class="live-video" *ngIf="videoUrl" (error)="onVideoError()">
@@ -133,19 +145,19 @@
     </section>
 
     <div class="transcription-info">
-      <div class="audio-wave">
+      <!-- <div class="audio-wave">
         <mat-icon class="audio-icon">graphic_eq</mat-icon>
         <div class="audio-sections">
           <div class="section green"></div>
           <div class="section green"></div>
           <div class="section green"></div>
         </div>
-      </div>
+      </div> -->
       <textarea
         [(ngModel)]="subtitleText"
         (keyup)="onSubtitleChange()"
         placeholder="Saisir le texte"
-      ></textarea>
+      class="c-input"></textarea>
     </div>
   </main>
 </div>

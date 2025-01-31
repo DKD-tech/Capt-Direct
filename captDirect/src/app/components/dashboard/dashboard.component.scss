@@ -29,8 +29,8 @@ body {
 }
 
 .user-icon {
-  width: 50px;
-  height: 50px;
+  width: 20px;
+  height: 26px;
   border-radius: 50%;
   margin-right: 15px;
 }
@@ -96,7 +96,7 @@ body {
 .status-text {
   font-size: 16px;
   font-weight: bold;
-  color: #333;
+  color: rgb(0, 255, 149);
 }
 
 .clock {
@@ -113,7 +113,6 @@ body {
 .collaborators-count {
   font-size: 14px;
   font-weight: bold;
-  text-align: center;
   width: 100%;
   color: #333;
 }
@@ -218,3 +217,64 @@ body {
   background-color: #4caf50; /* Couleur de l'onde */
   transition: width 1s linear; /* Animation fluide */
 }
+textarea {   
+   display: inline-block;   
+    border: inset 1px gray;    
+    white-space: pre-wrap;    
+    width: attr(cols, ex, 10em);    
+    height: attr(rows, em);    
+    overflow: hidden
+  }
+
+  .c-button {  
+    position: relative;  
+    background: none;  
+    border: 1px solid transparent;  
+    padding: 0;  display: inline-flex;  
+    align-items: center;  
+    justify-content: center;  
+    min-height: 3rem;  
+    padding: 0 2.4rem;  
+    font-size: 1.6rem;  
+    font-weight: 600;  
+    text-align: center;  
+    color: #1a1a1a;  
+    user-select: none;  
+    cursor: pointer;  
+    text-decoration: none;  
+    box-sizing: border-box;  /* Remove IOS Style */  
+  }
+    .c-button--primary {  
+      background-color: #1a1a1a;  
+      --text-color: #fff;  
+      color: var(--text-color);  
+      border-radius: 100rem;  
+      text-decoration: none;
+    }
+    .c-input, input.c-input { 
+      width: 90%; 
+      min-height: 4.8rem;
+      border-radius: 1.2rem !important; 
+      padding: 0 1.6rem; 
+      border: 1px solid #aca3a0 !important; 
+      font-size: 1rem; 
+      font-weight: 600; 
+      background-color: #fff; 
+      text-align: left; 
+    }
+    .widthText{
+      width: 50% !important;
+      padding: 10px;
+    }
+    .c-button--sm {
+       min-height: 3.2rem; 
+       padding: 0 1.6rem; 
+       font-size: 1rem; 
+      }
+      ul{
+        list-style-type: none;
+        padding-left: 0 !important;
+      }
+      .icon-size{
+        height: 26px;
+      }

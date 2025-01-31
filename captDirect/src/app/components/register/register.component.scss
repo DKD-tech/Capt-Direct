@@ -7,18 +7,26 @@
   box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
 }
 
+body {
+  padding: 20px 0; /* Ajoute un padding de 20px en haut et en bas pour espacer le contenu */
+}
+
 .register-container h2 {
   text-align: center;
   margin-bottom: 20px;
 }
 
+// .form-group {
+//   margin-bottom: 15px;
+// }
+
+// .form-group label {
+//   display: block;
+//   margin-bottom: 5px;
+// }
+
 .form-group {
   margin-bottom: 15px;
-}
-
-.form-group label {
-  display: block;
-  margin-bottom: 5px;
 }
 
 .form-group input {
@@ -27,6 +35,13 @@
   margin: 5px 0;
   box-sizing: border-box;
 }
+
+// .form-group input {
+//   width: 100%;
+//   padding: 10px;
+//   margin: 5px 0;
+//   box-sizing: border-box;
+// }
 
 .btn {
   width: 100%;
@@ -54,26 +69,9 @@
   text-decoration: underline;
 }
 
-.popup-error {
-  position: fixed;
-  top: 50%; /* Centré verticalement */
-  left: 50%; /* Centré horizontalement */
-  transform: translate(-50%, -50%); /* Centre le popup */
-  background-color: #f8d7da;
-  padding: 20px;
-  border: 1px solid #f5c2c7;
-  color: #721c24;
-  border-radius: 5px;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-  text-align: center;
-  z-index: 1000; /* Pour s'assurer qu'il est au-dessus des autres éléments */
-}
-
-.popup-error button {
-  margin-top: 10px;
-  background-color: #f5c2c7;
-  border: none;
-  padding: 5px 10px;
-  cursor: pointer;
-  border-radius: 3px;
+.widthText {
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 10px;
+  font-size: 1rem;
 }
