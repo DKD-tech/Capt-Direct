@@ -465,6 +465,41 @@ export class DashboardComponent implements OnInit, OnDestroy {
       .join('\n\n');
   }
 
+  formatTimeToSRT(time: number): string {
+    if (isNaN(time)) {
+      console.error(
+        'Erreur : timestamp invalide détecté dans formatTimeToSRT:',
+        time
+      );
+      return '00:00:00,000'; // Retourne un timestamp par défaut au lieu de NaN
+    }
+
+    const hours = Math.floor(time / 3600);
+    const minutes = Math.floor((time % 3600) / 60);
+    const seconds = Math.floor(time % 60);
+    const milliseconds = Math.floor((time % 1) * 1000);
+
+    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(
+      2,
+      '0'
+    )}:${String(seconds).padStart(2, '0')},${String(milliseconds).padStart(
+      3,
+      '0'
+    )}`;
+  }
+  timeStringToSeconds(timeString: string): number {
+    const parts = timeString.split(':'); // Séparer HH, MM, SS
+    if (parts.length < 3) {
+      console.error('Format de temps invalide :', timeString);
+      return 0;
+    }
+
+    const hours = parseInt(parts[0], 10) || 0;
+    const minutes = parseInt(parts[1], 10) || 0;
+    const seconds = parseFloat(parts[2]) || 0; // Accepte les millisecondes
+
+    return hours * 3600 + minutes * 60 + seconds;
+  }
   // Exporter les sous-titres au format SRT
   exportToSRT(): string {
     console.log('Segments avant génération du fichier SRT :', this.segments);
@@ -480,8 +515,25 @@ export class DashboardComponent implements OnInit, OnDestroy {
           text
         );
 
+        // Vérification des valeurs brutes des timestamps
+        console.log(
+          `start_time brut: ${segment.start_time}, end_time brut: ${segment.end_time}`
+        );
+
+        // Conversion correcte en secondes
+        let startTime = this.timeStringToSeconds(segment.start_time);
+        let endTime = this.timeStringToSeconds(segment.end_time);
+
+        // Vérification des erreurs possibles
+        if (isNaN(startTime) || isNaN(endTime) || startTime === endTime) {
+          console.error(
+            `⚠️ Erreur : start_time (${startTime}) et end_time (${endTime}) invalides pour le segment ${segment.segment_id}`
+          );
+          endTime = startTime + 1; // Évite que les sous-titres aient une durée de 0 secondes
+        }
+
         return `${index + 1}
-  ${segment.start_time} --> ${segment.end_time}
+  ${this.formatTimeToSRT(startTime)} --> ${this.formatTimeToSRT(endTime)}
   ${text}`;
       })
       .join('\n\n');

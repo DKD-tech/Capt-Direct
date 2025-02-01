@@ -13,6 +13,7 @@ import { SessionService } from '../../services/sessions/session.service';
 export class StreamingComponent implements OnInit {
   videoUrl: string = '';
   subtitles: string = '';
+  convertedVttUrl: string = '';
 
   constructor(
     private route: ActivatedRoute,
@@ -33,6 +34,11 @@ export class StreamingComponent implements OnInit {
     const savedSrt = localStorage.getItem('srtFile');
     this.subtitles = savedSrt ? savedSrt : '⚠️ Aucun sous-titre disponible.';
     console.log('📌 Sous-titres chargés :', this.subtitles);
+
+    if (savedSrt) {
+      this.convertSrtToVtt(savedSrt); // 🔹 Convertit et charge les sous-titres
+      console.log('📌 URL du fichier VTT généré :', this.convertedVttUrl);
+    }
   }
   downloadSubtitles(): void {
     if (!this.subtitles.trim()) {
@@ -69,5 +75,23 @@ export class StreamingComponent implements OnInit {
         this.videoUrl = '';
       },
     });
+  }
+
+  // 🔹 Conversion de SRT en VTT
+  convertSrtToVtt(srt: string): void {
+    console.log('🔄 Conversion du fichier SRT en VTT...');
+
+    const vttText =
+      'WEBVTT\n\n' +
+      srt
+        .replace(/\r\n|\r|\n/g, '\n') // Normalisation des retours à la ligne
+        .replace(/(\d{2}:\d{2}:\d{2}),(\d{3})/g, '$1.$2'); // Convertit "," en "."
+
+    console.log('📌 Fichier VTT généré :', vttText);
+
+    // 🔹 Création d'un fichier temporaire .vtt
+    const blob = new Blob([vttText], { type: 'text/vtt' });
+    this.convertedVttUrl = URL.createObjectURL(blob);
+    console.log('✅ URL du fichier VTT :', this.convertedVttUrl);
   }
 }
