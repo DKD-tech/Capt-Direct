@@ -151,6 +151,8 @@ async function assignUserToSegmentController(req, res) {
  */
 async function addWordToSubtitle(req, res) {
   const { segment_id, word, created_by } = req.body;
+const segmentId = typeof segment_id === 'object' ? segment_id.segment_id : segment_id; // 🔥 Correction ici
+
   console.log("🔹 Nouveau mot reçu :", { segment_id, word, created_by });
 
   if (!segment_id || !word || !created_by) {
@@ -175,30 +177,21 @@ async function addWordToSubtitle(req, res) {
 
     const cleanedWord = cleanWord(word);
 
-    // 🔍 **LOG AVANT AJUSTEMENT**
-    console.log(`🛠️ AVANT AJUSTEMENT : Mot reçu -> "${cleanedWord}" dans le segment ${segment_id}`);
-
-    // **🔧 Ajustement avec les voisins**
-    const adjustedWord = await adjustTextWithNeighbors(segment, cleanedWord);
-
-    // 🔍 **LOG APRÈS AJUSTEMENT**
-    console.log(`✅ APRÈS AJUSTEMENT : Mot ajusté -> "${adjustedWord}" dans le segment ${segment_id}`);
-
     // 📌 Vérification des doublons dans le même segment
-    const isDuplicate = await isDuplicateInSegment(segment_id, adjustedWord, created_by);
+    const isDuplicate = await isDuplicateInSegment(segment_id, cleanedWord, created_by);
     if (isDuplicate) {
-      console.warn(`🚨 Mot "${adjustedWord}" rejeté car détecté comme doublon dans le même segment.`);
+      console.warn(`🚨 Mot "${cleanedWord}" rejeté car détecté comme doublon dans le même segment.`);
       return res.status(400).json({
         message: "Mot détecté comme doublon dans ce segment.",
-        word: adjustedWord
+        word: cleanedWord
       });
     } else {
-      console.log(`✅ Mot "${adjustedWord}" accepté, aucun doublon détecté.`);
+      console.log(`✅ Mot "${cleanedWord}" accepté, aucun doublon détecté.`);
     }
 
     // 📌 Validation du mot
-    if (!isWordValid(adjustedWord)) {
-      const suggestion = suggestCorrection(adjustedWord);
+    if (!isWordValid(cleanedWord)) {
+      const suggestion = suggestCorrection(cleanedWord);
       if (suggestion) {
         return res.status(200).json({
           message: "Mot invalide détecté.",
@@ -206,39 +199,41 @@ async function addWordToSubtitle(req, res) {
           suggestion,
         });
       } else {
-        console.warn(`⚠️ Mot "${adjustedWord}" invalide mais accepté.`);
+        console.warn(`⚠️ Mot "${cleanedWord}" invalide mais accepté.`);
+        // On continue l'ajout du mot sans le bloquer
       }
     }
     
     // 📌 Stockage dans Redis
     const redisKey = `segment:${segment_id}:subtitles`;
-    await redisClient.rPush(redisKey, adjustedWord);
+    await redisClient.rPush(redisKey, cleanedWord); // Ajout en file d'attente FIFO
 
     console.log("📡 Envoi du mot via socket :", { 
       segment_id, 
-      word: adjustedWord, 
+      word: cleanedWord, 
       user_id: created_by 
     });
 
     // 📡 Diffuser aux utilisateurs via Socket.IO
     io.to(`segment_${segment_id}`).emit("word_added", { 
       segment_id, 
-      word: adjustedWord,
+      word: cleanedWord,
       user_id: created_by 
     });
 
     io.to(`session:${segment_id}`).emit("updateSubtitle", {
-        text: adjustedWord,
+        text: cleanedWord,
         segment_id
     });
 
-    return res.status(201).json({ message: "Mot ajouté avec succès.", word: adjustedWord });
+    return res.status(201).json({ message: "Mot ajouté avec succès.", word: cleanedWord });
 
   } catch (error) {
     console.error("❌ Erreur lors de l'ajout du mot :", error);
     return res.status(500).json({ message: "Erreur serveur." });
   }
 }
+
 
 /**
  * Finaliser le sous-titre après validation de tous les mots

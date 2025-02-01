@@ -224,44 +224,36 @@ this.socketService.onSubtitleFinalized().subscribe(({ segment_id, finalText }) =
     }
   }
   
-  sendWordToBackend(word: string, segment: any): void { 
+  sendWordToBackend(word: string, segment: any): void {
     if (!word.trim()) return; // Ne rien envoyer si le mot est vide
-  
+
     if (!segment || !segment.segment_id) {
       console.error("❌ ERREUR : segment_id est manquant !", segment);
       return;
     }
-  
-    // ✅ Bloquer l'envoi du mot si le segment est finalisé
-    if (segment.isFinalized) {
-      console.warn(`⚠️ Impossible d'envoyer : le segment ${segment.segment_id} est déjà finalisé.`);
-      return;
-    }
-  
+
     const payload = {
       segment_id: segment.segment_id,
       word: word.trim(),
       created_by: this.userId
     };
-  
+
     console.log("📡 [DEBUG] Données envoyées à l'API :", payload);
-  
+
+    // ✅ Envoi via Socket.IO pour affichage en direct
+    this.socketService.sendWord(segment.segment_id, word.trim(), this.userId);
+
+    // ✅ Envoi via API pour enregistrement en base
     this.sessionService.addWord(segment.segment_id, word.trim(), this.userId).subscribe({
       next: (response) => {
         console.log("✅ [API] Mot ajouté en base :", response);
-        
-        segment.subtitleText = '';
-  
-        setTimeout(() => {
-          this.cdRef.detectChanges();
-          console.log("🔄 Affichage mis à jour après suppression du mot !");
-        }, 50);
       },
       error: (error) => {
         console.error("❌ [API] Erreur lors de l'envoi du mot :", error);
       }
     });
-  }
+}
+
   
 
   loadSegments(): void {
