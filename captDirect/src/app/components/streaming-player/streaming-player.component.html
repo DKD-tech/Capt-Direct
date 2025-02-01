@@ -1,0 +1,11 @@
+<div class="video-container">
+  <video
+    #videoPlayer
+    controls
+    (timeupdate)="updateSubtitle(videoPlayer.currentTime)"
+  >
+    <source [src]="videoUrl" type="video/mp4" />
+    Votre navigateur ne supporte pas la vidéo.
+  </video>
+  <div class="subtitles">{{ currentSubtitle }}</div>
+</div>

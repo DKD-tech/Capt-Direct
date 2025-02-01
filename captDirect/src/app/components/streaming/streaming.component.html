@@ -1,0 +1,16 @@
+<div class="streaming-container">
+  <h2>Lecture de la vidéo sous-titrée</h2>
+
+  <video *ngIf="videoUrl" controls>
+    <source [src]="videoUrl" type="video/mp4" />
+    Votre navigateur ne supporte pas la vidéo.
+  </video>
+
+  <p *ngIf="!videoUrl">⚠️ Vidéo introuvable.</p>
+
+  <h3>Sous-titres</h3>
+  <pre>{{ subtitles }}</pre>
+
+  <!-- Bouton pour télécharger les sous-titres -->
+  <button (click)="downloadSubtitles()">Télécharger les sous-titres</button>
+</div>

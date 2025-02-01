@@ -500,9 +500,19 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   onAllSegmentsComplete(): void {
-    const finalSubtitles = this.compileFinalSubtitles();
-    console.log('Sous-titres finaux générés :', finalSubtitles);
-    alert('Sous-titres finaux prêts. Vous pouvez les exporter.');
+    const finalSubtitles = this.exportToSRT();
+    console.log('✅ Sous-titres générés :', finalSubtitles);
+
+    if (!finalSubtitles.trim()) {
+      console.error('❌ Aucun sous-titre généré ! Vérifie la saisie.');
+      return;
+    }
+
+    // Sauvegarder le fichier .srt localement (stocké temporairement dans localStorage)
+    localStorage.setItem('srtFile', finalSubtitles);
+
+    // Redirection vers Streaming avec l'ID de session
+    this.router.navigate(['/streaming', this.sessionId]);
   }
 
   connectToSocket(): void {

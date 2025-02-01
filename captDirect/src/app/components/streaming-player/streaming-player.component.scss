@@ -1,0 +1,22 @@
+.video-container {
+  position: relative;
+  max-width: 800px;
+  margin: auto;
+}
+
+video {
+  width: 100%;
+  border-radius: 10px;
+}
+
+.subtitles {
+  position: absolute;
+  bottom: 20px;
+  width: 100%;
+  text-align: center;
+  color: white;
+  font-size: 20px;
+  background: rgba(0, 0, 0, 0.7);
+  padding: 5px;
+  border-radius: 5px;
+}
