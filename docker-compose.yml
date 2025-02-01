@@ -68,9 +68,9 @@ services:
     networks:
       - capt_direct_net
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: Kh@didia74
-      POSTGRES_DB: stc_db
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
     volumes:
       - postgres_data:/var/lib/postgresql/data
 

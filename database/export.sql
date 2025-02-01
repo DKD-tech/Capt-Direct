@@ -397,4 +397,3 @@ ALTER TABLE ONLY public.video_segments
 --
 -- PostgreSQL database dump complete
 --
-
