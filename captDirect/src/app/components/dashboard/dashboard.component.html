@@ -40,6 +40,109 @@
         </ul>
       </div>
     </div>
+    <section class="segments">
+      <h3>Segments assignés</h3>
+      <ul>
+        <li *ngFor="let segment of segments">
+          <!-- <p>
+            Segment {{ segment.segment_id }} - Début : {{ segment.start_time }},
+            Fin : {{ segment.end_time }}, Statut : {{ segment.status }}
+          </p> -->
+
+          <p>
+            <!-- Nom de l'utilisateur assigné -->
+            <strong>Utilisateur assigné :</strong>
+            {{ segment.assigned_to || "Non spécifié" }}
+          </p>
+          <div class="audio-wave-container">
+            <div
+              class="audio-wave"
+              [style.width]="
+                calculateWaveWidth(
+                  segment.timeRemaining,
+                  segment.end_time,
+                  segment.start_time
+                )
+              "
+              [style.backgroundColor]="
+                segment.timeRemaining > 0 ? '#4caf50' : '#f44336'
+              "
+            ></div>
+          </div>
+
+          <!-- Barre de progression
+          <div class="progress-container">
+            <div
+              class="progress-bar"
+              [style.width.%]="
+                100 - (segment.timeRemaining / segment.duration) * 100
+              "
+            ></div>
+          </div> -->
+
+          <p>Temps restant : {{ segment.timeRemaining }} secondes</p>
+
+          <!-- Zone de texte pour saisir un sous-titre -->
+          <textarea
+          [(ngModel)]="segment.subtitleText"
+          placeholder="Saisir un sous-titre"
+          (focus)="startTimerForSegment(segment)"
+          (keyup)="onSubtitleInput($event, segment)">
+          [disabled]="segment.isDisabled || segment.timeRemaining <= 0 || segment.isLocked"
+          ></textarea>
+          <button (click)="testLiveSubtitles()">Tester liveSubtitles</button>
+
+          <!-- <button
+            (click)="addSubtitleToSegment(segment)"
+            [disabled]="segment.isDisabled || segment.timeRemaining <= 0"
+          >
+            Enregistrer
+          </button> -->
+
+          <!-- Afficher les sous-titres existants -->
+
+          <ul>
+            <li *ngFor="let subtitle of segment.subtitles">
+              {{ subtitle.text }}
+              <span *ngIf="subtitle.created_by"> (Créé par : {{ subtitle.created_by }}) </span>
+            </li>
+            
+          </ul>
+        </li>
+      </ul>
+      <button (click)="downloadSubtitles()">Exporter les sous-titres</button>
+    </section>
+
+    <!-- Section dédiée aux sous-titres en direct -->
+<!-- Section dédiée aux sous-titres en cours -->
+<section class="live-subtitles-container">
+  <h3>Sous-titres en cours</h3>
+
+  <!-- Message si aucun sous-titre -->
+  <p *ngIf="liveSubtitles.length === 0" class="no-subtitles">
+    ⚠️ Aucun sous-titre reçu en temps réel
+  </p>
+
+  <div class="live-subtitles">
+    <div *ngFor="let subtitle of liveSubtitles.slice(-maxVisibleSubtitles); let i = index" 
+    [@fadeInOut] class="subtitle-line">
+ {{ subtitle.text }}
+    </div>
+  </div>
+</section>
+
+
+<!-- Section dédiée aux sous-titres finalisés -->
+<section class="subtitle-stream">
+  <h3>Sous-titres en temps réel</h3>
+  <div class="subtitle-container">
+    <p *ngFor="let subtitle of finalizedSubtitles" class="subtitle-item">
+      {{ subtitle.text }}
+      <span *ngIf="subtitle.created_by"> (Créé par : {{ subtitle.created_by }}) </span>
+    </p>    
+  </div>
+</section>
+
 
     <section class="live-video" *ngIf="videoUrl" (error)="onVideoError()">
       <video
@@ -73,7 +176,7 @@
       </div>
       <textarea
         [(ngModel)]="subtitleText"
-        (keyup)="onSubtitleChange()"
+       
         placeholder="Saisir le texte"
       ></textarea>
     </div>

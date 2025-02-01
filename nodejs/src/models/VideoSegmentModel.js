@@ -25,6 +25,29 @@ class VideoSegmentModel extends Model {
   }
 
   /**
+   * Marquer un segment comme finalisé.
+   */
+  async finalizeSegment(segment_id) {
+    const query = `
+      UPDATE ${this.tableName}
+      SET is_finalized = TRUE
+      WHERE segment_id = $1
+      RETURNING *;
+    `;
+    try {
+      const result = await pool.query(query, [segment_id]);
+      if (result.rowCount === 0) {
+        throw new Error(`Aucun segment trouvé avec l'ID ${segment_id}.`);
+      }
+      console.log(`✅ Segment ${segment_id} marqué comme finalisé.`);
+      return result.rows[0];
+    } catch (error) {
+      console.error(`❌ Erreur lors de la finalisation du segment ${segment_id} :`, error);
+      throw error;
+    }
+  }
+
+  /**
    * Trouver un segment par son ID.
    */
   async findById(segment_id) {
@@ -40,27 +63,25 @@ class VideoSegmentModel extends Model {
       throw error;
     }
   }
-/**
- * Récupérer tous les segments pour une session triés par start_time.
- */
-async findSegmentsBySessionId(session_id) {
-  const query = `
-    SELECT * FROM ${this.tableName}
-    WHERE session_id = $1
-    ORDER BY start_time ASC;
-  `;
-  try {
-    const result = await pool.query(query, [session_id]);
-    return result.rows; // Retourne les segments triés
-  } catch (error) {
-    console.error(
-      `Erreur lors de la récupération des segments pour la session ${session_id} :`,
-      error
-    );
-    throw error;
+  async findSegmentsBySessionId(session_id) {
+    const query = `
+      SELECT segment_id, start_time, end_time, status, is_finalized, session_id
+      FROM ${this.tableName} 
+      WHERE session_id = $1
+      ORDER BY start_time ASC;
+    `;
+    try {
+      const result = await pool.query(query, [session_id]);
+      return result.rows; // Retourne les segments avec is_finalized
+    } catch (error) {
+      console.error(
+        `Erreur lors de la récupération des segments pour la session ${session_id} :`,
+        error
+      );
+      throw error;
+    }
   }
-}
-
+  
   /**
    * Mettre à jour le statut d'un segment.
    */
@@ -138,6 +159,107 @@ async findSegmentsBySessionId(session_id) {
       throw error;
     }
   }
+
+  async findManyByWithUsers(session_id) {
+    const query = `
+      SELECT 
+        s.segment_id,
+        s.start_time,
+        s.end_time,
+        s.status,
+        s.is_finalized, -- ✅ Ajout du champ is_finalized
+        u.username AS assigned_to,
+        s.session_id
+      FROM public.video_segments AS s
+      LEFT JOIN (
+        SELECT DISTINCT ON (su.segment_id) su.segment_id, su.user_id
+        FROM public.segment_users AS su
+        ORDER BY su.segment_id, su.assigned_at DESC
+      ) AS latest_assignments ON latest_assignments.segment_id = s.segment_id
+      LEFT JOIN public.users AS u ON latest_assignments.user_id = u.user_id
+      WHERE s.session_id = $1
+      ORDER BY s.start_time ASC;
+    `;
+    try {
+      const result = await pool.query(query, [session_id]);
+      return result.rows;
+    } catch (error) {
+      console.error(
+        `Erreur lors de la récupération des segments avec utilisateurs pour la session ${session_id} :`,
+        error
+      );
+      throw error;
+    }
 }
+
+  
+  async getPreviousSegment(segment_id) {
+    const query = `
+      SELECT * 
+      FROM ${this.tableName} 
+      WHERE end_time <= (
+        SELECT start_time 
+        FROM ${this.tableName} 
+        WHERE segment_id = $1
+      )
+      AND segment_id != $1
+      AND session_id = (
+        SELECT session_id 
+        FROM ${this.tableName} 
+        WHERE segment_id = $1
+      )
+      ORDER BY end_time DESC
+      LIMIT 1;
+    `;
+    const result = await pool.query(query, [segment_id]);
+    return result.rows[0]; // Retourne le segment précédent ou `undefined`
+  }
+
+  async getNextSegment(segment_id) {
+    const query = `
+      SELECT * 
+      FROM ${this.tableName} 
+      WHERE start_time >= (
+        SELECT end_time 
+        FROM ${this.tableName} 
+        WHERE segment_id = $1
+      )
+      AND segment_id != $1
+      AND session_id = (
+        SELECT session_id 
+        FROM ${this.tableName} 
+        WHERE segment_id = $1
+      )
+      ORDER BY start_time ASC
+      LIMIT 1;
+    `;
+    const result = await pool.query(query, [segment_id]);
+    return result.rows[0]; // Retourne le segment suivant ou `undefined`
+  }
+
+  /**
+ * Trouver tous les segments disponibles triés par start_time.
+ */
+async findAvailableSegmentsSorted(session_id) {
+  const query = `
+    SELECT * FROM ${this.tableName}
+    WHERE session_id = $1 AND status = 'available'
+    ORDER BY start_time ASC;
+  `;
+  try {
+    const result = await pool.query(query, [session_id]);
+    return result.rows; // Retourne les segments triés
+  } catch (error) {
+    console.error(
+      `Erreur lors de la récupération des segments triés pour la session ${session_id} :`,
+      error
+    );
+    throw error;
+  }
+}
+
+}
+
+
 
 module.exports = new VideoSegmentModel();

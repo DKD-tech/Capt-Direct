@@ -177,6 +177,7 @@ const VideoSegmentModel = require("../../models/VideoSegmentModel");
 const SessionModel = require("../../models/SessionModel");
 const SubtitlesModel = require("../../models/SubtitleModel");
 const axios = require("axios");
+const { mergeSortSegments } = require("../../utils/mergeSortSegment");
 const { setAsync, getAsync } = require("../../redis/index");
 // const { requestHlsGeneration } = require("../../../../hls_service/hls_service");
 
@@ -879,9 +880,11 @@ async function getSegmentsWithSubtitles(req, res) {
 
   try {
     console.log(`Fetching segments for session ID: ${session_id}`);
-    // Récupérer les segments associés à la session
-    const segments = await VideoSegmentModel.findManyBy({ session_id });
+    // Récupérer les segments associés à la session avec les noms des utilisateurs assignés
+    const segments = await VideoSegmentModel.findManyByWithUsers(session_id);
 
+    // Trier les segments par start_time
+    const sortedSegments = mergeSortSegments(segments);
     // Récupérer les sous-titres associés à chaque segment
     const segmentsWithSubtitles = await Promise.all(
       segments.map(async (segment) => {
@@ -1133,6 +1136,43 @@ async function saveSubtitlesToDB(req, res) {
 //     res.status(500).json({ message: "Erreur serveur." });
 //   }
 // }
+
+
+async function getNextSegmentByStartTime(req, res) {
+  const { session_id, current_start_time } = req.query;
+
+  if (!session_id || !current_start_time) {
+    return res
+      .status(400)
+      .json({ message: "Session ID et current_start_time sont requis." });
+  }
+
+  try {
+    const query = `
+      SELECT *
+      FROM public.video_segments
+      WHERE session_id = $1
+        AND start_time::TEXT > $2
+      ORDER BY start_time ASC
+      LIMIT 1;
+    `;
+
+    const result = await pool.query(query, [session_id, current_start_time]);
+    if (result.rows.length > 0) {
+      return res.status(200).json({ segment: result.rows[0] });
+    } else {
+      return res.status(404).json({ message: "Aucun segment suivant trouvé." });
+    }
+  } catch (error) {
+    console.error(
+      "Erreur lors de la récupération du segment suivant :",
+      error
+    );
+    return res.status(500).json({ message: "Erreur serveur." });
+  }
+}
+
+
 async function startStreaming(req, res) {
   const { sessionId } = req.params;
   console.log("Session ID reçu :", sessionId); // Journal du sessionId
@@ -1185,4 +1225,5 @@ module.exports = {
   saveSubtitlesToDB,
   startStreaming,
   handleUserDisconnection,
+  getNextSegmentByStartTime, 
 };

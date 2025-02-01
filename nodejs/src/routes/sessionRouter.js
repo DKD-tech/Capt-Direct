@@ -39,10 +39,16 @@
 // module.exports = sessionRouter; // Export correct du routeur
 
 const express = require("express");
+const router = express.Router();
+
 const {
   createSessionController,
   getSessionController,
 } = require("../controllers/stc/creationSessionController");
+
+const { getLiveSubtitles } = require("../controllers/stc/segmentUsersController");
+
+
 const {
   createVideoSegmentController,
   createHlsSegmentsController,
@@ -50,20 +56,25 @@ const {
   storeVideoDurationController,
   getVideoDuration,
   startStreaming,
+  getNextSegmentByStartTime,
+  // ✅ Ajout pour récupérer les sous-titres en temps réel
 } = require("../controllers/stc/videoSegmentController");
+
 const {
   assignSegmentsToUsers,
   handleUserDisconnection,
 } = require("../controllers/stc/assignSegmentController");
+
 const {
-  addSubtitle,
+  addWordToSubtitle,   // ✅ Nouveau : Ajouter un mot en temps réel
+  finalizeSubtitle,    // ✅ Nouveau : Finaliser le sous-titre
   getSubtitlesBySegment,
   getSubtitlesBySession,
-
 } = require("../controllers/stc/segmentUsersController");
+
 const { streamSessions } = require("../controllers/rtmp/streamController");
 const VideoSegmentModel = require("../models/VideoSegmentModel");
-
+const dictionaryController = require("../controllers/stc/dictionaryController");
 const sessionRouter = express.Router();
 
 sessionRouter.post("/create-session", createSessionController);
@@ -79,12 +90,10 @@ sessionRouter.post("/create-segment", async (req, res) => {
   try {
     console.log(`Appel de /create-segment pour la session ${session_id}`);
 
-    // Étape 1 : Réinitialiser les segments inactifs
     console.log("Réinitialisation des segments inactifs...");
-    const resetSegments = await VideoSegmentModel.resetInactiveSegments(5); // 5 minutes d'inactivité
+    const resetSegments = await VideoSegmentModel.resetInactiveSegments(5);
     console.log("Segments réinitialisés :", resetSegments);
 
-    // Étape 2 : Créer ou assigner des segments (appel au contrôleur existant)
     await createVideoSegmentController(req, res);
   } catch (error) {
     console.error("Erreur lors de la création des segments :", error);
@@ -94,8 +103,18 @@ sessionRouter.post("/create-segment", async (req, res) => {
 
 sessionRouter.post("/assign-user-seg", assignSegmentsToUsers);
 sessionRouter.post("/disconnect-user", handleUserDisconnection);
-sessionRouter.post("/add-subtitle", addSubtitle);
+
+// ✅ Nouvelle route pour ajouter un mot en temps réel
+sessionRouter.post("/add-word", addWordToSubtitle);
+
+// ✅ Nouvelle route pour finaliser le sous-titre
+sessionRouter.post("/finalize-subtitle", finalizeSubtitle);
+
+// ✅ Nouvelle route pour récupérer les sous-titres en direct
+sessionRouter.get("/live-subtitles/:segment_id", getLiveSubtitles);
+
 sessionRouter.get("/get-subtitles/:segment_id", getSubtitlesBySegment);
+sessionRouter.get("/subtitles/:session_id", getSubtitlesBySession);
 sessionRouter.post("/generate-hls", createHlsSegmentsController);
 sessionRouter.post("/start", streamSessions);
 sessionRouter.get("/:session_id", getSegmentsWithSubtitles);
@@ -103,9 +122,11 @@ sessionRouter.get("/info/:sessionId", getSessionController);
 sessionRouter.post("/store-duration/:sessionId", storeVideoDurationController);
 sessionRouter.post("/get-duration/:sessionId", getVideoDuration);
 sessionRouter.post("/stream/:sessionId", startStreaming);
-// Route pour valider un sous-titre
-//sessionRouter.post("/validate-subtitle", validateSubtitleWords);
-sessionRouter.get("/subtitles/:session_id", getSubtitlesBySession);
+sessionRouter.get("/next-segment", getNextSegmentByStartTime);
+sessionRouter.get("/validate-word/:word", dictionaryController.validateWord);
+sessionRouter.post("/validate-text", dictionaryController.validateText);
+sessionRouter.get("/suggest-word/:word", dictionaryController.suggestWord);
+
 // Récupérer les utilisateurs connectés
 sessionRouter.get("/connected-users/:session_id", async (req, res) => {
   const { session_id } = req.params;
@@ -114,10 +135,7 @@ sessionRouter.get("/connected-users/:session_id", async (req, res) => {
     const connectedUsers = await findConnectedUsersRedis(session_id);
     res.status(200).json({ connectedUsers });
   } catch (error) {
-    console.error(
-      "Erreur lors de la récupération des utilisateurs connectés :",
-      error
-    );
+    console.error("Erreur lors de la récupération des utilisateurs connectés :", error);
     res.status(500).json({ message: "Erreur serveur." });
   }
 });

@@ -201,3 +201,82 @@ body {
   box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.4); /* Légère ombre pour plus de lisibilité */
   line-height: 1.4; /* Espacement pour une meilleure lisibilité */
 }
+
+.audio-wave-container {
+  width: 100%; /* Largeur de la barre complète */
+  height: 20px;
+  background-color: #ddd; /* Couleur de fond */
+  position: relative;
+  margin: 10px 0;
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+.audio-wave {
+  height: 100%;
+  width: 0; /* Commence à 0%, sera mis à jour dynamiquement */
+  background-color: #4caf50; /* Couleur de l'onde */
+  transition: width 1s linear; /* Animation fluide */
+  .blinking {
+    animation: blink-animation 1s infinite;
+    color: orange; /* Couleur de l'alerte */
+  }
+  
+  .active {
+    color: green; /* Couleur pour indiquer que le segment est actif */
+  }
+  
+  @keyframes blink-animation {
+    50% {
+      opacity: 0;
+    }
+  }
+
+
+  .live-subtitles-container {
+    position: fixed;
+    bottom: 10%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 80%;
+    max-width: 700px;
+    background: rgba(0, 0, 0, 0.7);
+    padding: 15px;
+    border-radius: 8px;
+    color: white;
+    font-size: 22px;
+    text-align: center;
+    overflow: hidden;
+    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.3);
+  }
+  
+  .no-subtitles {
+    color: red;
+    font-size: 18px;
+    font-style: italic;
+  }
+  
+  .live-subtitles {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    height: 100px; /* Ajuste la hauteur d'affichage */
+    overflow: hidden;
+    position: relative;
+  }
+  
+  .subtitle-line {
+    opacity: 1;
+    transform: translateY(0);
+    transition: transform 0.6s ease-out, opacity 1s ease-in;
+    margin-bottom: 5px;
+  }
+  
+  .fade-out {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  
+  
+}

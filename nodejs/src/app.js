@@ -30,6 +30,8 @@ const io = socketIO(server, {
 app.use(express.json());
 app.use(cors());
 app.use("/api", router);
+const { setSocketInstance } = require("./controllers/stc/segmentUsersController"); 
+setSocketInstance(io);
 
 // Stockage des sous-titres, utilisateurs et sessions
 const subtitles = {};

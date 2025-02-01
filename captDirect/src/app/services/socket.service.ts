@@ -1,30 +1,63 @@
 import { Injectable } from '@angular/core';
 import { Socket } from 'ngx-socket-io';
-import { Observable } from 'rxjs';
-import { from } from 'rxjs';
+import { Observable, BehaviorSubject } from 'rxjs';
 
 @Injectable({
   providedIn: 'root',
 })
 export class SocketService {
-  constructor(private socket: Socket) {}
+  private wordAddedSubject = new BehaviorSubject<any>(null); // 🔹 Stocke le dernier mot ajouté
 
-  // Méthodes pour envoyer des événements
-  // joinVideoSession(data: {
-  //   session_id: number;
-  //   user_id: number;
-  //   userName: string;
-  // }) {
-  //   this.socket.emit('join-session', data);
-  // }
-
-  // Rejoindre une session
-  joinSession(session_id: number, username: string, user_id: number): void {
-    this.socket.emit('join-session', { session_id, username, user_id });
+  constructor(private socket: Socket) {
+    this.socket.on("connect", () => {
+      console.log("✅ CONNECTÉ À SOCKET.IO !");
+    });
+  
+    // Vérification immédiate après la connexion
+    setTimeout(() => {
+      console.log("📡 Test d'écoute : Demande au serveur de renvoyer un test.");
+      this.socket.emit("test-connection");
+    }, 3000);
+  
+    // 🔍 Vérification de `word_added`
+    this.socket.on("word_added", (data: any) => {
+      console.log("🔥 DEBUG DIRECT SOCKET.IO reçu :", data);
+    });
   }
+  
+  joinSession(session_id: number, username: string, user_id: number): void {
+    console.log("📢 [FRONTEND] Tentative de rejoindre la session :", { session_id, username, user_id });
+    this.socket.emit("join-session", { session_id, username, user_id });
+  
+    this.socket.on("update-users", (users: string[]) => {  // 👈 Ajoute le type ici
+      console.log("✅ [FRONTEND] Utilisateurs mis à jour :", users);
+    });
+  }
+  
+  
+
+  // 🔹 Vérifier la réception de `word_added`
+  onWordAdded(): Observable<any> {
+    return this.wordAddedSubject.asObservable();
+  }
+
+  // 🔹 Quitter une session
+  leaveVideoSession(data: { userId: number; sessionId: number }) {
+    this.socket.emit('leaveVideoSession', data);
+  }
+
+  sendWord(segmentId: number, word: string, userId: number): void {
+    console.log("📤 [FRONTEND] Envoi du mot via socket :", { segment_id: segmentId, word, created_by: userId });
+    this.socket.emit('word_added', { segment_id: segmentId, word, created_by: userId });
+  }
+  
+
+
+  
   // onSegmentAssigned(callback: (segment: any) => void) {
   //   this.socket.on('segment-assigned', callback);
   // }
+  
 
   // Recevoir les utilisateurs connectés
   getUsers(): Observable<string[]> {
@@ -34,10 +67,21 @@ export class SocketService {
       });
     });
   }
-  leaveVideoSession(data: { userId: number; videoId: string }) {
-    this.socket.emit('leaveVideoSession', data);
+
+  // Écouter la mise à jour de la liste des utilisateurs connectés
+  onUsersUpdated(): Observable<string[]> {
+    return this.socket.fromEvent<string[]>('update-users');
   }
 
+  // Écouter les mises à jour des segments redistribués
+  onSegmentsRedistributed(): Observable<any[]> {
+    return this.socket.fromEvent<any[]>('segments-redistributed');
+  }
+
+  // Mises à jour des segments redistribués
+  onSegmentsUpdated(): Observable<any> {
+    return this.socket.fromEvent('segments-updated');
+  }
   sendSubtitle(subtitle: { text: string; videoId: string; timestamp: number }) {
     this.socket.emit('editSubtitle', subtitle);
   }
@@ -66,19 +110,31 @@ export class SocketService {
     this.socket.emit('notification', data);
   }
 
-  // Méthodes pour écouter des événements
-  onSubtitleUpdate(): Observable<{
-    text: string;
-    videoId: string;
-    timestamp: number;
-  }> {
+  onSubtitleUpdate(): Observable<any> {
     return this.socket.fromEvent('updateSubtitle');
   }
+  
+  // Méthodes pour écouter des événements
+  //onSubtitleUpdate(): Observable<{
+  //  text: string;
+    //videoId: string;
+    //timestamp: number;
+  //}> {
+  //  return this.socket.fromEvent('updateSubtitle');
+  //}
 
-  onSegmentsUpdated(): Observable<any[]> {
-    return this.socket.fromEvent<any[]>('updateSegments');
+  // onSegmentsUpdated(): Observable<any[]> {
+  //   return this.socket.fromEvent<any[]>('updateSegments');
+  // }
+  onSocketConnect(): Observable<void> {
+    return new Observable(observer => {
+      this.socket.on("connect", () => {
+        console.log("✅ CONNECTÉ À SOCKET.IO !");
+        observer.next();
+      });
+    });
   }
-
+  
   onUserJoined(): Observable<{ userId: string; userName: string }> {
     return this.socket.fromEvent('userJoined');
   }
@@ -102,6 +158,26 @@ export class SocketService {
   onUserTyping(): Observable<{ userId: string }> {
     return this.socket.fromEvent('userTyping');
   }
+ ;
+  
+  
+  
+  // 🔹 Écouter un sous-titre finalisé
+onSubtitleFinalized(): Observable<{ segment_id: number; finalText: string }> {
+  return this.socket.fromEvent('subtitle_finalized');
+}
+
+// 🔹 Écouter les mots reçus en temps réel
+onWordReceived(): Observable<any> {
+  return new Observable(observer => {
+    this.socket.on("word_added", (data: any) => {  // Ajout de ": any"
+      console.log("✅ SOCKET SERVICE : Événement `word_added` reçu :", data);
+      observer.next(data);
+    });
+  });
+}
+
+
 
   onNotification(): Observable<{
     type: string;
@@ -110,4 +186,15 @@ export class SocketService {
   }> {
     return this.socket.fromEvent('notification');
   }
+  public listen(eventName: string): Observable<any> {
+    return new Observable(observer => {
+      this.socket.on(eventName, (data: any) => {
+        console.log(`📡 Événement reçu : ${eventName}`, data);
+        observer.next(data);
+      });
+    });
+  }
+  
+
+  
 }
