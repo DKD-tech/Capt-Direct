@@ -72,37 +72,49 @@ async function assignUserToSegmentController(req, res) {
 }
 
 async function addSubtitle(req, res) {
-  let { segment_id, text, created_by } = req.body;
+  const { segment_id, text, created_by } = req.body;
 
   if (!segment_id || !text || !created_by) {
     return res.status(400).json({ message: "Champs obligatoires manquants." });
   }
 
   try {
-    // Vérifie si le segment existe
+    // ✅ Vérifier si le segment existe
     const currentSegment = await VideoSegmentModel.findById(segment_id);
     if (!currentSegment) {
       return res.status(404).json({ message: "Segment introuvable." });
     }
 
-    console.log(
-      `Ajustement pour le segment ${segment_id}. Texte initial : "${text}"`
+    // ✅ Vérifier si l'utilisateur est bien assigné à ce segment
+    const isUserAssigned = await SegmentUserModel.isUserAssignedToSegment(
+      created_by,
+      segment_id
     );
 
-    // Correction avec les n-grams pour prédire le mot suivant
+    if (!isUserAssigned) {
+      return res.status(403).json({
+        message: "🚫 Vous n'êtes pas autorisé à sous-titrer ce segment.",
+      });
+    }
+
+    console.log(
+      `✏️ Ajout du sous-titre pour le segment ${segment_id} : "${text}"`
+    );
+
+    // ✅ Utilisation de `predictNextWord()` pour compléter automatiquement le texte
     const predictedWord = predictNextWord(text, trigramModel);
     if (predictedWord) {
       text = `${text} ${predictedWord}`;
-      console.log(`Correction automatique avec n-gram : "${text}"`);
+      console.log(`🔮 Correction automatique avec n-gram : "${text}"`);
     }
 
-    // Vérifie les chevauchements avec les segments voisins
+    // ✅ Vérifier les chevauchements avec les segments voisins
     const adjustedText = await adjustTextWithNeighbors(currentSegment, text);
     console.log(
-      `Texte après ajustement pour le segment ${segment_id} : "${adjustedText}"`
+      `📌 Texte final pour le segment ${segment_id} : "${adjustedText}"`
     );
 
-    // Ajoute le sous-titre ajusté en base de données
+    // ✅ Ajouter le sous-titre en base de données
     const newSubtitle = await SubtitleModel.addSubtitle({
       segment_id,
       text: adjustedText,
@@ -110,14 +122,15 @@ async function addSubtitle(req, res) {
     });
 
     return res.status(201).json({
-      message: "Sous-titre ajouté avec succès.",
+      message: "✅ Sous-titre ajouté avec succès.",
       subtitle: newSubtitle,
     });
   } catch (error) {
-    console.error("Erreur lors de l’ajout du sous-titre :", error);
+    console.error("❌ Erreur lors de l’ajout du sous-titre :", error);
     return res.status(500).json({ message: "Erreur serveur." });
   }
 }
+
 // async function addSubtitle(req, res) {
 //   const { segment_id, text, created_by } = req.body;
 
