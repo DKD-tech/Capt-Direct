@@ -65,41 +65,41 @@ class SubtitleModel extends Model {
       /**
        * Ajouter un mot au sous-titre en temps réel (stockage temporaire Redis)
        */
-      async addWordToSubtitle(segment_id, word, created_by) {
-        if (!segment_id || !word || !created_by) {
-          throw new Error("Segment ID, mot et auteur sont requis.");
-        }
-    
-        const redisKey = `subtitles:${segment_id}`;
-        await redisClient.rPush(redisKey, JSON.stringify({ word, created_by }));
-      }
-    
       /**
-       * Finaliser un sous-titre après validation (ex: après 10s)
-       */
-      async finalizeSubtitle(segment_id, created_by) {
-        const redisKey = `subtitles:${segment_id}`;
-        const words = await redisClient.lRange(redisKey, 0, -1);
-    
-        if (!words || words.length === 0) {
-          throw new Error("Aucun mot à finaliser pour ce segment.");
-        }
-    
-        const fullText = words.map((entry) => JSON.parse(entry).word).join(" ");
-    
-        // Sauvegarde dans PostgreSQL
-        const newSubtitle = await this.insert({
-          segment_id,
-          text: fullText,
-          created_by,
-        });
-    
-        // Nettoyage Redis après stockage
-        await redisClient.del(redisKey);
-    
-        return newSubtitle;
-      }
-    
+   * Ajouter un mot au sous-titre
+   */
+  async addSubtitle(segment_id, word, created_by) {
+    if (!segment_id || !word || !created_by) {
+      throw new Error("Segment ID, mot et auteur sont requis.");
+    }
+
+    const redisKey = `subtitles:${segment_id}`;
+    await redisClient.rPush(redisKey, JSON.stringify({ word, created_by }));
+  }
+      /**
+       *async finalizeSubtitle(segment_id, created_by) {
+    const redisKey = `subtitles:${segment_id}`;
+    const words = await redisClient.lRange(redisKey, 0, -1);
+
+    if (!words || words.length === 0) {
+      throw new Error("Aucun mot à finaliser pour ce segment.");
+    }
+
+    const fullText = words.map((entry) => JSON.parse(entry).word).join(" ");
+
+    // Sauvegarde dans PostgreSQL
+    const newSubtitle = await this.insert({
+      segment_id,
+      text: fullText,
+      created_by,
+    });
+
+    // Nettoyage Redis après stockage
+    await redisClient.del(redisKey);
+
+    return newSubtitle;
+}
+
       /**
        * Récupérer les sous-titres d'un segment
        */
@@ -107,7 +107,27 @@ class SubtitleModel extends Model {
         return await this.findManyBy({ segment_id });
       }
     
-
+      async storeFinalSubtitle(segment_id, text, created_by) {
+        if (!segment_id || !text || !created_by) {
+            throw new Error("Le segment_id, le texte final et le created_by sont requis.");
+        }
+    
+        const query = `
+            INSERT INTO subtitles (segment_id, text, created_by)
+            VALUES ($1, $2, $3)
+            RETURNING *;
+        `;
+    
+        try {
+            const result = await pool.query(query, [segment_id, text, created_by]);
+            console.log(`✅ Sous-titre final enregistré pour le segment ${segment_id} :`, result.rows[0]);
+            return result.rows[0];
+        } catch (error) {
+            console.error("❌ Erreur lors de l'enregistrement du sous-titre final :", error);
+            throw error;
+        }
+    }
+    
       async getFinalSubtitleBySegment(segment_id) {
         //console.log(`🛠️ Exécution de la requête SQL pour récupérer le sous-titre finalisé du segment ${segment_id}`);
       

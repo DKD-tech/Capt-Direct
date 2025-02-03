@@ -26,7 +26,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   displayedSubtitle = '';
   userId: number = 0;
   videoUrl = '';
-  sessionId: number = 30;
+  sessionId: number = 38;
   segments: any[] = [];
   username: string = '';
   collaborators: number = 1;
@@ -56,7 +56,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.loadSessionDetails();
     this.connectToSocket();
     this.loadSessionInfo();
-    this.loadLiveSubtitles();
+    //this.loadLiveSubtitles();
     this.loadSegments();
     this.loadFinalizedSubtitles();
     this.listenForSubtitleUpdates();
@@ -87,69 +87,57 @@ export class DashboardComponent implements OnInit, OnDestroy {
       });
     });
 
-    this.socketService.onWordAdded().subscribe((data) => {
-      if (!data?.word) {
-        console.warn("⚠️ Mot reçu invalide :", data);
-        return;
-      }
+    //this.socketService.onWordAdded().subscribe((data) => {
+     // if (!data?.word || !data.isValid) {
+      //    console.warn("⚠️ Mot rejeté :", data);
+     //     return;
+     // }
+  
+     // this.liveSubtitles.push({ text: data.word });
+  
+      //if (this.liveSubtitles.length > this.maxVisibleSubtitles) {
+       //   setTimeout(() => {
+       //       this.liveSubtitles.shift();
+         //     this.cdRef.detectChanges();
+         // }, 1500);
+     // }
+      //this.cdRef.detectChanges();
+  //});
+  
+  
     
-      // 🔹 Ajout ou concaténation du mot dans liveSubtitles
-      if (this.liveSubtitles.length > 0) {
-        this.liveSubtitles[this.liveSubtitles.length - 1].text += " " + data.word;
-      } else {
-        this.liveSubtitles.push({ text: data.word });
-      }
+    //this.socketService.onWordReceived().subscribe((data: any) => {
+     //if (!data?.word) {
+      // console.warn("⚠️ Mot reçu invalide :", data);
+      // return;
+    //}
     
-// Ajouter le mot au dernier sous-titre ou créer une nouvelle ligne
-if (this.liveSubtitles.length > 0) {
-  this.liveSubtitles[this.liveSubtitles.length - 1].text += " " + data.word;
-} else {
-  this.liveSubtitles.push({ text: data.word });
-}
-
-// Si trop de sous-titres visibles, supprimer les anciens
-if (this.liveSubtitles.length > this.maxVisibleSubtitles) {
-  setTimeout(() => {
-    this.liveSubtitles.shift();
-    this.cdRef.detectChanges();
-  }, 1500); // Délai avant suppression
-}
-
-      this.cdRef.detectChanges(); // 🔄 Mise à jour de l'affichage
-    });
+       //🔹 Ajout ou concaténation du mot dans liveSubtitles
+     // if (this.liveSubtitles.length > 0) {
+     // this.liveSubtitles[this.liveSubtitles.length - 1].text += " " + data.word;
+     // } else {
+      //this.liveSubtitles.push({ text: data.word });
+    // }
     
-    this.socketService.onWordReceived().subscribe((data: any) => {
-      if (!data?.word) {
-        console.warn("⚠️ Mot reçu invalide :", data);
-        return;
-      }
-    
-      // 🔹 Ajout ou concaténation du mot dans liveSubtitles
-      if (this.liveSubtitles.length > 0) {
-        this.liveSubtitles[this.liveSubtitles.length - 1].text += " " + data.word;
-      } else {
-        this.liveSubtitles.push({ text: data.word });
-      }
-    
-      this.cdRef.detectChanges(); // 🔄 Mise à jour de l'affichage
-    });
+    // this.cdRef.detectChanges(); // 🔄 Mise à jour de l'affichage
+   // });
     
     // Écoute de la finalisation des sous-titres
-this.socketService.onSubtitleFinalized().subscribe(({ segment_id, finalText }) => {
-  console.log("🔴 [SOCKET] `subtitle_finalized` reçu :", { segment_id, finalText });
-  const segment = this.segments.find((s) => s.segment_id === segment_id);
-  if (segment) {
-    segment.subtitleText = finalText;
+//this.socketService.onSubtitleFinalized().subscribe(({ segment_id, finalText }) => {
+  //console.log("🔴 [SOCKET] `subtitle_finalized` reçu :", { segment_id, finalText });
+  //const segment = this.segments.find((s) => s.segment_id === segment_id);
+  //if (segment) {
+   // segment.subtitleText = finalText;
 
     // ✅ Mettre à jour l'état du segment pour désactiver la saisie
-    segment.isFinalized = true;
-    segment.isDisabled = true;
+   //segment.isFinalized = true;
+   //segment.isDisabled = true;
 
     // 🔄 Mise à jour du DOM pour refléter le changement
-    this.cdRef.detectChanges();
-    console.log(`✅ Sous-titre finalisé pour segment ${segment_id}, la saisie est désormais bloquée.`);
-  }
-});
+   //this.cdRef.detectChanges();
+   // console.log(`✅ Sous-titre finalisé pour segment ${segment_id}, la saisie est désormais bloquée.`);
+  //}
+//});
 
     
   }
@@ -187,74 +175,43 @@ this.socketService.onSubtitleFinalized().subscribe(({ segment_id, finalText }) =
     });
   }
 
-  onSubtitleInput(event: KeyboardEvent, segment: any) {
-    if (segment.isFinalized) {
-      console.warn(`⚠️ Impossible d'envoyer : le segment ${segment.segment_id} est déjà finalisé.`);
-      return; // 🔹 Empêcher tout envoi
-    }
-    
-    if (event.key === ' ') {  
-      event.preventDefault(); // Empêche l'ajout automatique de l'espace
-  
-      const words = segment.subtitleText.trim().split(' ');
-      const lastWord = words.pop(); // 🔹 Supprime le dernier mot de la phrase
-  
-      if (lastWord) {
-        console.log("📤 [DEBUG] Envoi du mot :", lastWord, "pour segment :", segment);
-  
-        // ✅ Vérifier si le segment n'est pas finalisé avant envoi
-        if (!segment.isFinalized) {
-          this.sendWordToBackend(lastWord, segment);
-        } else {
-          console.warn(`🚫 Le segment ${segment.segment_id} est finalisé. Aucun mot ne sera envoyé.`);
-        }
-  
-        // ✅ Mise à jour immédiate de l'affichage des sous-titres
-        if (this.liveSubtitles.length > 0) {
-          this.liveSubtitles[this.liveSubtitles.length - 1].text += " " + lastWord;
-        } else {
-          this.liveSubtitles.push({ text: lastWord });
-        }
-        
-        this.cdRef.detectChanges();
-      }
-  
-      // ✅ Met à jour l'input texte sans le dernier mot
-      segment.subtitleText = words.join(' ');
-    }
-  }
-  
-  sendWordToBackend(word: string, segment: any): void {
-    if (!word.trim()) return; // Ne rien envoyer si le mot est vide
+ // onSubtitleInput(event: KeyboardEvent, segment: any) {
+   // if (segment.isFinalized) {
+   //     console.warn(`⚠️ Impossible d'envoyer : le segment ${segment.segment_id} est déjà finalisé.`);
+   //     return;
+   // }
 
-    if (!segment || !segment.segment_id) {
-      console.error("❌ ERREUR : segment_id est manquant !", segment);
-      return;
-    }
+   // if (event.key === ' ') {  
+     //   event.preventDefault(); 
 
-    const payload = {
-      segment_id: segment.segment_id,
-      word: word.trim(),
-      created_by: this.userId
-    };
+      //  const words = segment.subtitleText.trim().split(' ');
+      //  const lastWord = words.pop(); 
 
-    console.log("📡 [DEBUG] Données envoyées à l'API :", payload);
+       // if (lastWord) {
+        //    console.log("📤 [DEBUG] Envoi du mot :", lastWord, "pour segment :", segment);
 
-    // ✅ Envoi via Socket.IO pour affichage en direct
-    this.socketService.sendWord(segment.segment_id, word.trim(), this.userId);
+            // ✅ Envoyer uniquement après validation
+          //  this.sessionService.addWord(segment.segment_id, lastWord, this.userId).subscribe({
+               // next: (response: any) => {
+                 //   console.log("✅ [API] Mot validé :", response);
+                 //   if (response.word) {
+                  //      this.socketService.sendWord(segment.segment_id, response.word, this.userId);
+                        // ✅ Ajouter à l'affichage seulement après validation
+                  //      this.liveSubtitles.push({ text: response.word });
+                 //   }
+               // },
+               // error: (error) => {
+              //      console.warn(`🚨 Le mot "${lastWord}" a été rejeté par le backend.`);
+             //   }
+           // });
+       // }
 
-    // ✅ Envoi via API pour enregistrement en base
-    this.sessionService.addWord(segment.segment_id, word.trim(), this.userId).subscribe({
-      next: (response) => {
-        console.log("✅ [API] Mot ajouté en base :", response);
-      },
-      error: (error) => {
-        console.error("❌ [API] Erreur lors de l'envoi du mot :", error);
-      }
-    });
-}
+       // segment.subtitleText = words.join(' '); 
+  //  }
+//}
 
   
+
 
   loadSegments(): void {
     this.sessionService.getSegmentsWithSession(this.sessionId).subscribe({
@@ -265,13 +222,16 @@ this.socketService.onSubtitleFinalized().subscribe(({ segment_id, finalText }) =
           ...segment,
           subtitleText: '',
           timeRemaining: this.calculateDurationInSeconds(segment.start_time, segment.end_time),
-          isDisabled: segment.is_finalized || false,  // 🔹 Désactiver la saisie si le segment est finalisé
-          isFinalized: segment.is_finalized || false, // 🔹 Stocker l'état de finalisation
+          isDisabled: false,  // ✅ Désactiver si `status` est `finalized`
+          isFinalized: segment.status === 'finalized', // 🔹 Stocker l'état de finalisation
           isBlinking: false,
           isActive: false,
           assigned_to: segment.assigned_to || 'Utilisateur inconnu',
           subtitles: segment.subtitles || [],
         }));
+        // ✅ Trie les segments par `start_time` pour éviter les erreurs de séquencement
+this.segments.sort((a, b) => this.convertTimeToSeconds(a.start_time) - this.convertTimeToSeconds(b.start_time));
+
   
         console.log("🚀 [DEBUG] Après chargement, segments:", this.segments); // 📌 Log après traitement
       
@@ -282,62 +242,92 @@ this.socketService.onSubtitleFinalized().subscribe(({ segment_id, finalText }) =
     });
   }
   
-finalizeSubtitle(segment: any): void {
-  if (!segment.segment_id || !this.userId) {
-    console.error("❌ Erreur : segment_id ou userId manquant !", { segment_id: segment.segment_id, userId: this.userId });
-    return;
-  }
-
-  // 🔹 Désactiver la zone de texte pour ce segment AVANT l'envoi au serveur
-  segment.isDisabled = true;
-  segment.isFinalized = true;
-
-  this.sessionService.finalizeSubtitle(segment.segment_id, this.userId).subscribe({
-    next: (response) => {
-      console.log(`✅ Sous-titre finalisé pour le segment ${segment.segment_id} :`, response);
-
-      // 🔹 Mettre à jour `isFinalized` pour éviter que l'utilisateur écrive encore
-      segment.isFinalized = true;
-      segment.isDisabled = true; 
-
-      // 🔄 Mettre à jour l'affichage
-      this.cdRef.detectChanges();
-    },
-    error: (error) => {
-      console.error(`❌ Erreur lors de la finalisation du segment ${segment.segment_id} :`, error);
-      segment.isDisabled = false; // 🔄 Réactiver en cas d'échec
+  addSubtitle(segment: any): void {
+    if (!segment.segment_id || !segment.subtitleText.trim()) {
+      console.error("❌ [ERREUR] Segment ID manquant ou texte vide !", segment);
+      return;
     }
+  
+    console.log("📡 [DEBUG] Envoi du sous-titre :", segment.subtitleText, "pour segment :", segment.segment_id);
+  
+    this.subtitleService.addSubtitle(segment.segment_id, segment.subtitleText, this.userId).subscribe({
+      next: (response) => {
+        console.log("✅ [API] Sous-titre ajouté avec succès :", response);
+        segment.subtitleText = ''; // Nettoyer le champ après l'envoi
+      },
+      error: (error) => {
+        console.error("❌ [ERREUR] Impossible d'ajouter le sous-titre :", error);
+      }
+    });
+  }
+  
+
+
+  finalizeSubtitle(segment: any): void {
+    if (!segment.segment_id || !this.userId) {
+      console.error("❌ Erreur : segment_id ou userId manquant !", { segment_id: segment.segment_id, userId: this.userId });
+      return;
+    }
+  
+    // 🔹 Vérification : S'il n'y a pas de texte, on ne finalise pas
+    if (!segment.subtitleText.trim()) {
+      console.warn(`⚠️ Aucun texte à finaliser pour le segment ${segment.segment_id}.`);
+      return;
+    }
+  
+    console.log(`📡 [FINALISATION] Envoi du sous-titre final pour segment ${segment.segment_id} :`, segment.subtitleText);
+  
+    this.subtitleService.finalizeSubtitle(segment.segment_id, this.userId).subscribe({
+      next: (response) => {
+        console.log(`✅ Sous-titre finalisé pour le segment ${segment.segment_id} :`, response);
+  
+        segment.isFinalized = true;
+        segment.isDisabled = true; 
+        segment.subtitleText = ""; // Nettoyer l'affichage après finalisation
+  
+        this.cdRef.detectChanges();
+      },
+      error: (error) => {
+        console.error(`❌ Erreur lors de la finalisation du segment ${segment.segment_id} :`, error);
+        segment.isDisabled = false;
+      }
+    });
+  }
+  
+
+  connectToSocket(): void { 
+    // ✅ Réception d'un segment finalisé en temps réel
+    this.socketService.onSubtitleFinalized().subscribe(({ segment_id, finalText }) => {
+        console.log("🔴 [SOCKET] `subtitle_finalized` reçu :", { segment_id, finalText });
+
+        const segment = this.segments.find((s) => s.segment_id === segment_id);
+        if (segment) {
+            segment.subtitleText = finalText;
+            segment.status = 'finalized';
+            segment.isDisabled = true;
+            this.finalizedSubtitles.push({ text: finalText });
+            this.cdRef.detectChanges();
+            console.log(`✅ Segment ${segment_id} finalisé et ajouté à la transcription.`);
+        }
+    });
+    this.socketService.listen("segment_assigned").subscribe((data: any) => {
+      console.log("📢 Événement reçu : segment_assigned", data);
+  
+      // ✅ Toujours re-trier les segments avant d'activer le prochain
+      this.segments.sort((a, b) => this.convertTimeToSeconds(a.start_time) - this.convertTimeToSeconds(b.start_time));
+  
+      const assignedSegment = this.segments.find(s => s.segment_id === data.segment_id);
+      if (assignedSegment) {
+          console.log("✅ Nouveau segment assigné :", assignedSegment);
+          assignedSegment.isActive = true; 
+          this.cdRef.detectChanges(); 
+  
+          // ✅ Lancer le timer automatiquement
+          this.startTimerForSegment(assignedSegment);
+      }
   });
+  
 }
-
-
-
-  connectToSocket(): void {
-    this.socketService.onWordReceived().subscribe((data) => {
-      const segment = this.segments.find((seg) => seg.segment_id === data.segment_id);
-      if (segment) {
-        segment.subtitleText += ` ${data.word}`;
-      }
-    });
-
-    this.socketService.onSubtitleFinalized().subscribe((data) => {
-      const segment = this.segments.find((seg) => seg.segment_id === data.segment_id);
-      if (segment) {
-        segment.subtitleText = data.finalText;
-        segment.isDisabled = true;
-      }
-    });
-  }
-
-  compileFinalSubtitles(): string {
-    return this.segments
-      .filter((segment) => segment.subtitles.length > 0)
-      .map((segment) => {
-        const combinedText = segment.subtitles.map((s: { text: any }) => s.text).join(' ');
-        return `${segment.start_time} --> ${segment.end_time}\n${combinedText}`;
-      })
-      .join('\n\n');
-  }
 
   exportToSRT(): string {
     let subtitleIndex = 1;
@@ -402,23 +392,6 @@ finalizeSubtitle(segment: any): void {
       },
     });
   }
-  autoSaveSubtitle(segment: any): void {
-    console.log(`⌛ Temps écoulé, finalisation du segment ${segment.segment_id}`);
-  
-    this.sessionService
-      .finalizeSubtitle(segment.segment_id, this.userId)  // ✅ On enregistre le texte complet du segment
-      .subscribe({
-        next: (response) => {
-          console.log(`✅ Sous-titre finalisé et enregistré en base pour le segment ${segment.segment_id} :`, response);
-          segment.subtitleText = ''; // Nettoyage de l'input après enregistrement
-        },
-        error: (error) => {
-          console.error(`❌ Erreur lors de la finalisation du sous-titre pour le segment ${segment.segment_id} :`, error);
-        },
-      });
-  
-    segment.isDisabled = true; // Désactiver l’édition du segment après la fin du timer
-  }
   
   
   calculateWaveWidth(
@@ -471,33 +444,56 @@ finalizeSubtitle(segment: any): void {
 
   startTimerForSegment(segment: any): void {
     if (segment.isFinalized) {
-      console.warn(`⏳ Le segment ${segment.segment_id} est déjà finalisé, pas de timer.`);
-      return; // ❌ Empêche le timer de démarrer
+        console.warn(`⏳ Le segment ${segment.segment_id} est déjà finalisé, pas de timer.`);
+        return; 
     }
-  
-    if (segment.timer) return; // ⏳ Ne démarre pas un timer déjà actif
-  
+
+    if (segment.timer) return; 
+
     console.log(`🚀 Démarrage du timer pour le segment ${segment.segment_id}`);
     segment.timeRemaining += 10;
-  
+
     segment.timer = setInterval(() => {
-      if (segment.timeRemaining > 0) {
-        segment.timeRemaining--;
-        if (segment.timeRemaining === 5) {
-          segment.isBlinking = true;
+        if (segment.timeRemaining > 0) {
+            segment.timeRemaining--;
+            if (segment.timeRemaining === 5) {
+                segment.isBlinking = true;
+            }
+        } else {
+            clearInterval(segment.timer);
+            segment.timer = null;
+            segment.isBlinking = false;
+            console.log(`⏳ Timer terminé pour le segment ${segment.segment_id}`);
+
+            // ✅ Avant de finaliser, on ajoute le sous-titre dans Redis
+            if (segment.subtitleText.trim()) {
+                console.log(`📤 [FRONTEND] Envoi du sous-titre pour segment ${segment.segment_id} :`, segment.subtitleText);
+                this.sessionService.addSubtitle(segment.segment_id, segment.subtitleText, this.userId).subscribe({
+                    next: (response) => {
+                        console.log(`✅ Sous-titre ajouté pour le segment ${segment.segment_id} :`, response);
+
+                        // ✅ Finalisation automatique après ajout du sous-titre
+                        this.subtitleService.finalizeSubtitle(segment.segment_id, this.userId).subscribe({
+                            next: (finalResponse) => {
+                                console.log(`✅ Segment ${segment.segment_id} finalisé avec succès :`, finalResponse);
+                            },
+                            error: (finalError) => {
+                                console.error(`❌ Erreur lors de la finalisation du segment ${segment.segment_id} :`, finalError);
+                            }
+                        });
+
+                    },
+                    error: (error) => {
+                        console.error(`❌ Erreur lors de l'ajout du sous-titre pour ${segment.segment_id} :`, error);
+                    }
+                });
+            } else {
+                console.warn(`⚠️ Aucun texte saisi pour le segment ${segment.segment_id}, pas d'envoi.`);
+            }
         }
-      } else {
-        clearInterval(segment.timer);
-        segment.timer = null;
-        segment.isBlinking = false;
-        console.log(`⏳ Timer terminé pour le segment ${segment.segment_id}`);
-  
-        // ✅ Finalisation automatique du segment
-        this.finalizeSegmentSubtitle(segment);
-      }
     }, 1000);
-  }
-  
+}
+
   /**
    * Active le prochain segment basé sur `start_time`.
    */
@@ -539,27 +535,35 @@ finalizeSubtitle(segment: any): void {
       'Impossible de charger la vidéo. Vérifiez son chemin ou sa disponibilité.'
     );
   }
-  // Envoyer un sous-titre via le socket
-  onSubtitleChange() {
+  onSubtitleChange(segment: any) {
+    if (!segment.subtitleText.trim()) {
+      console.warn("⚠️ Aucun texte à envoyer.");
+      return;
+    }
+  
     const timestamp = Date.now();
+  
     this.socketService.sendSubtitle({
-      text: this.subtitleText,
-      videoId: this.videoUrl,
+      text: segment.subtitleText,
+      sessionId: this.sessionId,  // Ajoute la session en cours
       timestamp,
     });
-  }
-
-  handleWordInput(event: KeyboardEvent, segment: any): void {
-    if (event.key === ' ') { // Détection de l'espace
-      const words = segment.subtitleText.trim().split(' ');
-      const lastWord = words[words.length - 1];
   
-      if (lastWord) {
-        this.socketService.sendWord(segment.segment_id, lastWord, this.userId);
-        console.log(`Mot envoyé : "${lastWord}" pour le segment ${segment.segment_id}`);
-      }
-    }
+    console.log(`📡 Sous-titre envoyé pour le segment ${segment.segment_id}`);
   }
+  
+
+  //handleWordInput(event: KeyboardEvent, segment: any): void {
+  //  if (event.key === ' ') { // Détection de l'espace
+  //    const words = segment.subtitleText.trim().split(' ');
+   //   const lastWord = words[words.length - 1];
+  
+   //   if (lastWord) {
+     //   this.socketService.sendWord(segment.segment_id, lastWord, this.userId);
+     //   console.log(`Mot envoyé : "${lastWord}" pour le segment ${segment.segment_id}`);
+    //  }
+   // }
+ // }
   
   finalizeSegmentSubtitle(segment: any): void {
     if (!segment.segment_id || !this.userId) {
@@ -571,7 +575,7 @@ finalizeSubtitle(segment: any): void {
     segment.isDisabled = true;
   
     // ✅ Envoyer la finalisation au serveur
-    this.sessionService.finalizeSubtitle(segment.segment_id, this.userId).subscribe({
+    this.subtitleService.finalizeSubtitle(segment.segment_id, this.userId).subscribe({
       next: (response) => {
         console.log(`✅ Sous-titre finalisé pour le segment ${segment.segment_id} :`, response);
         

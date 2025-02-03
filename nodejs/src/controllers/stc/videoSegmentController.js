@@ -601,40 +601,32 @@ async function createVideoSegmentController(req, res) {
   }
 
   try {
-    console.log(
-      "Début de la création des segments pour la session :",
-      session_id
-    );
+    console.log("🔹 Début de la création des segments pour la session :", session_id);
 
     // Vérifier si des segments existent déjà pour cette session
     const existingSegments = await VideoSegmentModel.findManyBy({ session_id });
-    console.log("Segments existants :", existingSegments);
 
     if (existingSegments && existingSegments.length > 0) {
-      console.log(
-        "Les segments existent déjà. Vérification des assignations..."
-      );
+      console.log("ℹ️ Segments déjà existants. Vérification des assignations...");
 
-      // Inclure les segments disponibles ou assignés mais non transcrits
+      // Filtrer les segments disponibles
       const availableSegments = existingSegments.filter(
-        (segment) => segment.status === "available" || segment.status === "assigned"
+        (segment) => segment.status === "available"
       );
 
       if (availableSegments.length > 0) {
-        console.log("Assignation des segments disponibles ou assignés...");
-        const assignments = await assignSegmentsToUsers(
-          session_id,
-          availableSegments
-        );
+        console.log("✅ Assignation des segments disponibles aux utilisateurs...");
+        const assignments = await assignSegmentsToUsers(session_id, availableSegments);
+
         return res.status(201).json({
-          message: "Segments existants assignés avec succès.",
+          message: "✅ Segments existants assignés avec succès.",
           segments: availableSegments,
           assignments,
         });
       }
 
       return res.status(200).json({
-        message: "Aucun segment disponible ou assigné à redistribuer.",
+        message: "✅ Aucun segment disponible à assigner, mais ils existent déjà.",
         segments: existingSegments,
       });
     }
@@ -642,15 +634,14 @@ async function createVideoSegmentController(req, res) {
     // Récupérer la durée de la vidéo depuis Redis
     const durationKey = `video:duration:${session_id}`;
     const duration = await getAsync(durationKey);
-    console.log("Durée de la vidéo :", duration);
 
     if (!duration) {
-      return res
-        .status(400)
-        .json({ message: "Durée non trouvée pour cette session." });
+      return res.status(400).json({ message: "⛔ Durée de la vidéo non trouvée pour cette session." });
     }
 
-    // Générer les segments
+    console.log("⏳ Durée totale de la vidéo :", duration, "secondes");
+
+    // Générer les segments en fonction de la durée
     const segmentDuration = 10; // Durée d'un segment en secondes
     const numberOfSegments = Math.ceil(duration / segmentDuration);
     const segments = [];
@@ -658,10 +649,6 @@ async function createVideoSegmentController(req, res) {
     for (let i = 0; i < numberOfSegments; i++) {
       const start_time = i * segmentDuration;
       const end_time = Math.min((i + 1) * segmentDuration, duration);
-
-      console.log(
-        `Segment ${i + 1}: start_time = ${start_time}, end_time = ${end_time}`
-      );
 
       segments.push({
         session_id,
@@ -672,35 +659,33 @@ async function createVideoSegmentController(req, res) {
       });
     }
 
-    console.log("Segments générés :", segments);
+    console.log("✅ Segments générés :", segments);
 
     // Insérer les segments dans la base de données
     const createdSegments = await Promise.all(
       segments.map((segment) => VideoSegmentModel.insert(segment))
     );
-    console.log("Segments créés :", createdSegments);
 
-    // Assigner les segments aux utilisateurs
-    console.log("Appel de assignSegmentsToUsers...");
-    const assignments = await assignSegmentsToUsers(
-      session_id,
-      createdSegments
-    );
-    console.log("Assignations effectuées :", assignments);
+    console.log("✅ Segments créés avec succès :", createdSegments);
+
+    // **🚀 Assignation automatique des segments aux utilisateurs**
+    console.log("🔄 Assignation automatique des segments aux utilisateurs...");
+    const assignments = await assignSegmentsToUsers(session_id, createdSegments);
+    console.log("✅ Assignations effectuées :", assignments);
 
     return res.status(201).json({
-      message: "Segments créés et assignés avec succès.",
+      message: "🎉 Segments créés et assignés automatiquement avec succès !",
       segments: createdSegments,
       assignments,
     });
+
   } catch (error) {
-    console.error(
-      "Erreur lors de la segmentation et de l'assignation :",
-      error
-    );
+    console.error("❌ Erreur lors de la création et de l'assignation des segments :", error);
     return res.status(500).json({ message: "Erreur serveur." });
   }
 }
+
+
 
 // async function redistributeSegments(session_id) {
 //   try {

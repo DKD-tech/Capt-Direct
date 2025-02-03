@@ -13,6 +13,7 @@ class VideoSegmentModel extends Model {
     const query = `
       SELECT * FROM ${this.tableName}
       WHERE session_id = $1 AND status = 'available'
+      ORDER BY start_time ASC
       LIMIT 1;
     `;
     try {
@@ -24,13 +25,14 @@ class VideoSegmentModel extends Model {
     }
   }
 
-  /**
-   * Marquer un segment comme finalisé.
+
+   /**
+   * Marquer un segment comme finalisé et assigner le suivant
    */
   async finalizeSegment(segment_id) {
     const query = `
       UPDATE ${this.tableName}
-      SET is_finalized = TRUE
+      SET is_finalized = TRUE, status = 'finalized'
       WHERE segment_id = $1
       RETURNING *;
     `;
@@ -40,12 +42,20 @@ class VideoSegmentModel extends Model {
         throw new Error(`Aucun segment trouvé avec l'ID ${segment_id}.`);
       }
       console.log(`✅ Segment ${segment_id} marqué comme finalisé.`);
+      
+      // Vérifier et assigner le segment suivant
+      const nextSegment = await this.getNextSegment(segment_id);
+      if (nextSegment) {
+        await this.updateSegmentStatus(nextSegment.segment_id, 'assigned');
+        console.log(`➡️ Segment suivant ${nextSegment.segment_id} assigné.`);
+      }
       return result.rows[0];
     } catch (error) {
       console.error(`❌ Erreur lors de la finalisation du segment ${segment_id} :`, error);
       throw error;
     }
   }
+
 
   /**
    * Trouver un segment par son ID.
@@ -193,50 +203,74 @@ class VideoSegmentModel extends Model {
 }
 
   
-  async getPreviousSegment(segment_id) {
-    const query = `
-      SELECT * 
+ /**
+   * Trouver le segment précédent
+   */
+ async getPreviousSegment(segment_id) {
+  const query = `
+    SELECT * 
+    FROM ${this.tableName} 
+    WHERE start_time < (
+      SELECT start_time 
       FROM ${this.tableName} 
-      WHERE end_time <= (
-        SELECT start_time 
-        FROM ${this.tableName} 
-        WHERE segment_id = $1
-      )
-      AND segment_id != $1
-      AND session_id = (
-        SELECT session_id 
-        FROM ${this.tableName} 
-        WHERE segment_id = $1
-      )
-      ORDER BY end_time DESC
-      LIMIT 1;
-    `;
-    const result = await pool.query(query, [segment_id]);
-    return result.rows[0]; // Retourne le segment précédent ou `undefined`
-  }
+      WHERE segment_id = $1
+    )
+    AND session_id = (
+      SELECT session_id 
+      FROM ${this.tableName} 
+      WHERE segment_id = $1
+    )
+    ORDER BY start_time DESC
+    LIMIT 1;
+  `;
+  const result = await pool.query(query, [segment_id]);
+  return result.rows[0];
+}
 
-  async getNextSegment(segment_id) {
+   /**
+   * Trouver le segment suivant
+   */
+   async getNextSegment(segment_id) {
     const query = `
-      SELECT * 
-      FROM ${this.tableName} 
-      WHERE start_time >= (
-        SELECT end_time 
+        SELECT * 
         FROM ${this.tableName} 
-        WHERE segment_id = $1
-      )
-      AND segment_id != $1
-      AND session_id = (
-        SELECT session_id 
-        FROM ${this.tableName} 
-        WHERE segment_id = $1
-      )
-      ORDER BY start_time ASC
-      LIMIT 1;
+        WHERE segment_id > $1
+        AND session_id = (
+            SELECT session_id 
+            FROM ${this.tableName} 
+            WHERE segment_id = $1
+        )
+        AND status != 'finalized'
+        ORDER BY segment_id ASC
+        LIMIT 1;
     `;
     const result = await pool.query(query, [segment_id]);
     return result.rows[0]; // Retourne le segment suivant ou `undefined`
-  }
+}
 
+  /**
+   * Mettre à jour le statut d'un segment.
+   */
+  async updateSegmentStatus(segment_id, newStatus) {
+    console.log(`Tentative de mise à jour du segment ${segment_id} avec le statut ${newStatus}`);
+    const query = `
+      UPDATE ${this.tableName}
+      SET status = $1, updated_at = NOW()
+      WHERE segment_id = $2
+      RETURNING *;
+    `;
+    try {
+      const result = await pool.query(query, [newStatus, segment_id]);
+      if (result.rowCount === 0) {
+        throw new Error(`Aucun segment trouvé avec l'ID ${segment_id}.`);
+      }
+      console.log(`Segment ${segment_id} mis à jour avec le statut : ${newStatus}`);
+      return result.rows[0];
+    } catch (error) {
+      console.error(`Erreur lors de la mise à jour du statut pour le segment ${segment_id} :`, error);
+      throw error;
+    }
+  }
   /**
  * Trouver tous les segments disponibles triés par start_time.
  */

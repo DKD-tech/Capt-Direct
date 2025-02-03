@@ -73,19 +73,7 @@ export class SessionService {
   }
   
   
-  finalizeSubtitle(segment_id: number, user_id: number) {
-    console.log("📌 Données envoyées pour la finalisation :", { segment_id, user_id });
   
-    return this.http.post(`${this.baseUrl}/finalize-subtitle`, {
-      segment_id,
-      created_by: user_id, // Vérifie bien que `created_by` est envoyé
-    }).pipe(
-      catchError((error) => {
-        console.error("❌ Erreur lors de l'appel à finalizeSubtitle :", error);
-        return throwError(() => error);
-      })
-    );
-  }
   
   
   saveSubtitle(segmentId: number, text: string): Observable<any> {
@@ -97,23 +85,19 @@ export class SessionService {
     );
   }
 
-  addSubtitle(
-    segmentId: number,
-    text: string,
-    createdBy: number
-  ): Observable<any> {
-    const url = `http://localhost:3000/api/sessions/add-word`;
+  addSubtitle(segmentId: number, text: string, createdBy: number): Observable<any> {
+    const url = `http://localhost:3000/api/sessions/add-subtitle`; // ✅ Changement de route
     const payload = {
-      segment_id: segmentId,
-      text: text,
-      created_by: createdBy,
+        segment_id: segmentId,
+        text: text,  
+        created_by: createdBy
     };
     return this.http.post<any>(url, payload).pipe(
-      tap((response) => {
-        console.log('Sous-titre ajouté :', response);
-      })
+        tap((response) => {
+            console.log('✅ Sous-titre ajouté :', response);
+        })
     );
-  }
+}
 
   // startStreaming(sessionId: number): void {
   //   this.http.post(`/api/sessions/stream/${sessionId}`, {}).subscribe({

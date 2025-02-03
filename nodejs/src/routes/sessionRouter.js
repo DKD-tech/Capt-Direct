@@ -41,6 +41,10 @@
 const express = require("express");
 const router = express.Router();
 
+
+//const { adjustTextWithNeighbors, handleOverlapWithWords, storeLastWordInRedis } = require("../utils/adjust_text");
+
+
 const {
   createSessionController,
   getSessionController,
@@ -66,7 +70,7 @@ const {
 } = require("../controllers/stc/assignSegmentController");
 
 const {
-  addWordToSubtitle,   // ✅ Nouveau : Ajouter un mot en temps réel
+  addSubtitle,   // ✅ Nouveau : Ajouter un mot en temps réel
   finalizeSubtitle,    // ✅ Nouveau : Finaliser le sous-titre
   getSubtitlesBySegment,
   getSubtitlesBySession,
@@ -105,7 +109,7 @@ sessionRouter.post("/assign-user-seg", assignSegmentsToUsers);
 sessionRouter.post("/disconnect-user", handleUserDisconnection);
 
 // ✅ Nouvelle route pour ajouter un mot en temps réel
-sessionRouter.post("/add-word", addWordToSubtitle);
+sessionRouter.post("/add-Subtitle", addSubtitle);
 
 // ✅ Nouvelle route pour finaliser le sous-titre
 sessionRouter.post("/finalize-subtitle", finalizeSubtitle);
@@ -177,6 +181,47 @@ sessionRouter.post("/start-transcription", async (req, res) => {
   } catch (error) {
     console.error("Erreur lors du passage du segment en transcription :", error);
     res.status(500).json({ message: "Erreur serveur." });
+  }
+});
+/**
+ * 🔹 API pour ajuster un mot avec correction des chevauchements
+ */
+router.post("/adjust-word", async (req, res) => {
+  try {
+      const { segment_id, word } = req.body;
+      const adjustedWord = await adjustTextWithNeighbors({ segment_id }, word);
+      return res.status(200).json({ adjustedWord });
+  } catch (error) {
+      console.error("❌ Erreur API adjust-word :", error);
+      return res.status(500).json({ message: "Erreur serveur." });
+  }
+});
+
+/**
+* 🔹 API pour détecter un chevauchement entre deux textes
+*/
+router.post("/check-overlap", async (req, res) => {
+  try {
+      const { previousText, currentText } = req.body;
+      const { adjustedText, overlap } = handleOverlapWithWords(previousText, currentText);
+      return res.status(200).json({ adjustedText, overlap });
+  } catch (error) {
+      console.error("❌ Erreur API check-overlap :", error);
+      return res.status(500).json({ message: "Erreur serveur." });
+  }
+});
+
+/**
+* 🔹 API pour stocker le dernier mot d'un segment dans Redis
+*/
+router.post("/store-last-word", async (req, res) => {
+  try {
+      const { segment_id, finalText } = req.body;
+      await storeLastWordInRedis(segment_id, finalText);
+      return res.status(200).json({ message: "Dernier mot stocké avec succès." });
+  } catch (error) {
+      console.error("❌ Erreur API store-last-word :", error);
+      return res.status(500).json({ message: "Erreur serveur." });
   }
 });
 

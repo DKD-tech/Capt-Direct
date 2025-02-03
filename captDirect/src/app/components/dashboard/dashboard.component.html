@@ -83,13 +83,13 @@
           <p>Temps restant : {{ segment.timeRemaining }} secondes</p>
 
           <!-- Zone de texte pour saisir un sous-titre -->
+          
           <textarea
-          [(ngModel)]="segment.subtitleText"
-          placeholder="Saisir un sous-titre"
-          (focus)="startTimerForSegment(segment)"
-          (keyup)="onSubtitleInput($event, segment)">
-          [disabled]="segment.isDisabled || segment.timeRemaining <= 0 || segment.isLocked"
-          ></textarea>
+  [(ngModel)]="segment.subtitleText"
+  placeholder="Saisir un sous-titre"
+  (focus)="startTimerForSegment(segment)"
+  [disabled]="segment.isDisabled || segment.timeRemaining <= 0 || segment.isLocked"></textarea>
+
           <button (click)="testLiveSubtitles()">Tester liveSubtitles</button>
 
           <!-- <button
@@ -115,33 +115,27 @@
 
     <!-- Section dédiée aux sous-titres en direct -->
 <!-- Section dédiée aux sous-titres en cours -->
+<!-- Section dédiée aux sous-titres finalisés -->
 <section class="live-subtitles-container">
-  <h3>Sous-titres en cours</h3>
+  <h3>Transcription en temps réel</h3>
 
-  <!-- Message si aucun sous-titre -->
-  <p *ngIf="liveSubtitles.length === 0" class="no-subtitles">
-    ⚠️ Aucun sous-titre reçu en temps réel
+  <!-- Afficher un message si aucun sous-titre finalisé -->
+  <p *ngIf="finalizedSubtitles.length === 0" class="no-subtitles">
+    ⚠️ Aucun sous-titre finalisé pour l'instant
   </p>
 
   <div class="live-subtitles">
-    <div *ngFor="let subtitle of liveSubtitles.slice(-maxVisibleSubtitles); let i = index" 
+    <div *ngFor="let subtitle of finalizedSubtitles.slice(-maxVisibleSubtitles); let i = index" 
     [@fadeInOut] class="subtitle-line">
- {{ subtitle.text }}
+      {{ subtitle.text }}
+      <span *ngIf="subtitle.created_by"> (Créé par : {{ subtitle.created_by }}) </span>
     </div>
   </div>
 </section>
 
 
 <!-- Section dédiée aux sous-titres finalisés -->
-<section class="subtitle-stream">
-  <h3>Sous-titres en temps réel</h3>
-  <div class="subtitle-container">
-    <p *ngFor="let subtitle of finalizedSubtitles" class="subtitle-item">
-      {{ subtitle.text }}
-      <span *ngIf="subtitle.created_by"> (Créé par : {{ subtitle.created_by }}) </span>
-    </p>    
-  </div>
-</section>
+
 
 
     <section class="live-video" *ngIf="videoUrl" (error)="onVideoError()">

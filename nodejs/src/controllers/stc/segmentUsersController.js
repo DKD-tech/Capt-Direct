@@ -3,6 +3,8 @@ const VideoSegmentModel = require("../../models/VideoSegmentModel");
 const SubtitleModel = require("../../models/SubtitleModel");
 const { client: redisClient } = require("../../redis/index");
 const { isWordValid, suggestCorrection,cleanWord } = require("../../utils/dictionaryLoader");
+const { adjustTextWithNeighbors, handleOverlapWithWords } = require("../../utils/adjust_text");
+
 let fullTranscript = ""; 
 const pool = require("../../config/db"); // Import de la connexion PostgreSQL
 
@@ -11,7 +13,7 @@ const pool = require("../../config/db"); // Import de la connexion PostgreSQL
 
 const levenshtein = require("fast-levenshtein"); // Librairie pour Levenshtein
 //const { validateWord, getSuggestion } = require("../../utils/dictionaryLoader");
-let io;
+
 
 function setSocketInstance(socketInstance) {
   io = socketInstance;
@@ -149,160 +151,156 @@ async function assignUserToSegmentController(req, res) {
 /**
  * Ajouter un mot au sous-titre (en temps réel)
  */
-async function addWordToSubtitle(req, res) {
-  const { segment_id, word, created_by } = req.body;
-const segmentId = typeof segment_id === 'object' ? segment_id.segment_id : segment_id; // 🔥 Correction ici
-
-  console.log("🔹 Nouveau mot reçu :", { segment_id, word, created_by });
-
-  if (!segment_id || !word || !created_by) {
-    return res.status(400).json({ message: "Champs obligatoires manquants." });
-  }
-
+async function addSubtitle(req, res) {
+  console.log("🛠️ [BACKEND] Requête reçue pour ajouter un sous-titre :", req.body);
   try {
-    // 📌 Vérifier si le segment existe et s'il est finalisé
-    const segment = await VideoSegmentModel.findById(segment_id);
-    if (!segment) {
-      return res.status(404).json({ message: "Segment introuvable." });
-    }
-    if (segment.is_finalized) {
-      return res.status(403).json({ message: "Le segment est finalisé, impossible d'ajouter un mot." });
+    const { segment_id, text, created_by } = req.body;
+
+    console.log("📥 Requête reçue pour ajouter un sous-titre :", { segment_id, text, created_by });
+
+    if (!segment_id || !text || !created_by) {
+      return res.status(400).json({ message: "Champs obligatoires manquants." });
     }
 
-    // 📌 Vérifier si l'utilisateur est assigné au segment
+    // Vérification du segment
+    const segment = await VideoSegmentModel.findById(segment_id);
+    if (!segment || segment.is_finalized) {
+      return res.status(403).json({ message: "Le segment est finalisé ou inexistant." });
+    }
+
+    // Vérification si l'utilisateur est autorisé à sous-titrer ce segment
     const isUserAssigned = await SegmentUserModel.isUserAssignedToSegment(created_by, segment_id);
     if (!isUserAssigned) {
       return res.status(403).json({ message: "Non autorisé à sous-titrer ce segment." });
     }
 
-    const cleanedWord = cleanWord(word);
+    // Nettoyage et validation du texte
+    let cleanedText = cleanWord(text.trim());
+    // Vérification et correction via le dictionnaire
+    if (!isWordValid(cleanedText)) {
+      const suggestion = suggestCorrection(cleanedText);
+      cleanedText = suggestion ? suggestion : cleanedText;  // ✅ Si invalide, on garde le texte original
+  }
+    // Vérification du chevauchement avec le dernier mot du segment précédent
+    const lastWordKey = `segment:last_word:${segment.session_id}`;
+    const lastWord = await redisClient.get(lastWordKey);
 
-    // 📌 Vérification des doublons dans le même segment
-    const isDuplicate = await isDuplicateInSegment(segment_id, cleanedWord, created_by);
-    if (isDuplicate) {
-      console.warn(`🚨 Mot "${cleanedWord}" rejeté car détecté comme doublon dans le même segment.`);
-      return res.status(400).json({
-        message: "Mot détecté comme doublon dans ce segment.",
-        word: cleanedWord
-      });
-    } else {
-      console.log(`✅ Mot "${cleanedWord}" accepté, aucun doublon détecté.`);
-    }
-
-    // 📌 Validation du mot
-    if (!isWordValid(cleanedWord)) {
-      const suggestion = suggestCorrection(cleanedWord);
-      if (suggestion) {
-        return res.status(200).json({
-          message: "Mot invalide détecté.",
-          word,
-          suggestion,
-        });
-      } else {
-        console.warn(`⚠️ Mot "${cleanedWord}" invalide mais accepté.`);
-        // On continue l'ajout du mot sans le bloquer
+    if (lastWord && cleanedText) {
+      const { adjustedText1, adjustedText2, overlap } = handleOverlapWithWords(lastWord, cleanedText);
+      if (overlap) {
+        console.warn(`🚨 Chevauchement détecté entre "${lastWord}" et "${cleanedText}"`);
+        cleanedText = adjustedText2.trim();
+        if (!cleanedText) {
+          return res.status(400).json({ message: "Texte supprimé après ajustement du chevauchement." });
+        }
       }
     }
-    
-    // 📌 Stockage dans Redis
+
+    // Stockage du texte dans Redis
     const redisKey = `segment:${segment_id}:subtitles`;
-    await redisClient.rPush(redisKey, cleanedWord); // Ajout en file d'attente FIFO
+    await redisClient.rPush(redisKey, cleanedText);
 
-    console.log("📡 Envoi du mot via socket :", { 
-      segment_id, 
-      word: cleanedWord, 
-      user_id: created_by 
-    });
+    console.log(`✅ Texte ajouté dans Redis pour le segment ${segment_id} : "${cleanedText}"`);
 
-    // 📡 Diffuser aux utilisateurs via Socket.IO
-    io.to(`segment_${segment_id}`).emit("word_added", { 
-      segment_id, 
-      word: cleanedWord,
-      user_id: created_by 
-    });
-
-    io.to(`session:${segment_id}`).emit("updateSubtitle", {
-        text: cleanedWord,
-        segment_id
-    });
-
-    return res.status(201).json({ message: "Mot ajouté avec succès.", word: cleanedWord });
-
+    return res.status(201).json({ message: "Texte ajouté au segment.", text: cleanedText });
   } catch (error) {
-    console.error("❌ Erreur lors de l'ajout du mot :", error);
+    console.error("❌ Erreur lors de l'ajout du sous-titre :", error);
     return res.status(500).json({ message: "Erreur serveur." });
   }
 }
 
-
-/**
- * Finaliser le sous-titre après validation de tous les mots
- */
 /**
  * Finaliser le sous-titre après validation de tous les mots
  */
 async function finalizeSubtitle(req, res) {
+  console.log("🛠️ [BACKEND] Requête reçue pour finaliser un sous-titre :", req.body);
+
   const { segment_id, created_by } = req.body;
 
   if (!segment_id || !created_by) {
-    return res.status(400).json({ message: "Champs obligatoires manquants." });
+      console.log("❌ Requête invalide : segment_id ou created_by manquant.");
+      return res.status(400).json({ message: "Champs obligatoires manquants." });
   }
 
   try {
-    const redisKey = `segment:${segment_id}:subtitles`;
-    const words = await redisClient.lRange(redisKey, 0, -1);
+      console.log(`📌 Vérification des sous-titres en attente pour segment ${segment_id}`);
+      const redisKey = `segment:${segment_id}:subtitles`;
+      let words = await redisClient.lRange(redisKey, 0, -1);
 
-    if (!words || words.length === 0) {
-      return res.status(400).json({ message: "Aucun mot à finaliser." });
-    }
+      console.log(`🔍 Contenu dans Redis pour ${redisKey} :`, words);
 
-    // ✅ Vérifier si les mots sont JSON ou de simples chaînes
-    const parsedWords = words.map(word => {
-      try {
-        return JSON.parse(word); // Si JSON valide, on parse
-      } catch (error) {
-        return { word: word, created_by: created_by }; // Sinon, on l'utilise directement
+      if (!words || words.length === 0) {
+          console.warn(`⚠️ Aucun sous-titre trouvé dans Redis pour ${segment_id}.`);
+          return res.status(400).json({ message: "Aucun sous-titre à finaliser." });
       }
-    });
 
-    // ✅ Reconstruction du texte final
-    const finalText = parsedWords.map(w => w.word).join(" ");
+      let finalText = words.join(" ");
+      console.log(`📌 Texte finalisé pour segment ${segment_id} :`, finalText);
 
-    // ✅ Prendre le created_by du premier mot
-    const userCreatedBy = parsedWords.length > 0 ? parsedWords[0].created_by : null;
+      // Vérification du segment
+      const segment = await VideoSegmentModel.findById(segment_id);
+      if (!segment) {
+          console.log("❌ Segment introuvable.");
+          return res.status(404).json({ message: "Segment introuvable." });
+      }
 
-    console.log(`✅ Finalisation du sous-titre avec created_by: ${userCreatedBy}, Texte: "${finalText}"`);
+      // Ajustement avec les segments voisins
+      finalText = await adjustTextWithNeighbors(segment, finalText);
 
-    // ✅ Enregistrement en base avec le bon created_by
-    await SubtitleModel.storeFinalSubtitle(segment_id, finalText, userCreatedBy);
+      // Enregistrement en base de données
+      await SubtitleModel.storeFinalSubtitle(segment_id, finalText, created_by);
 
-    // ✅ Mise à jour du statut du segment
-    await pool.query(`
-      UPDATE video_segments 
-      SET status = 'assigned', is_finalized = TRUE
-      WHERE segment_id = $1
-    `, [segment_id]);
-    
+      // Mise à jour du segment comme finalisé
+      await VideoSegmentModel.finalizeSegment(segment_id);
+      console.log(`✅ Segment ${segment_id} finalisé avec succès.`);
 
-    // ✅ Notifier tous les utilisateurs
-    io.to(`session:${segment_id}`).emit("subtitle_finalized", { segment_id, finalText });
+// Stockage du dernier mot pour gestion des chevauchements
+const lastWords = finalText.trim().split(" ");
+const lastWord = lastWords.length > 0 ? lastWords[lastWords.length - 1] : "";
 
-    // ✅ Supprimer les sous-titres de Redis
-    // ✅ Supprimer les sous-titres du segment finalisé de Redis
-await redisClient.del(`segment:${segment_id}:subtitles`);
-console.log(`🗑️ Les sous-titres du segment ${segment_id} ont été supprimés de Redis après finalisation.`);
+// Stocker le dernier mot en Redis pour le segment finalisé
+if (lastWord) {
+  await redisClient.set(`lastWord:${segment_id}`, lastWord, 'EX', 600); // Expire après 10 min
+    console.log(`✅ Dernier mot du segment ${segment_id} stocké en Redis : "${lastWord}"`);
+}
 
 
-    return res.status(200).json({
-      message: "Sous-titre finalisé avec succès.",
-      finalText,
-    });
+
+      // Nettoyage des sous-titres de Redis après finalisation
+      await redisClient.del(redisKey);
+
+      // Notifier le frontend via WebSocket
+      io.to(`session:${segment.session_id}`).emit("subtitle_finalized", { 
+        segment_id, 
+        finalText 
+      });
+
+      // Vérifier s'il y a un segment suivant
+      const nextSegment = await VideoSegmentModel.getNextSegment(segment_id);
+      if (nextSegment) {
+          console.log(`➡️ Segment suivant ${nextSegment.segment_id} prêt à être traité.`);
+
+          // Mettre à jour son statut en "assigned"
+          await VideoSegmentModel.updateSegmentStatus(nextSegment.segment_id, 'assigned');
+
+          // 🚀 Notifier le frontend via WebSocket
+          io.to(`session:${segment.session_id}`).emit("segment_assigned", { 
+              segment_id: nextSegment.segment_id,
+              start_time: nextSegment.start_time,
+              end_time: nextSegment.end_time
+          });
+
+          console.log(`🟢 Notification envoyée pour le segment ${nextSegment.segment_id}`);
+      }
+
+      return res.status(200).json({ message: "Segment finalisé avec succès.", finalText });
 
   } catch (error) {
-    console.error("❌ Erreur lors de la finalisation du sous-titre :", error);
-    return res.status(500).json({ message: "Erreur serveur." });
+      console.error("❌ Erreur lors de la finalisation du sous-titre :", error);
+      return res.status(500).json({ message: "Erreur serveur." });
   }
 }
+
 
 async function getSubtitlesBySegment(req, res) {
   const { segment_id } = req.params;
@@ -403,58 +401,6 @@ async function isDuplicateInSegment(segment_id, newText, created_by, cache = {})
     //return res.status(500).json({ message: "Erreur serveur." });
   //}
 //}
-async function adjustTextWithNeighbors(currentSegment, text) {
-  console.log(`🛠️ Début de l'ajustement des sous-titres pour le segment ${currentSegment.segment_id}`);
-
-  // 🔍 Récupérer le segment précédent (celui qui est finalisé en base)
-  const previousSegment = await VideoSegmentModel.getPreviousSegment(currentSegment.segment_id);
-
-  if (!previousSegment) {
-    console.log("⚠️ Aucun segment précédent trouvé. Pas d'ajustement nécessaire.");
-    return text; // Pas de segment précédent, donc pas d'ajustement
-  }
-
-  console.log(`🔄 Segment précédent détecté : ${previousSegment.segment_id}`);
-
-  // 🔍 Récupérer le sous-titre finalisé du segment précédent
-  const previousFinalizedSubtitle = await SubtitleModel.getFinalSubtitleBySegment(previousSegment.segment_id);
-
-  if (!previousFinalizedSubtitle) {
-    console.log(`⚠️ Aucun sous-titre finalisé trouvé pour le segment ${previousSegment.segment_id}`);
-    return text; // Si le segment précédent n'a pas de sous-titre finalisé, pas d'ajustement
-  }
-
-  console.log(`📌 Sous-titre finalisé du segment ${previousSegment.segment_id} : "${previousFinalizedSubtitle.text}"`);
-
-  // 🔍 Récupérer le premier mot du segment actuel (encore en Redis)
-  const redisKey = `segment:${currentSegment.segment_id}:subtitles`;
-  const wordsInRedis = await redisClient.lRange(redisKey, 0, -1);
-  const firstWordInCurrentSegment = wordsInRedis.length > 0 ? wordsInRedis[0] : null;
-
-  console.log(`📌 Premier mot en Redis du segment ${currentSegment.segment_id} : "${firstWordInCurrentSegment}"`);
-
-  // Comparer le dernier mot du segment précédent et le premier mot du segment actuel
-  if (firstWordInCurrentSegment) {
-    const lastWords = previousFinalizedSubtitle.text.trim().toLowerCase().split(" ");
-    const lastWordInPreviousSegment = lastWords[lastWords.length - 1];
-
-    console.log(`🔍 Dernier mot du segment précédent : "${lastWordInPreviousSegment}"`);
-
-    if (lastWordInPreviousSegment && levenshtein.get(lastWordInPreviousSegment, firstWordInCurrentSegment.toLowerCase()) <= 2) {
-      console.warn(`🚨 Doublon détecté entre "${lastWordInPreviousSegment}" et "${firstWordInCurrentSegment}"`);
-
-      // ❌ Supprimer le premier mot du segment actuel de Redis
-      await redisClient.lRem(redisKey, 1, firstWordInCurrentSegment);
-      console.log(`🗑️ Mot "${firstWordInCurrentSegment}" supprimé de Redis.`);
-
-      // ✅ Mettre à jour le texte sans le mot en double
-      text = text.replace(firstWordInCurrentSegment, "").trim();
-    }
-  }
-
-  console.log(`✅ Texte après ajustement : "${text}"`);
-  return text;
-}
 
 async function getSubtitlesBySession(req, res) {
   const { session_id } = req.params;
@@ -501,7 +447,7 @@ async function getLiveSubtitles(req, res) {
 
 module.exports = {
   assignUserToSegmentController,
-  addWordToSubtitle, // Ajout de mot en temps réel
+  //addWordToSubtitle, // Ajout de mot en temps réel
   finalizeSubtitle,
   getLiveSubtitles,
   getSubtitlesBySegment,
@@ -509,6 +455,6 @@ module.exports = {
   isDuplicateInSegment,
   adjustTextWithNeighbors,
   setSocketInstance,
-  adjustTextWithNeighbors,
+  addSubtitle,
   //validateSubtitleWords,
 };

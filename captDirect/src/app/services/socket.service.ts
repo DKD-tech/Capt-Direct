@@ -37,19 +37,22 @@ export class SocketService {
   
 
   // 🔹 Vérifier la réception de `word_added`
-  onWordAdded(): Observable<any> {
-    return this.wordAddedSubject.asObservable();
-  }
+  onSubtitleAdded(): Observable<any> {
+    return this.socket.fromEvent('subtitle_added');
+}
+
 
   // 🔹 Quitter une session
   leaveVideoSession(data: { userId: number; sessionId: number }) {
     this.socket.emit('leaveVideoSession', data);
   }
 
-  sendWord(segmentId: number, word: string, userId: number): void {
-    console.log("📤 [FRONTEND] Envoi du mot via socket :", { segment_id: segmentId, word, created_by: userId });
-    this.socket.emit('word_added', { segment_id: segmentId, word, created_by: userId });
+  sendSubtitle(data: { text: string; sessionId: number; timestamp: number }) {
+    console.log("📡 Envoi du sous-titre via socket :", data);
+    this.socket.emit('subtitle_update', data);  // Vérifie le bon événement côté backend
   }
+  
+
   
 
 
@@ -82,9 +85,9 @@ export class SocketService {
   onSegmentsUpdated(): Observable<any> {
     return this.socket.fromEvent('segments-updated');
   }
-  sendSubtitle(subtitle: { text: string; videoId: string; timestamp: number }) {
-    this.socket.emit('editSubtitle', subtitle);
-  }
+  //sendSubtitle(subtitle: { text: string; videoId: string; timestamp: number }) {
+   // this.socket.emit('editSubtitle', subtitle);
+  //}
 
   deleteSubtitle(data: { subtitleId: string; videoId: string }) {
     this.socket.emit('deleteSubtitle', data);
@@ -195,6 +198,13 @@ onWordReceived(): Observable<any> {
     });
   }
   
+  removeWord(segmentId: number, word: string): void {
+    console.log(`🗑️ [Socket] Suppression du mot "${word}" pour le segment ${segmentId}`);
+    
+    // 🔹 Émettre un événement Socket.IO pour informer le frontend
+    this.socket.emit("remove_word", { segment_id: segmentId, word: word });
+}
+
 
   
 }
