@@ -5,6 +5,7 @@ import { RegisterPageComponent } from './pages/register-page/register-page.compo
 import { DashboardPageComponent } from './pages/dashboard-page/dashboard-page.component';
 import { authGuard } from './services/auth/auth.guard';
 import { VideosListComponent } from './videos-list/videos-list.component';
+import { VideoSubComponent } from './video-sub/video-sub.component';
 
 export const routes: Routes = [
   {
@@ -22,6 +23,9 @@ export const routes: Routes = [
   },{
     path: 'videos-list',
     component: VideosListComponent,
+  },{
+    path: 'video-sub',
+    component: VideoSubComponent,
   },
   {
     path: 'dashboard-page',
