@@ -112,7 +112,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       });
     });
   }
-  onUserTyping(segment: any) {
+  onUserTyping() {
     if (!this.hasStartedTyping) {
       this.hasStartedTyping = true;
       console.log(
@@ -271,8 +271,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
         console.log('Segments chargés avec timers :', this.segments);
 
-        // Démarrer les timers
-        this.startTimers();
+        // ✅ Assigner immédiatement le premier segment actif
+        if (this.segments.length > 0) {
+          this.activeSegment = this.segments[0];
+        }
       },
       error: (error) => {
         console.error('Erreur lors du chargement des segments :', error);

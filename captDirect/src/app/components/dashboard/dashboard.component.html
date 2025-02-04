@@ -83,7 +83,7 @@
           <p>Temps restant : {{ segment.timeRemaining }} secondes</p>
 
           <!-- Zone de texte pour saisir un sous-titre -->
-          <textarea
+          <!-- <textarea
             [(ngModel)]="segment.subtitleText"
             placeholder="Saisir un sous-titre"
             [disabled]="
@@ -92,7 +92,7 @@
               segment.isLocked
             "
             (keyup)="onUserTyping(segment)"
-          ></textarea>
+          ></textarea> -->
           <!-- <button
             (click)="addSubtitleToSegment(segment)"
             [disabled]="segment.isDisabled || segment.timeRemaining <= 0"
@@ -109,6 +109,17 @@
           </ul>
         </li>
       </ul>
+      <!-- ✅ Zone de texte toujours visible dès le début -->
+      <div class="subtitle-editor" *ngIf="activeSegment">
+        <h3>Segment en cours : {{ activeSegment.segment_id }}</h3>
+        <textarea
+          [(ngModel)]="activeSegment.subtitleText"
+          placeholder="Saisir un sous-titre..."
+          (focus)="onUserTyping()"
+        >
+        </textarea>
+      </div>
+
       <button (click)="downloadSubtitles()">Exporter les sous-titres</button>
     </section>
 
