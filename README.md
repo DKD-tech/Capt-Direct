@@ -55,9 +55,6 @@ Frontend : cd captdirect, executer ```  npm install -g @angular/cli ```
 
 Backend : cd nodejs puis executer   ``` npm install ```
 
-## Démarrage
-
-
 # Démarrage sans Docker 
 
 **Démarrer le backend**  
