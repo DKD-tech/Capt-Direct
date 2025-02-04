@@ -15,13 +15,16 @@
   <main class="main-content">
     <div class="streaming-info">
       <div class="status-header">
-        <span class="dot red"></span>
         <span class="status-text">Session en cours</span>
 
-        <div class="clock">
+        <div class="timer-notification" *ngIf="currentSegment">
+          <p>⏳ Temps restant : {{ currentSegment.timeRemaining }} secondes</p>
+        </div>
+
+        <!-- <div class="clock">
           <mat-icon>access_time</mat-icon>
           <span id="clock">12:12 à 12:22</span>
-        </div>
+        </div> -->
       </div>
       <!-- Affichage des informations de la session -->
       <!-- <div class="session-info">
@@ -34,83 +37,15 @@
         </p>
       </div> -->
       <div class="collaborators-count">
-        <span>Vous êtes {{ collaborators }} collaborateurs en ligne</span>
-        <ul>
+        <span
+          >👥 Nombre d'utilisateurs connectés : {{ users.length }} en
+          ligne</span
+        >
+        <!-- <ul>
           <li *ngFor="let user of users">{{ user }}</li>
-        </ul>
+        </ul> -->
       </div>
     </div>
-    <section class="segments">
-      <h3>Segments assignés</h3>
-      <ul>
-        <li *ngFor="let segment of segments">
-          <!-- <p>
-            Segment {{ segment.segment_id }} - Début : {{ segment.start_time }},
-            Fin : {{ segment.end_time }}, Statut : {{ segment.status }}
-          </p> -->
-
-          <p>
-            <!-- Nom de l'utilisateur assigné -->
-            <strong>Utilisateur assigné :</strong>
-            {{ segment.assigned_to || "Non spécifié" }}
-          </p>
-          <div class="audio-wave-container">
-            <div
-              class="audio-wave"
-              [style.width]="
-                calculateWaveWidth(
-                  segment.timeRemaining,
-                  segment.end_time,
-                  segment.start_time
-                )
-              "
-              [style.backgroundColor]="
-                segment.timeRemaining > 0 ? '#4caf50' : '#f44336'
-              "
-            ></div>
-          </div>
-
-          <!-- Barre de progression
-          <div class="progress-container">
-            <div
-              class="progress-bar"
-              [style.width.%]="
-                100 - (segment.timeRemaining / segment.duration) * 100
-              "
-            ></div>
-          </div> -->
-
-          <p>Temps restant : {{ segment.timeRemaining }} secondes</p>
-
-          <!-- Zone de texte pour saisir un sous-titre -->
-          <textarea
-            [(ngModel)]="segment.subtitleText"
-            placeholder="Saisir un sous-titre"
-            [disabled]="
-              segment.isDisabled ||
-              segment.timeRemaining <= 0 ||
-              segment.isLocked
-            "
-          ></textarea>
-          <!-- <button
-            (click)="addSubtitleToSegment(segment)"
-            [disabled]="segment.isDisabled || segment.timeRemaining <= 0"
-          >
-            Enregistrer
-          </button> -->
-
-          <!-- Afficher les sous-titres existants -->
-
-          <ul>
-            <li *ngFor="let subtitle of segment.subtitles">
-              {{ subtitle.text }} (Créé par : {{ subtitle.created_by }})
-            </li>
-          </ul>
-        </li>
-      </ul>
-      <button (click)="downloadSubtitles()">Exporter les sous-titres</button>
-    </section>
-
     <section class="live-video" *ngIf="videoUrl" (error)="onVideoError()">
       <video
         id="liveVideo"
@@ -128,11 +63,86 @@
       </video>
       <!-- Affichage de la durée de la vidéo -->
       <p *ngIf="duration === null">Chargement de la durée de la vidéo...</p>
-      <span class="live-badge">LIVE</span>
       <div class="subtitle-display">{{ displayedSubtitle }}</div>
     </section>
+    <section class="segments">
+      <!-- <h3>Segments assignés</h3> -->
+      <!-- <ul>
+        <li *ngFor="let segment of segments">
+          <!-- <p>
+            Segment {{ segment.segment_id }} - Début : {{ segment.start_time }},
+            Fin : {{ segment.end_time }}, Statut : {{ segment.status }}
+          </p> -->
 
-    <div class="transcription-info">
+      <!-- Barre de progression
+          <div class="progress-container">
+            <div
+              class="progress-bar"
+              [style.width.%]="
+                100 - (segment.timeRemaining / segment.duration) * 100
+              "
+            ></div>
+          </div> -->
+
+      <!-- Zone de texte pour saisir un sous-titre -->
+      <!-- Zone de texte pour saisir un sous-titre -->
+      <!-- <textarea
+            [(ngModel)]="segment.subtitleText"
+            placeholder="Saisir un sous-titre"
+            [disabled]="
+              segment.isDisabled ||
+              segment.timeRemaining <= 0 ||
+              segment.isLocked
+            "
+            (input)="onSubtitleInputChange(segment)"
+          ></textarea> -->
+      <!-- Affichage en temps réel du texte saisi -->
+      <!-- <p *ngIf="displayedSubtitle">
+            <strong>Texte en cours de saisie :</strong> {{ displayedSubtitle }}
+          </p>
+
+          <ul>
+            <li *ngFor="let subtitle of segment.subtitles">
+              {{ subtitle.text }} (Créé par : {{ subtitle.created_by }})
+            </li>
+          </ul>
+        </li>
+      </ul> -->
+
+      <div class="progress-bars-container">
+        <div class="progress-item" *ngFor="let segment of segments">
+          <div class="audio-wave-container">
+            <div
+              class="audio-wave"
+              [style.width]="
+                calculateWaveWidth(
+                  segment.timeRemaining,
+                  segment.end_time,
+                  segment.start_time
+                )
+              "
+              [style.backgroundColor]="
+                segment.timeRemaining > 0 ? '#4caf50' : '#f44336'
+              "
+            >
+              <span class="progress-user">{{
+                segment.assigned_to || "Non spécifié"
+              }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <textarea
+        [(ngModel)]="globalSubtitleText"
+        placeholder="Saisir un sous-titre"
+        [disabled]="!currentSegment || currentSegment.timeRemaining <= 0"
+        (input)="onGlobalSubtitleChange()"
+      ></textarea>
+      <!-- <button (click)="downloadSubtitles()">Exporter les sous-titres</button> -->
+    </section>
+
+    <!-- <div class="transcription-info">
       <div class="audio-wave">
         <mat-icon class="audio-icon">graphic_eq</mat-icon>
         <div class="audio-sections">
@@ -141,11 +151,11 @@
           <div class="section green"></div>
         </div>
       </div>
-      <textarea
+      <!-- <textarea
         [(ngModel)]="subtitleText"
         (keyup)="onSubtitleChange()"
         placeholder="Saisir le texte"
-      ></textarea>
-    </div>
+      ></textarea> -->
+    <!-- </div> -->
   </main>
 </div>

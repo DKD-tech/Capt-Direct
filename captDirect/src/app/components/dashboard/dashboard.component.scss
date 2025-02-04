@@ -13,15 +13,37 @@ body {
 
 .sidebar {
   width: 250px;
-  background-color: #333;
+  background-color: #2c3e50; /* Bleu foncé élégant */
   color: white;
   padding: 20px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  height: 100%; /* Hauteur de la barre latérale alignée avec le conteneur */
+  height: 100vh;
 }
 
+.user-status {
+  font-size: 16px;
+  font-weight: bold;
+}
+.user-status span {
+  padding: 5px 10px;
+  border-radius: 5px;
+  font-weight: bold;
+}
+/* Statuts dynamiques */
+.status-in-progress {
+  background-color: #2ecc71; /* Vert */
+  color: white;
+}
+// .status-waiting {
+//   background-color: #f39c12; /* Orange */
+//   color: white;
+// }
+.status-done {
+  background-color: #e74c3c; /* Rouge */
+  color: white;
+}
 .user-info {
   display: flex;
   align-items: center;
@@ -46,17 +68,22 @@ body {
 }
 
 .nav-links li {
-  margin: 10px 0;
+  margin: 15px 0;
 }
 
 .nav-links a {
   color: white;
   text-decoration: none;
   font-size: 16px;
+  padding: 10px;
+  display: block;
+  transition: background 0.3s ease-in-out;
+  border-radius: 5px;
 }
 
 .nav-links a:hover {
-  text-decoration: underline;
+  background-color: #1abc9c; /* Vert turquoise moderne */
+  cursor: pointer;
 }
 
 .main-content {
@@ -64,16 +91,21 @@ body {
   padding: 20px;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  overflow-y: auto; /* Défilement interne pour éviter le débordement global */
-  height: 100%; /* Fixe la hauteur pour correspondre au conteneur */
+  align-items: center;
+  justify-content: flex-start;
+  height: 100vh; /* Fixe la hauteur pour s’assurer que tout rentre */
+  overflow-y: auto; /* Permet de scroller si nécessaire */
 }
 
 .status-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding-bottom: 10px;
+  padding: 10px 20px;
+  font-size: 18px;
+  font-weight: bold;
+  background-color: #f5f5f5;
+  border-radius: 8px;
 }
 
 .status-indicator {
@@ -94,9 +126,9 @@ body {
 }
 
 .status-text {
-  font-size: 16px;
+  font-size: 18px;
   font-weight: bold;
-  color: #333;
+  color: #2c3e50;
 }
 
 .clock {
@@ -202,19 +234,158 @@ body {
   line-height: 1.4; /* Espacement pour une meilleure lisibilité */
 }
 
-.audio-wave-container {
-  width: 100%; /* Largeur de la barre complète */
-  height: 20px;
-  background-color: #ddd; /* Couleur de fond */
+.textarea-container {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  margin-top: 10px;
+}
+
+textarea {
+  width: 90%; /* S’adapte à la largeur disponible */
+  max-width: 800px; /* Grande largeur maximale */
+  height: 60px; /* Augmente la hauteur */
+  font-size: 18px; /* Texte plus lisible */
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  transition: all 0.3s ease-in-out;
+  resize: vertical; /* Permet à l'utilisateur de redimensionner verticalement */
+}
+
+textarea:focus {
+  border-color: #1abc9c; /* Change la couleur au focus */
+  box-shadow: 0 0 5px rgba(26, 188, 156, 0.5);
+}
+
+.progress-bars-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px; /* Espacement entre les barres */
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 20px; /* Augmente l’espace en dessous */
+  padding: 10px;
+}
+
+.progress-item {
+  width: 200px; /* Ajuste la largeur de chaque barre */
   position: relative;
-  margin: 10px 0;
+}
+
+.audio-wave-container {
+  width: 100%;
+  height: 20px;
+  background-color: #ddd;
   border-radius: 5px;
   overflow: hidden;
+  position: relative;
 }
 
 .audio-wave {
   height: 100%;
-  width: 0; /* Commence à 0%, sera mis à jour dynamiquement */
-  background-color: #4caf50; /* Couleur de l'onde */
-  transition: width 1s linear; /* Animation fluide */
+  width: 0%;
+  position: relative;
+  transition: width 0.5s linear;
+  display: flex;
+  justify-content: center; /* Centre le texte horizontalement */
+  align-items: center; /* Centre le texte verticalement */
+  color: white; /* Texte en blanc pour contraste */
+  font-weight: bold;
+  font-size: 14px;
 }
+.progress-user {
+  position: absolute;
+  width: 100%;
+  text-align: center;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+// .timer-notification {
+//   position: absolute;
+//   top: 10px;
+//   right: 20px; /* Aligné à droite */
+//   background-color: rgba(0, 0, 0, 0.8);
+//   color: white;
+//   padding: 8px 15px;
+//   border-radius: 5px;
+//   font-size: 14px;
+//   font-weight: bold;
+//   display: flex;
+//   align-items: center;
+//   gap: 8px;
+//   z-index: 1000;
+// }
+.timer-notification {
+  background-color: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 8px 15px;
+  border-radius: 5px;
+  font-size: 14px;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+}
+.user-status {
+  font-size: 16px;
+  font-weight: bold;
+}
+
+.user-status span {
+  padding: 5px 10px;
+  border-radius: 5px;
+  font-weight: bold;
+}
+
+/* Couleurs des statuts */
+.status-in-progress {
+  background-color: #2ecc71; /* Vert */
+  color: white;
+}
+.status-active {
+  background-color: #28a745; /* Vert */
+  color: white;
+  padding: 5px 10px;
+  border-radius: 5px;
+  font-weight: bold;
+}
+
+.status-typing {
+  background-color: #ffc107; /* Jaune */
+  color: black;
+  padding: 5px 10px;
+  border-radius: 5px;
+  font-weight: bold;
+}
+
+.status-soon {
+  background-color: #17a2b8; /* Bleu clair */
+  color: white;
+  padding: 5px 10px;
+  border-radius: 5px;
+  font-weight: bold;
+}
+
+.status-waiting {
+  background-color: #dc3545; /* Rouge */
+  color: white;
+  padding: 5px 10px;
+  border-radius: 5px;
+  font-weight: bold;
+}
+
+// .status-typing {
+//   background-color: #3498db; /* Bleu */
+//   color: white;
+// }
+
+// .status-soon {
+//   background-color: #f39c12; /* Orange */
+//   color: white;
+// }
+
+// .status-waiting {
+//   background-color: #e74c3c; /* Rouge */
+//   color: white;
+// }

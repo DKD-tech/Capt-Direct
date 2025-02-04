@@ -10,6 +10,7 @@ import { Router } from '@angular/router';
 import { SessionService } from '../../services/sessions/session.service';
 import { CommonModule } from '@angular/common';
 import test from 'node:test';
+import { ChangeDetectorRef } from '@angular/core';
 // import videojs from 'video.js';
 // import WaveSurfer from 'wavesurfer.js';
 
@@ -27,7 +28,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   displayedSubtitle = '';
   userId: number = 0; // Identifiant utilisateur récupéré dynamiquement
   videoUrl = ''; // URL de la vidéo récupérée dynamiquement
-  sessionId: number = 7; // ID de la session à afficher
+  sessionId: number = 8; // ID de la session à afficher
   segments: any[] = [];
   username: string = '';
   collaborators: number = 1; // Nombre de collaborateurs en ligne
@@ -39,42 +40,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
   // Ajout d'une propriété pour stocker la durée de la vidéo
   duration: number | null = null;
   // duration: number;
-
-  // // Méthode pour calculer la durée de la vidéo
-  // calculateVideoDuration(videoUrl: string): void {
-  //   const videoElement = document.createElement('video');
-  //   videoElement.src = videoUrl;
-
-  //   videoElement.onloadedmetadata = () => {
-  //     const duration = videoElement.duration;
-  //     console.log('Durée de la vidéo :', duration);
-  //     this.videoDuration = duration;
-
-  //     // Appel pour enregistrer la durée dans Redis via le backend
-  //     this.saveVideoDurationToRedis(duration);
-  //   };
-
-  //   videoElement.onerror = () => {
-  //     console.error(
-  //       'Erreur lors du chargement de la vidéo pour calculer la durée'
-  //     );
-  //   };
-  // }
-
-  // saveVideoDurationToRedis(duration: number): void {
-  //   // Envoie la durée au backend pour la stocker dans Redis
-  //   this.sessionService.saveVideoDuration(this.sessionId, duration).subscribe({
-  //     next: () => {
-  //       console.log('Durée de la vidéo sauvegardée dans Redis avec succès.');
-  //     },
-  //     error: (error) => {
-  //       console.error(
-  //         'Erreur lors de la sauvegarde de la durée de la vidéo dans Redis :',
-  //         error
-  //       );
-  //     },
-  //   });
-  // }
+  currentSegment: any = null; // Stocke le segment actif
+  globalSubtitleText: string = ''; // Contient le texte en cours d'écriture
+  isTyping: any;
 
   constructor(
     private socketService: SocketService,
@@ -82,7 +50,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
     private router: Router,
     private sessionService: SessionService,
     private videoService: VideoService,
-    private SubtitleService: SubtitleService
+    private SubtitleService: SubtitleService,
+    private cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit() {
@@ -108,7 +77,33 @@ export class DashboardComponent implements OnInit, OnDestroy {
         console.log('Utilisateurs connectés à la session :', this.users);
       });
     });
+    this.socketService.onSubtitleUpdate().subscribe((data) => {
+      this.displayedSubtitle = data.text; // Met à jour l'affichage en direct
+    });
   }
+
+  onGlobalSubtitleChange() {
+    if (this.currentSegment) {
+      this.currentSegment.subtitleText = this.globalSubtitleText;
+    }
+  }
+
+  updateCurrentSegment() {
+    this.currentSegment =
+      this.segments.find(
+        (segment) =>
+          segment.assigned_to === this.user?.username &&
+          segment.timeRemaining > 0
+      ) || null;
+
+    // Si un segment actif est trouvé, on récupère son texte
+    if (this.currentSegment) {
+      this.globalSubtitleText = this.currentSegment.subtitleText || '';
+    } else {
+      this.globalSubtitleText = '';
+    }
+  }
+
   // Chargement des informations utilisateur
   loadUserSession(): void {
     this.authService.getUserSession().subscribe(
@@ -203,37 +198,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
     });
   }
 
-  // Charger les segments associés à la session
-  // loadSegments(): void {
-  //   this.sessionService.getSegmentsWithSession(this.sessionId).subscribe({
-  //     next: (response) => {
-  //       this.segments = response.segments; // Adaptez si la structure diffère
-  //       console.log('Segments chargés pour la session :', this.segments);
-  //     },
-  //     error: (error) => {
-  //       console.error('Erreur lors du chargement des segments :', error);
-  //       alert('Impossible de charger les segments pour cette session.');
-  //     },
-  //   });
-  // }
-
-  // loadSegments(): void {
-  //   this.sessionService.getSegmentsWithSession(this.sessionId).subscribe({
-  //     next: (response) => {
-  //       this.segments = response.segments.map((segment: any) => ({
-  //         ...segment,
-  //         subtitleText: '', // Initialisation locale pour la saisie
-  //       }));
-  //       console.log('Segments chargés :', this.segments);
-
-  //       // Démarrer les timers pour chaque segment
-  //     this.startTimers();
-  //     },
-  //     error: (error) => {
-  //       console.error('Erreur lors du chargement des segments :', error);
-  //     },
-  //   });
-  // }
   loadSegments(): void {
     this.sessionService.getSegmentsWithSession(this.sessionId).subscribe({
       next: (response) => {
@@ -281,95 +245,278 @@ export class DashboardComponent implements OnInit, OnDestroy {
     // Retourner la différence en secondes
     return endTotalSeconds - startTotalSeconds;
   }
+  getUserStatusClass(): string {
+    if (!this.currentSegment) return 'status-waiting'; // Aucun segment actif
 
-  startTimers(): void {
-    let currentSegmentIndex = 0; // Démarrer par le premier segment
-
-    const startSegmentTimer = (index: number) => {
-      if (index >= this.segments.length) {
-        console.log('Tous les segments ont été exécutés.');
-        this.onAllSegmentsComplete();
-        return; // Tous les segments ont été joués
+    if (this.currentSegment.assigned_to === this.user?.username) {
+      if (this.isTyping) {
+        return 'status-typing'; // L'utilisateur est en train d'écrire
       }
+      return 'status-active'; // L'utilisateur est en cours
+    }
 
-      const segment = this.segments[index];
-      console.log(`Démarrage du timer pour le segment ${segment.segment_id}`);
-
-      // Initialiser un timer pour le segment actuel
-      segment.timer = setInterval(() => {
-        if (segment.timeRemaining > 0) {
-          segment.timeRemaining--;
-        } else {
-          // Sauvegarder automatiquement à la fin
-          clearInterval(segment.timer);
-          this.autoSaveSubtitle(segment);
-
-          // Démarrer le timer du segment suivant
-          startSegmentTimer(index + 1);
-        }
-      }, 1000); // Décompte toutes les secondes
-    };
-
-    // Démarrer le timer pour le premier segment
-    startSegmentTimer(currentSegmentIndex);
-  }
-
-  autoSaveSubtitle(segment: any): void {
-    console.log(
-      `Texte saisi pour le segment ${segment.segment_id} :`,
-      segment.subtitleText
+    // Vérifier si l'utilisateur a un segment qui arrive bientôt
+    const userSegments = this.segments.filter(
+      (seg) => seg.assigned_to === this.user?.username
+    );
+    const userCurrentIndex = userSegments.findIndex(
+      (seg) => seg.segment_id === this.currentSegment.segment_id
     );
 
-    if (segment.subtitleText.trim() !== '') {
-      this.sessionService
-        .addSubtitle(segment.segment_id, segment.subtitleText, this.userId)
-        .subscribe({
-          next: (response) => {
-            console.log(
-              `Réponse du backend pour le segment ${segment.segment_id} :`,
-              response
-            );
-
-            // Ajoute ici un log pour vérifier si `response.subtitle` est correct
-            if (response && response.subtitle) {
-              console.log(
-                'Sous-titre sauvegardé avec succès :',
-                response.subtitle
-              );
-
-              // Mets à jour `segment.subtitles`
-              segment.subtitles.push({
-                text: response.subtitle.text,
-                created_by: this.userId,
-                created_at: response.subtitle.created_at,
-              });
-
-              console.log(
-                `Sous-titres actuels pour le segment ${segment.segment_id} :`,
-                segment.subtitles
-              );
-            } else {
-              console.error(
-                `Problème dans la réponse du backend pour le segment ${segment.segment_id}.`
-              );
-            }
-
-            // Réinitialise la zone de texte
-            segment.subtitleText = '';
-          },
-          error: (error) => {
-            console.error(
-              `Erreur lors de la sauvegarde pour le segment ${segment.segment_id} :`,
-              error
-            );
-          },
-        });
-    } else {
-      console.log(
-        `Aucun texte à sauvegarder pour le segment ${segment.segment_id}.`
-      );
+    if (userCurrentIndex !== -1 && userCurrentIndex + 1 < userSegments.length) {
+      return 'status-soon'; // Son segment arrive bientôt
     }
+
+    return 'status-waiting'; // En attente
   }
+
+  getUserStatusText(): string {
+    if (!this.currentSegment) return '🔴 En attente'; // Aucun segment actif
+
+    if (this.currentSegment.assigned_to === this.user?.username) {
+      if (this.isTyping) {
+        return "⌨️ En train d'écrire...";
+      }
+      return '🟢 En cours';
+    }
+
+    // Vérifier si l'utilisateur a un segment qui arrive bientôt
+    const userSegments = this.segments.filter(
+      (seg) => seg.assigned_to === this.user?.username
+    );
+    const userCurrentIndex = userSegments.findIndex(
+      (seg) => seg.segment_id === this.currentSegment.segment_id
+    );
+
+    if (userCurrentIndex !== -1 && userCurrentIndex + 1 < userSegments.length) {
+      return '🟠 Bientôt à vous';
+    }
+
+    return '🔴 En attente';
+  }
+
+  startTimers(): void {
+    this.startSegmentTimer(0); // Démarre le premier segment
+  }
+
+  startSegmentTimer(index: number): void {
+    if (index >= this.segments.length) {
+      console.log('✅ Tous les segments ont été joués.');
+      this.onAllSegmentsComplete();
+      return;
+    }
+
+    this.currentSegment = this.segments[index];
+    console.log(
+      `🎬 Démarrage du segment ${this.currentSegment.segment_id} pour ${this.currentSegment.assigned_to}`
+    );
+
+    const startTime = this.timeStringToSeconds(this.currentSegment.start_time);
+    const endTime = this.timeStringToSeconds(this.currentSegment.end_time);
+
+    if (isNaN(startTime) || isNaN(endTime) || endTime <= startTime) {
+      console.error(`❌ Erreur: start_time ou end_time invalide`);
+      return;
+    }
+
+    this.currentSegment.timeRemaining = endTime - startTime;
+    this.globalSubtitleText = this.currentSegment.subtitleText || '';
+
+    this.currentSegment.timer = setInterval(() => {
+      if (this.currentSegment.timeRemaining > 0) {
+        this.currentSegment.timeRemaining--;
+      } else {
+        clearInterval(this.currentSegment.timer);
+        console.log(`⏳ Fin du segment ${this.currentSegment.segment_id}`);
+
+        // ✅ Attendre un peu avant de passer au segment suivant
+        setTimeout(() => {
+          this.autoSaveSubtitle(() => {
+            this.moveToNextSegment(index + 1);
+          });
+        }, 500);
+      }
+    }, 1000);
+  }
+
+  autoSaveSubtitle(nextSegmentCallback?: () => void): void {
+    if (!this.currentSegment) {
+      console.log('Aucun segment actif, pas de sauvegarde.');
+      return;
+    }
+
+    console.log(
+      `💾 Sauvegarde automatique pour ${this.currentSegment.segment_id}`
+    );
+
+    if (this.globalSubtitleText.trim() === '') {
+      this.globalSubtitleText = `Utilisateur ${this.userId} : Pas de transcription`;
+    }
+
+    this.sessionService
+      .addSubtitle(
+        this.currentSegment.segment_id,
+        this.globalSubtitleText,
+        this.userId
+      )
+      .subscribe({
+        next: (response) => {
+          console.log(`✅ Réponse du backend :`, response);
+
+          if (response && response.subtitle) {
+            this.currentSegment.subtitles.push({
+              text: response.subtitle.text,
+              created_by: this.userId,
+              created_at: response.subtitle.created_at,
+            });
+
+            this.currentSegment.isDisabled = true;
+            this.globalSubtitleText = ''; // Réinitialisation
+
+            // ✅ Assure que le passage au segment suivant ne se fait qu’après l’enregistrement
+            if (nextSegmentCallback) {
+              setTimeout(nextSegmentCallback, 500);
+            }
+          }
+        },
+        error: (error) => {
+          console.error(`❌ Erreur de sauvegarde :`, error);
+        },
+      });
+  }
+
+  moveToNextSegment(nextIndex: number): void {
+    if (nextIndex >= this.segments.length) {
+      console.log('✅ Tous les segments sont terminés.');
+
+      // ✅ Attendre un petit instant avant la redirection
+      setTimeout(() => {
+        this.currentSegment = null;
+        this.router.navigate(['/streaming', this.sessionId]);
+      }, 1000);
+
+      return;
+    }
+
+    this.currentSegment = this.segments[nextIndex];
+    this.globalSubtitleText = this.currentSegment.subtitleText || '';
+
+    console.log(
+      `➡️ Passage au segment suivant: ${this.currentSegment.segment_id} pour ${this.currentSegment.assigned_to}`
+    );
+
+    // ✅ Démarre le timer pour le segment suivant
+    setTimeout(() => this.startSegmentTimer(nextIndex), 500);
+  }
+
+  // autoSaveSubtitle(): void {
+  //   if (!this.currentSegment) {
+  //     console.log('Aucun segment actif, pas de sauvegarde.');
+  //     return;
+  //   }
+
+  //   console.log(
+  //     `💾 Sauvegarde automatique pour le segment ${this.currentSegment.segment_id}`
+  //   );
+
+  //   if (this.globalSubtitleText.trim() !== '') {
+  //     this.sessionService
+  //       .addSubtitle(
+  //         this.currentSegment.segment_id,
+  //         this.globalSubtitleText,
+  //         this.userId
+  //       )
+  //       .subscribe({
+  //         next: (response) => {
+  //           console.log(`✅ Réponse du backend :`, response);
+
+  //           if (response && response.subtitle) {
+  //             this.currentSegment.subtitles.push({
+  //               text: response.subtitle.text,
+  //               created_by: this.userId,
+  //               created_at: response.subtitle.created_at,
+  //             });
+
+  //             this.currentSegment.isDisabled = true;
+
+  //             console.log(
+  //               `📌 Sous-titres actuels du segment ${this.currentSegment.segment_id} :`,
+  //               this.currentSegment.subtitles
+  //             );
+
+  //             // 🟢 Passage automatique au segment suivant après sauvegarde
+  //             this.globalSubtitleText = ''; // Réinitialise la zone de texte
+  //             this.moveToNextSegment();
+  //           }
+  //         },
+  //         error: (error) => {
+  //           console.error(`❌ Erreur de sauvegarde :`, error);
+  //         },
+  //       });
+  //   } else {
+  //     console.log(`Aucun texte à sauvegarder.`);
+  //   }
+  // }
+
+  // autoSaveSubtitle(segment: any): void {
+  //   console.log(
+  //     `Texte saisi pour le segment ${segment.segment_id} :`,
+  //     segment.subtitleText
+  //   );
+
+  //   if (segment.subtitleText.trim() !== '') {
+  //     this.sessionService
+  //       .addSubtitle(segment.segment_id, segment.subtitleText, this.userId)
+  //       .subscribe({
+  //         next: (response) => {
+  //           console.log(
+  //             `Réponse du backend pour le segment ${segment.segment_id} :`,
+  //             response
+  //           );
+
+  //           // Ajoute ici un log pour vérifier si `response.subtitle` est correct
+  //           if (response && response.subtitle) {
+  //             console.log(
+  //               'Sous-titre sauvegardé avec succès :',
+  //               response.subtitle
+  //             );
+
+  //             // Mets à jour `segment.subtitles`
+  //             segment.subtitles.push({
+  //               text: response.subtitle.text,
+  //               created_by: this.userId,
+  //               created_at: response.subtitle.created_at,
+  //             });
+
+  //             // 🚀 Désactiver la saisie après validation
+  //             segment.isDisabled = true;
+
+  //             console.log(
+  //               `Sous-titres actuels pour le segment ${segment.segment_id} :`,
+  //               segment.subtitles
+  //             );
+  //           } else {
+  //             console.error(
+  //               `Problème dans la réponse du backend pour le segment ${segment.segment_id}.`
+  //             );
+  //           }
+
+  //           // Réinitialise la zone de texte
+  //           segment.subtitleText = '';
+  //         },
+  //         error: (error) => {
+  //           console.error(
+  //             `Erreur lors de la sauvegarde pour le segment ${segment.segment_id} :`,
+  //             error
+  //           );
+  //         },
+  //       });
+  //   } else {
+  //     console.log(
+  //       `Aucun texte à sauvegarder pour le segment ${segment.segment_id}.`
+  //     );
+  //   }
+  // }
 
   calculateWaveWidth(
     timeRemaining: number,
@@ -379,6 +526,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
     const totalDuration = this.calculateDurationInSeconds(startTime, endTime);
     const percentage = ((totalDuration - timeRemaining) / totalDuration) * 100;
     return `${percentage}%`; // Renvoie la largeur en pourcentage
+  }
+
+  onSubtitleInputChange(segment: any) {
+    this.displayedSubtitle = segment.subtitleText; // Mise à jour en temps réel
   }
 
   mergeSort(array: any[]): any[] {
@@ -419,7 +570,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
     return hours * 3600 + minutes * 60 + seconds;
   }
 
-  // // Normaliser le texte des sous-titres (supprime espaces inutiles, etc.)
   // normalizeSubtitle(text: string): string {
   //   // Supprime les espaces multiples et normalise le texte
   //   return text
@@ -621,13 +771,16 @@ export class DashboardComponent implements OnInit, OnDestroy {
     );
   }
   // Envoyer un sous-titre via le socket
-  onSubtitleChange() {
+  onSubtitleChange(segment: any) {
     const timestamp = Date.now();
     this.socketService.sendSubtitle({
-      text: this.subtitleText,
+      text: segment.subtitleText,
       videoId: this.videoUrl,
       timestamp,
     });
+
+    // Mettre à jour l'affichage localement
+    this.displayedSubtitle = segment.subtitleText;
   }
 
   ngOnDestroy() {
