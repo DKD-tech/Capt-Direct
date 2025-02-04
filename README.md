@@ -5,11 +5,17 @@
 ##  Fonctionnalités principales  
 
 **Connexion** : Se connecter sur l'application après avoir crée un compte. 
+
 **gestion des sessions** : Rejoindre une session existante ou créer la vôtre facilement.
-**Gestion des segments collaborateurs** : Attribution automatique des segments pour éviter les conflits.  
-**Sous-titrage ** : Ajouter des sous-titres à votre segment pendant le visionnage.  
+
+**Gestion des segments collaborateurs** : Attribution automatique des segments pour éviter les conflits. 
+
+**Sous-titrage** : Ajouter des sous-titres à votre segment pendant le visionnage. 
+
 **Mode collaboratif** : Plusieurs utilisateurs peuvent sous-titrer en même temps.   
+
 **Correction des chevauchements** : Ajustement automatique pour éviter les répétitions entre segments.  
+
 **Exportation en format SRT** : Téléchargez les sous-titres générés en fichier `.srt` pour une utilisation ultérieure.  
 
 
@@ -40,45 +46,54 @@ _Facultatif mais recommandé_ :
 ### Installation manuelle
 
 ## **Cloner le projet**  
-```sh
 git clone https://github.com/utilisateur/nom-du-projet.git
 cd nom-du-projet 
 
 _Accéder aux dossiers_:
 
-Frontend : cd captdirect, executer npm install -g @angular/cli
+Frontend : cd captdirect, executer ```  npm install -g @angular/cli ```
 
-Backend : cd nodejs puis executer npm install
+Backend : cd nodejs puis executer   ``` npm install ```
 
 ## Démarrage
 
-###Démarrage sans Docker 
+
+# Démarrage sans Docker 
 
 **Démarrer le backend**  
 ```sh
 npm run dev
+```
 
-L'API Backend sera disponible ici : 👉 http://localhost:3000/api/status
+L'API Backend sera disponible ici : http://localhost:3000/api/status
 
-**Démarrer le frontend**  
+**Démarrer le frontend**
 ```sh
 ng serve
+```
 
-L'interface Web sera accessible ici : 👉 http://localhost:4200
+L'interface Web sera accessible ici : http://localhost:4200
 
-###Démarrage avec Docker
+# Démarrage avec Docker
 
-**Lancer l'application avec Docker Compose
+**Lancer l'application avec Docker Compose**
+```sh
 sudo docker-compose up -d --build
+```
 
-**pour la verification 
-docker ps 
+**pour la verification** 
+```sh
+docker ps
+```
+Accéder directement à l'interface web et à l'API backend 
 
-#Accéder directement à l'interface web et à l'API backend 
+  Frontend : http://localhost:4200
+  API Backend : http://localhost:3000/api/status
 
-**Frontend : http://localhost:4200
-**API Backend : http://localhost:3000/api/status
+**Remarque :**
+Si tu veux arrêter l'application avec Docker, utilise cette commande : 
+```sh 
+docker-compose down 
+```
 
-Remarque :
-Si tu veux arrêter l'application avec Docker, utilise cette commande :docker-compose down
 
