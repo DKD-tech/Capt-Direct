@@ -39,6 +39,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
   // Ajout d'une propriété pour stocker la durée de la vidéo
   duration: number | null = null;
   // duration: number;
+  hasStartedTyping = false; // ✅ Ajout : Variable pour vérifier si l'utilisateur a commencé à écrire
+  videoLoaded = false; // ✅ Ajout : Variable pour suivre le chargement de la vidéo
+  activeSegment: any = null; // Le segment actuellement en cours
 
   // // Méthode pour calculer la durée de la vidéo
   // calculateVideoDuration(videoUrl: string): void {
@@ -109,6 +112,16 @@ export class DashboardComponent implements OnInit, OnDestroy {
       });
     });
   }
+  onUserTyping(segment: any) {
+    if (!this.hasStartedTyping) {
+      this.hasStartedTyping = true;
+      console.log(
+        '🖱️ L’utilisateur a cliqué sur la zone de texte, démarrage des timers.'
+      );
+      this.startTimers(); // ✅ Démarrer immédiatement le minuteur
+    }
+  }
+
   // Chargement des informations utilisateur
   loadUserSession(): void {
     this.authService.getUserSession().subscribe(
@@ -310,8 +323,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
       }, 1000); // Décompte toutes les secondes
     };
 
-    // Démarrer le timer pour le premier segment
-    startSegmentTimer(currentSegmentIndex);
+    // ✅ Relancer le premier segment dès le clic
+    if (this.hasStartedTyping && this.segments.length > 0) {
+      console.log('🔄 Relance du premier segment après clic !');
+      startSegmentTimer(currentSegmentIndex);
+    }
   }
 
   autoSaveSubtitle(segment: any): void {
@@ -504,37 +520,106 @@ export class DashboardComponent implements OnInit, OnDestroy {
   exportToSRT(): string {
     console.log('Segments avant génération du fichier SRT :', this.segments);
 
+    let subtitleIndex = 1;
+    const minFirstSegmentDuration = 10; // Forcer une durée de 10 secondes pour le premier segment
+    const minSubtitleDuration = 2; // Un sous-titre reste au moins 2 secondes
+    const maxCPS = 12; // 12 caractères/seconde pour une meilleure lisibilité
+    const maxVisibleLines = 3; // Max 3 lignes visibles en même temps
+
     return this.segments
-      .filter((segment) => segment.subtitles.length > 0) // Ne garde que les segments avec sous-titres
-      .map((segment, index) => {
-        const text = segment.subtitles
-          .map((s: { text: any }) => s.text)
+      .filter((segment) => segment.subtitles.length > 0)
+      .map((segment, segmentIndex) => {
+        const fullText = segment.subtitles
+          .map((s: { text: string }) => s.text)
           .join(' ');
+
         console.log(
           `Sous-titres pour le segment ${segment.segment_id} :`,
-          text
+          fullText
         );
 
-        // Vérification des valeurs brutes des timestamps
-        console.log(
-          `start_time brut: ${segment.start_time}, end_time brut: ${segment.end_time}`
-        );
-
-        // Conversion correcte en secondes
         let startTime = this.timeStringToSeconds(segment.start_time);
         let endTime = this.timeStringToSeconds(segment.end_time);
 
-        // Vérification des erreurs possibles
         if (isNaN(startTime) || isNaN(endTime) || startTime === endTime) {
           console.error(
             `⚠️ Erreur : start_time (${startTime}) et end_time (${endTime}) invalides pour le segment ${segment.segment_id}`
           );
-          endTime = startTime + 1; // Évite que les sous-titres aient une durée de 0 secondes
+          endTime = startTime + 1;
         }
 
-        return `${index + 1}
-  ${this.formatTimeToSRT(startTime)} --> ${this.formatTimeToSRT(endTime)}
-  ${text}`;
+        // Forcer le premier segment à durer au moins 10s
+        if (
+          segmentIndex === 0 &&
+          endTime - startTime < minFirstSegmentDuration
+        ) {
+          endTime = startTime + minFirstSegmentDuration;
+        }
+
+        const sanitizedText = fullText.replace(/[\r\n]+/g, ' ').trim();
+        const words = sanitizedText.split(' ');
+        const maxLineLength = 40;
+        const lines: string[] = [];
+        let currentLine = '';
+
+        words.forEach((word: string) => {
+          if ((currentLine + word).length <= maxLineLength) {
+            currentLine += word + ' ';
+          } else {
+            lines.push(currentLine.trim());
+            currentLine = word + ' ';
+          }
+        });
+
+        if (currentLine.trim() !== '') {
+          lines.push(currentLine.trim());
+        }
+
+        console.log(
+          `Sous-titres découpés pour le segment ${segment.segment_id} :`,
+          lines
+        );
+
+        // Durée totale du segment
+        let segmentDuration = endTime - startTime;
+        let idealDuration = sanitizedText.length / maxCPS;
+        let adjustedDuration = Math.max(
+          minSubtitleDuration,
+          Math.min(segmentDuration, idealDuration)
+        );
+
+        if (segmentIndex === 0 && adjustedDuration < minFirstSegmentDuration) {
+          adjustedDuration = minFirstSegmentDuration;
+        }
+
+        const lineDuration = Math.max(
+          minSubtitleDuration,
+          adjustedDuration / lines.length
+        );
+        let visibleLines: string[] = []; // Stocke les lignes affichées progressivement
+
+        // Génération des sous-titres en affichage progressif
+        const srtBlocks = lines.map((line, i) => {
+          const blockStartTime = startTime + i * lineDuration;
+          const blockEndTime = Math.min(endTime, blockStartTime + lineDuration);
+
+          // Ajout progressif des lignes à l'affichage
+          visibleLines.push(line);
+          if (visibleLines.length > maxVisibleLines) {
+            visibleLines.shift(); // Supprime la plus ancienne ligne pour un effet de "défilement"
+          }
+
+          const formattedStartTime = this.formatTimeToSRT(blockStartTime);
+          const formattedEndTime = this.formatTimeToSRT(blockEndTime);
+
+          const blockText = visibleLines.join('\n'); // Afficher les lignes empilées
+          const srtBlock = `${subtitleIndex}\n${formattedStartTime} --> ${formattedEndTime}\n${blockText}`;
+          subtitleIndex++;
+
+          return srtBlock;
+        });
+
+        return srtBlocks.join('\n\n');
       })
       .join('\n\n');
   }
