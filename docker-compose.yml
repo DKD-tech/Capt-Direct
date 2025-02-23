@@ -1,8 +1,94 @@
+# services:
+#   nginx:
+#     build:
+#       context: .
+#       dockerfile: ./nginx-rtmp-ffmpeg/Dockerfile
+#     container_name: nginx
+#     ports:
+#       - "80:80"
+#       - "1935:1935"
+#     volumes:
+#       - ./nginx-rtmp-ffmpeg/nginx.conf:/usr/local/nginx/conf/nginx.conf:ro
+#       - ./hls:/opt/data/hls
+#       - ./nginx-rtmp-ffmpeg/videos:/usr/src/app/videos
+#     networks:
+#       - capt_direct_net
+#     environment:
+#       - PATH=/usr/local/nginx/sbin:$PATH
+#     command: ["/usr/local/nginx/sbin/nginx", "-g", "daemon off;"]
+
+#   redis:
+#     image: redis:alpine
+#     container_name: redis
+#     ports:
+#       - "6379:6379" # Corrected format for ports
+#     networks:
+#       - capt_direct_net
+
+#   backend:
+#     build:
+#       context: ./nodejs
+#       dockerfile: Dockerfile
+#     container_name: backend
+#     ports:
+#       - "3000:3000"
+#     networks:
+#       - capt_direct_net
+#     environment:
+#       NODE_ENV: development
+#       # VIDEO_DIRECTORY: ${VIDEO_DIRECTORY}
+#       # JWT_SECRET: FEnuMwNrmFk1+9yTaNoQMvrjeI9nxNyWrUt4x9yn7za6aAIzlFiogaiuWU7JuJXZmOhUcTKuRroIvNZzkjYnTg==
+#     depends_on:
+#       - database
+#     volumes:
+#       - ./nginx-rtmp-ffmpeg/videos:/usr/src/app/videos
+#     env_file:
+#       - .env
+  
+#   frontend:
+#     build:
+#       context: ./captDirect
+#       dockerfile: Dockerfile
+#     container_name: frontend
+#     ports:
+#       - "4200:4200"
+#     networks:
+#       - capt_direct_net
+#     depends_on:
+#       - backend
+
+#   database:
+#     image: postgres:latest
+#     build:
+#       context: ./database
+#       dockerfile: Dockerfile
+#     container_name: database
+#     ports:
+#       - "5433:5432"
+#     networks:
+#       - capt_direct_net
+#     environment:
+#       POSTGRES_USER: postgres
+#       POSTGRES_PASSWORD: Kh@didia74
+#       POSTGRES_DB: stc_db
+#     volumes:
+#       - postgres_data:/var/lib/postgresql/data
+
+# networks:
+#   capt_direct_net:
+#     driver: bridge
+
+# volumes:
+#   postgres_data:
+
+
+version: '3.8'
+
 services:
   nginx:
     build:
-      context: .
-      dockerfile: ./nginx-rtmp-ffmpeg/Dockerfile
+      context: ./nginx-rtmp-ffmpeg
+      dockerfile: Dockerfile
     container_name: nginx
     ports:
       - "80:80"
@@ -17,14 +103,6 @@ services:
       - PATH=/usr/local/nginx/sbin:$PATH
     command: ["/usr/local/nginx/sbin/nginx", "-g", "daemon off;"]
 
-  redis:
-    image: redis:alpine
-    container_name: redis
-    ports:
-      - "6379:6379" # Corrected format for ports
-    networks:
-      - capt_direct_net
-
   backend:
     build:
       context: ./nodejs
@@ -35,16 +113,20 @@ services:
     networks:
       - capt_direct_net
     environment:
-      NODE_ENV: development
-      # VIDEO_DIRECTORY: ${VIDEO_DIRECTORY}
-      # JWT_SECRET: FEnuMwNrmFk1+9yTaNoQMvrjeI9nxNyWrUt4x9yn7za6aAIzlFiogaiuWU7JuJXZmOhUcTKuRroIvNZzkjYnTg==
+      - NODE_ENV=production
+      - PORT=3000
+      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_URL=${REDIS_URL}
+      - JWT_SECRET=FEnuMwNrmFk1+9yTaNoQMvrjeI9nxNyWrUt4x9yn7za6aAIzlFiogaiuWU7JuJXZmOhUcTKuRroIvNZzkjYnTg==
+      - HLS_SERVICE_URL=http://hls_service:5000
+      - VIDEO_DIRECTORY=./nginx-rtmp-ffmpeg/videos
     depends_on:
       - database
+      - redis
+      - hls_service
     volumes:
       - ./nginx-rtmp-ffmpeg/videos:/usr/src/app/videos
-    env_file:
-      - .env
-  
+
   frontend:
     build:
       context: ./captDirect
@@ -54,25 +136,40 @@ services:
       - "4200:4200"
     networks:
       - capt_direct_net
+    environment:
+      - API_URL=https://capt-direct-production.up.railway.app/api
     depends_on:
       - backend
 
-  database:
-    image: postgres:latest
+  hls_service:
     build:
-      context: ./database
+      context: ./hls_service
       dockerfile: Dockerfile
-    container_name: database
+    container_name: hls_service
     ports:
-      - "5433:5432"
+      - "5000:5000"
     networks:
       - capt_direct_net
+
+  database:
+    image: postgres:latest
+    container_name: database
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: Kh@didia74
-      POSTGRES_DB: stc_db
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=Kh@didia74
+      - POSTGRES_DB=stc_db
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    networks:
+      - capt_direct_net
+    restart: always
+
+  redis:
+    image: redis:alpine
+    container_name: redis
+    networks:
+      - capt_direct_net
+    restart: always
 
 networks:
   capt_direct_net:
@@ -80,3 +177,4 @@ networks:
 
 volumes:
   postgres_data:
+  nginx_hls:
