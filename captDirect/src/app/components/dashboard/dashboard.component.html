@@ -2,12 +2,12 @@
   <aside class="sidebar">
     <div class="user-info">
       <mat-icon class="user-icon">person</mat-icon>
-      <span class="user-name">djeneba Kaba</span>
+      <span class="user-name">{{ user?.username || "Utilisateur" }}</span>
     </div>
     <nav class="nav-links">
       <ul>
         <li><a href="#">Settings</a></li>
-        <li><a href="#">Logout</a></li>
+        <li><a (click)="onLogout()">Déconnexion</a></li>
       </ul>
     </nav>
   </aside>
@@ -16,39 +16,130 @@
     <div class="streaming-info">
       <div class="status-header">
         <span class="dot red"></span>
-        <!-- Point rouge pour indiquer le statut -->
-        <span class="status-text">En attente</span>
+        <span class="status-text">Session en cours</span>
 
-        <!-- Ajout de l'horloge ici -->
         <div class="clock">
           <mat-icon>access_time</mat-icon>
           <span id="clock">12:12 à 12:22</span>
         </div>
       </div>
+      <!-- Affichage des informations de la session -->
+      <!-- <div class="session-info">
+        <p><strong>Nom de la session :</strong> {{ sessionName }}</p>
+        <p><strong>Description :</strong> {{ sessionDescription }}</p>
+        <p><strong>Statut :</strong> {{ sessionStatus }}</p>
+        <p *ngIf="duration !== null">
+          <strong>Durée de la vidéo :</strong>
+          {{ duration | number : "1.0-2" }} secondes
+        </p>
+      </div> -->
       <div class="collaborators-count">
-        <span>Vous êtes 3 collaborateurs en ligne</span>
+        <span>Vous êtes {{ collaborators }} collaborateurs en ligne</span>
+        <ul>
+          <li *ngFor="let user of users">{{ user }}</li>
+        </ul>
       </div>
     </div>
+    <section class="segments">
+      <h3>Segments assignés</h3>
+      <ul>
+        <li *ngFor="let segment of segments">
+          <!-- <p>
+            Segment {{ segment.segment_id }} - Début : {{ segment.start_time }},
+            Fin : {{ segment.end_time }}, Statut : {{ segment.status }}
+          </p> -->
 
-    <section class="live-video">
-      <!-- <video controls autoplay muted class="live-stream">
-        <source
-          src="https://www.youtube.com/watch?v=sxt6rilYJkY"
-          type="video/mp4"
-        />
-        Votre navigateur ne prend pas en charge la lecture de vidéos.
-      </video> -->
-      <iframe
+          <p>
+            <!-- Nom de l'utilisateur assigné -->
+            <strong>Utilisateur assigné :</strong>
+            {{ segment.assigned_to || "Non spécifié" }}
+          </p>
+          <div class="audio-wave-container">
+            <div
+              class="audio-wave"
+              [style.width]="
+                calculateWaveWidth(
+                  segment.timeRemaining,
+                  segment.end_time,
+                  segment.start_time
+                )
+              "
+              [style.backgroundColor]="
+                segment.timeRemaining > 0 ? '#4caf50' : '#f44336'
+              "
+            ></div>
+          </div>
+
+          <!-- Barre de progression
+          <div class="progress-container">
+            <div
+              class="progress-bar"
+              [style.width.%]="
+                100 - (segment.timeRemaining / segment.duration) * 100
+              "
+            ></div>
+          </div> -->
+
+          <p>Temps restant : {{ segment.timeRemaining }} secondes</p>
+
+          <!-- Zone de texte pour saisir un sous-titre -->
+          <!-- <textarea
+            [(ngModel)]="segment.subtitleText"
+            placeholder="Saisir un sous-titre"
+            [disabled]="
+              segment.isDisabled ||
+              segment.timeRemaining <= 0 ||
+              segment.isLocked
+            "
+            (keyup)="onUserTyping(segment)"
+          ></textarea> -->
+          <!-- <button
+            (click)="addSubtitleToSegment(segment)"
+            [disabled]="segment.isDisabled || segment.timeRemaining <= 0"
+          >
+            Enregistrer
+          </button> -->
+
+          <!-- Afficher les sous-titres existants -->
+
+          <ul>
+            <li *ngFor="let subtitle of segment.subtitles">
+              {{ subtitle.text }} (Créé par : {{ subtitle.created_by }})
+            </li>
+          </ul>
+        </li>
+      </ul>
+      <!-- ✅ Zone de texte toujours visible dès le début -->
+      <div class="subtitle-editor" *ngIf="activeSegment">
+        <h3>Segment en cours : {{ activeSegment.segment_id }}</h3>
+        <textarea
+          [(ngModel)]="activeSegment.subtitleText"
+          placeholder="Saisir un sous-titre..."
+          (focus)="onUserTyping()"
+        >
+        </textarea>
+      </div>
+
+      <button (click)="downloadSubtitles()">Exporter les sous-titres</button>
+    </section>
+
+    <section class="live-video" *ngIf="videoUrl" (error)="onVideoError()">
+      <video
+        id="liveVideo"
         class="live-stream"
         width="100%"
         height="500px"
-        src="https://www.youtube.com/embed/RIQFon1Kbn8?autoplay=1&mute=1"
-        title="YouTube video player"
-        frameborder="0"
-        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-        allowfullscreen
+        controls
+        autoplay
+        muted
+        [src]="videoUrl"
+        (error)="onVideoError()"
       >
-      </iframe>
+        <!-- <source [src]="videoUrl" type="application/x-mpegURL" /> -->
+        Votre navigateur ne prend pas en charge la lecture de vidéos.
+      </video>
+      <!-- Affichage de la durée de la vidéo -->
+      <p *ngIf="duration === null">Chargement de la durée de la vidéo...</p>
       <span class="live-badge">LIVE</span>
       <div class="subtitle-display">{{ displayedSubtitle }}</div>
     </section>
@@ -56,8 +147,6 @@
     <div class="transcription-info">
       <div class="audio-wave">
         <mat-icon class="audio-icon">graphic_eq</mat-icon>
-        <!-- Icône représentant le flux audio -->
-        <!-- Ici, vous pouvez mettre une animation SVG ou un graphe audio si nécessaire -->
         <div class="audio-sections">
           <div class="section green"></div>
           <div class="section green"></div>

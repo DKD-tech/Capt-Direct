@@ -1,0 +1,29 @@
+# Étape 1 : Build de l'application Angular
+FROM node:18 AS build
+
+# Définir le répertoire de travail
+WORKDIR /app
+
+# Copier les fichiers package.json et package-lock.json
+COPY package.json package-lock.json ./
+
+# Installer les dépendances Angular
+RUN npm install
+
+# Copier tout le code source Angular
+COPY . .
+
+# Construire l'application Angular pour la production
+RUN npm run build --prod
+
+# Étape 2 : Servir les fichiers statiques avec Nginx
+FROM nginx:1.23
+
+# Copier les fichiers construits dans le répertoire par défaut de Nginx
+COPY --from=build /app/dist/<project-name> /usr/share/nginx/html
+
+# Exposer le port 80 pour Nginx
+EXPOSE 80
+
+# Commande par défaut pour démarrer Nginx
+CMD ["nginx", "-g", "daemon off;"]

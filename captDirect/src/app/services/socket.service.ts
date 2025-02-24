@@ -9,19 +9,41 @@ import { from } from 'rxjs';
 export class SocketService {
   constructor(private socket: Socket) {}
 
-  // Méthodes pour envoyer des événements
-  joinVideoSession(data: {
-    userId: string;
-    userName: string;
-    videoId: string;
-  }) {
-    this.socket.emit('joinVideoSession', data);
+  // Rejoindre une session
+  joinSession(session_id: number, username: string, user_id: number): void {
+    this.socket.emit('join-session', { session_id, username, user_id });
   }
-
-  leaveVideoSession(data: { userId: string; videoId: string }) {
+  // onSegmentAssigned(callback: (segment: any) => void) {
+  //   this.socket.on('segment-assigned', callback);
+  // }
+  // Quitter une session
+  leaveVideoSession(data: { userId: number; sessionId: number }) {
     this.socket.emit('leaveVideoSession', data);
   }
 
+  // Recevoir les utilisateurs connectés
+  getUsers(): Observable<string[]> {
+    return new Observable((observer) => {
+      this.socket.on('update-users', (users: string[]) => {
+        observer.next(users);
+      });
+    });
+  }
+
+  // Écouter la mise à jour de la liste des utilisateurs connectés
+  onUsersUpdated(): Observable<string[]> {
+    return this.socket.fromEvent<string[]>('update-users');
+  }
+
+  // Écouter les mises à jour des segments redistribués
+  onSegmentsRedistributed(): Observable<any[]> {
+    return this.socket.fromEvent<any[]>('segments-redistributed');
+  }
+
+  // Mises à jour des segments redistribués
+  onSegmentsUpdated(): Observable<any> {
+    return this.socket.fromEvent('segments-updated');
+  }
   sendSubtitle(subtitle: { text: string; videoId: string; timestamp: number }) {
     this.socket.emit('editSubtitle', subtitle);
   }
@@ -58,6 +80,11 @@ export class SocketService {
   }> {
     return this.socket.fromEvent('updateSubtitle');
   }
+
+  // onSegmentsUpdated(): Observable<any[]> {
+  //   return this.socket.fromEvent<any[]>('updateSegments');
+  // }
+
   onUserJoined(): Observable<{ userId: string; userName: string }> {
     return this.socket.fromEvent('userJoined');
   }

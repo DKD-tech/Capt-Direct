@@ -7,7 +7,7 @@ import { FooterComponent } from '../../components/footer/footer.component';
 @Component({
   selector: 'app-register-page',
   standalone: true,
-  imports: [HeaderComponent, RegisterComponent, FooterComponent],
+  imports: [RegisterComponent],
   templateUrl: './register-page.component.html',
   styleUrl: './register-page.component.scss',
 })

@@ -1,0 +1,78 @@
+version: '3.8'
+
+services:
+  nginx:
+    build:
+      context: .
+      dockerfile: ./nginx-rtmp-ffmpeg/Dockerfile
+    container_name: nginx
+    ports:
+      - "80:80"
+      - "1935:1935"
+      - "6379:6379" 
+    volumes:
+      - ./nginx-rtmp-ffmpeg/nginx.conf:/usr/local/nginx/conf/nginx.conf:ro
+      - ./hls:/opt/data/hls
+      - ./nginx-rtmp-ffmpeg/videos:/usr/src/app/videos
+    networks:
+      - capt_direct_net
+    environment:
+      - PATH=/usr/local/nginx/sbin:$PATH
+    command: ["/usr/local/nginx/sbin/nginx", "-g", "daemon off;"]
+
+  redis:
+    image: redis:alpine
+    container_name: redis
+    ports:
+      - "6379:6379" # Corrected format for ports
+    networks:
+      - capt_direct_net
+
+  backend:
+    build:
+      context: ./nodejs
+      dockerfile: Dockerfile
+    container_name: backend
+    ports:
+      - "3000:3000"
+    networks:
+      - capt_direct_net
+    environment:
+      NODE_ENV: development
+    depends_on:
+      - database
+
+  frontend:
+    build:
+      context: ./captDirect
+      dockerfile: Dockerfile
+    container_name: frontend
+    ports:
+      - "4200:4200"
+    networks:
+      - capt_direct_net
+    depends_on:
+      - backend
+
+  database:
+    build:
+      context: ./database
+      dockerfile: Dockerfile
+    container_name: database
+    ports:
+      - "5433:5432"
+    networks:
+      - capt_direct_net
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: Kh@didia74
+      POSTGRES_DB: stc_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+networks:
+  capt_direct_net:
+    driver: bridge
+
+volumes:
+  postgres_data:
