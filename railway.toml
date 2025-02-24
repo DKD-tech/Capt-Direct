@@ -1,3 +1,2 @@
 [deploy]
 dockerCompose = true
-echo "[deploy] dockerCompose = true" > railway.toml
