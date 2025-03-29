@@ -642,7 +642,7 @@ async function createVideoSegmentController(req, res) {
     console.log("⏳ Durée totale de la vidéo :", duration, "secondes");
 
     // Générer les segments en fonction de la durée
-    const segmentDuration = 10; // Durée d'un segment en secondes
+    const segmentDuration = 7; // Durée d'un segment en secondes
     const numberOfSegments = Math.ceil(duration / segmentDuration);
     const segments = [];
 

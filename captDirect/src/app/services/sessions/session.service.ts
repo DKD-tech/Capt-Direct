@@ -8,8 +8,8 @@ import { catchError, throwError } from 'rxjs';
   providedIn: 'root',
 })
 export class SessionService {
-  private apiUrl = 'http://localhost:3000/api/sessions/info'; // URL de l'API backend
-  baseUrl = `http://localhost:3000/api/sessions`;
+  private apiUrl = 'http://172.20.10.2:3000/api/sessions/info'; // URL de l'API backend
+  baseUrl = `http://172.20.10.2:3000/api/sessions`;
   // private apiUrl1 =
   // 'http://localhost:3000/api/sessions/sessionId/store-duration';
 
@@ -45,7 +45,7 @@ export class SessionService {
   }
 
   getSegmentsWithSession(sessionId: number): Observable<any> {
-    const segurl = `http://localhost:3000/api/sessions/${sessionId}`;
+    const segurl = `http://172.20.10.2:3000/api/sessions/${sessionId}`;
     return this.http.get<any>(segurl).pipe(
       tap((response) => {
         console.log('Segments récupérés pour la session :', response);
@@ -77,7 +77,7 @@ export class SessionService {
   
   
   saveSubtitle(segmentId: number, text: string): Observable<any> {
-    const suburl = `http://localhost:3000/api/sessions/segments/${segmentId}/subtitles`;
+    const suburl = `http://172.20.10.2:3000/api/sessions/segments/${segmentId}/subtitles`;
     return this.http.post<any>(suburl, { text }).pipe(
       tap((response) => {
         console.log('Sous-titre sauvegardé :', response);

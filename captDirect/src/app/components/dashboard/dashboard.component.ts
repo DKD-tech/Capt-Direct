@@ -26,7 +26,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   displayedSubtitle = '';
   userId: number = 0;
   videoUrl = '';
-  sessionId: number = 38;
+  sessionId: number = 23;
   segments: any[] = [];
   username: string = '';
   collaborators: number = 1;
@@ -213,41 +213,40 @@ export class DashboardComponent implements OnInit, OnDestroy {
   
 
 
-  loadSegments(): void {
-    this.sessionService.getSegmentsWithSession(this.sessionId).subscribe({
+loadSegments(): void {
+  this.sessionService.getSegmentsWithSession(this.sessionId).subscribe({
       next: (response) => {
-        console.log("Segments récupérés :", response.segments); // 📌 Log avant traitement
-      
-        this.segments = response.segments.map((segment: any) => ({
-          ...segment,
-          subtitleText: '',
-          timeRemaining: this.calculateDurationInSeconds(segment.start_time, segment.end_time),
-          isDisabled: false,  // ✅ Désactiver si `status` est `finalized`
-          isFinalized: segment.status === 'finalized', // 🔹 Stocker l'état de finalisation
-          isBlinking: false,
-          isActive: false,
-          assigned_to: segment.assigned_to || 'Utilisateur inconnu',
-          subtitles: segment.subtitles || [],
-        }));
-        // ✅ Trie les segments par `start_time` pour éviter les erreurs de séquencement
-this.segments.sort((a, b) => this.convertTimeToSeconds(a.start_time) - this.convertTimeToSeconds(b.start_time));
+          console.log("📦 Segments chargés :", response.segments);
 
-  
-        console.log("🚀 [DEBUG] Après chargement, segments:", this.segments); // 📌 Log après traitement
-      
+          this.segments = response.segments.map((segment: any) => ({
+              ...segment,
+              subtitleText: '',
+              timeRemaining: this.calculateDurationInSeconds(segment.start_time, segment.end_time),
+              isDisabled: false,
+              isFinalized: segment.status === 'finalized',
+              isBlinking: false,
+              isActive: false,
+              assigned_to: segment.assigned_to || 'Utilisateur inconnu',
+              subtitles: segment.subtitles || [],  // Vérifie que `subtitles` existe bien
+          }));
+
+          console.log("🚀 [DEBUG] Segments après traitement :", this.segments);
       },
       error: (error) => {
-        console.error("Erreur lors du chargement des segments :", error);
+          console.error("❌ Erreur lors du chargement des segments :", error);
       },
-    });
-  }
-  
+  });
+}
+
   addSubtitle(segment: any): void {
     if (!segment.segment_id || !segment.subtitleText.trim()) {
       console.error("❌ [ERREUR] Segment ID manquant ou texte vide !", segment);
       return;
     }
-  
+     
+    const sendTime = Date.now(); // 🕒 Capture le temps d'envoi
+
+    console.log(`📡 [DEBUG] Envoi du sous-titre à ${sendTime}:`, segment.subtitleText, "pour segment :", segment.segment_id);
     console.log("📡 [DEBUG] Envoi du sous-titre :", segment.subtitleText, "pour segment :", segment.segment_id);
   
     this.subtitleService.addSubtitle(segment.segment_id, segment.subtitleText, this.userId).subscribe({
@@ -297,9 +296,19 @@ this.segments.sort((a, b) => this.convertTimeToSeconds(a.start_time) - this.conv
 
   connectToSocket(): void { 
     // ✅ Réception d'un segment finalisé en temps réel
-    this.socketService.onSubtitleFinalized().subscribe(({ segment_id, finalText }) => {
-        console.log("🔴 [SOCKET] `subtitle_finalized` reçu :", { segment_id, finalText });
+    this.socketService.onSubtitleFinalized().subscribe((data: any) => { 
+      const { segment_id, finalText } = data;
+      const finalizedTime = data.finalizedTime ?? Date.now(); // Utilise Date.now() si non défini
 
+      console.log("🔴 [SOCKET] `subtitle_finalized` reçu :", { segment_id, finalText });
+
+      const receiveTime = Date.now(); // 🕒 Capture du moment où le frontend reçoit le sous-titre
+
+
+    console.log(`🔴 [SOCKET] Sous-titre reçu à ${receiveTime} pour segment ${segment_id}, texte: "${finalText}"`);
+    console.log(`⏳ Temps total (saisie -> affichage) : ${receiveTime - finalizedTime}ms`);
+
+        
         const segment = this.segments.find((s) => s.segment_id === segment_id);
         if (segment) {
             segment.subtitleText = finalText;
@@ -328,19 +337,149 @@ this.segments.sort((a, b) => this.convertTimeToSeconds(a.start_time) - this.conv
   });
   
 }
-
-  exportToSRT(): string {
-    let subtitleIndex = 1;
-    return this.segments
-      .filter((segment) => segment.subtitles.length > 0)
-      .map((segment) => {
-        const fullText = segment.subtitles.map((s: { text: string }) => s.text).join(' ');
-        const sanitizedText = fullText.replace(/[\r\n]+/g, ' ').trim();
-        return `${subtitleIndex++}\n${segment.start_time} --> ${segment.end_time}\n${sanitizedText}`;
-      })
-      .join('\n\n');
+timeStringToSeconds(timeString: string): number {
+  const parts = timeString.split(':'); // Séparer HH, MM, SS
+  if (parts.length < 3) {
+    console.error('Format de temps invalide :', timeString);
+    return 0;
   }
 
+  const hours = parseInt(parts[0], 10) || 0;
+  const minutes = parseInt(parts[1], 10) || 0;
+  const seconds = parseFloat(parts[2]) || 0; // Accepte les millisecondes
+
+  return hours * 3600 + minutes * 60 + seconds;
+}
+
+
+formatTimeToSRT(time: number): string {
+  if (isNaN(time)) {
+    console.error(
+      'Erreur : timestamp invalide détecté dans formatTimeToSRT:',
+      time
+    );
+    return '00:00:00,000'; // Retourne un timestamp par défaut au lieu de NaN
+  }
+
+  const hours = Math.floor(time / 3600);
+  const minutes = Math.floor((time % 3600) / 60);
+  const seconds = Math.floor(time % 60);
+  const milliseconds = Math.floor((time % 1) * 1000);
+
+  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(
+    2,
+    '0'
+  )}:${String(seconds).padStart(2, '0')},${String(milliseconds).padStart(
+    3,
+    '0'
+  )}`;
+}
+exportToSRT(): string {
+  console.log('Segments avant génération du fichier SRT :', this.segments);
+
+  let subtitleIndex = 1;
+  const minFirstSegmentDuration = 10; // Forcer une durée de 10 secondes pour le premier segment
+  const minSubtitleDuration = 2; // Un sous-titre reste au moins 2 secondes
+  const maxCPS = 12; // 12 caractères/seconde pour une meilleure lisibilité
+  const maxVisibleLines = 3; // Max 3 lignes visibles en même temps
+
+  return this.segments
+    .filter((segment) => segment.subtitles.length > 0)
+    .map((segment, segmentIndex) => {
+      const fullText = segment.subtitles
+        .map((s: { text: string }) => s.text)
+        .join(' ');
+
+      console.log(
+        `Sous-titres pour le segment ${segment.segment_id} :`,
+        fullText
+      );
+
+      let startTime = this.timeStringToSeconds(segment.start_time);
+      let endTime = this.timeStringToSeconds(segment.end_time);
+
+      if (isNaN(startTime) || isNaN(endTime) || startTime === endTime) {
+        console.error(
+          `⚠️ Erreur : start_time (${startTime}) et end_time (${endTime}) invalides pour le segment ${segment.segment_id}`
+        );
+        endTime = startTime + 1;
+      }
+
+      // Forcer le premier segment à durer au moins 10s
+      if (
+        segmentIndex === 0 &&
+        endTime - startTime < minFirstSegmentDuration
+      ) {
+        endTime = startTime + minFirstSegmentDuration;
+      }
+
+      const sanitizedText = fullText.replace(/[\r\n]+/g, ' ').trim();
+      const words = sanitizedText.split(' ');
+      const maxLineLength = 40;
+      const lines: string[] = [];
+      let currentLine = '';
+
+      words.forEach((word: string) => {
+        if ((currentLine + word).length <= maxLineLength) {
+          currentLine += word + ' ';
+        } else {
+          lines.push(currentLine.trim());
+          currentLine = word + ' ';
+        }
+      });
+
+      if (currentLine.trim() !== '') {
+        lines.push(currentLine.trim());
+      }
+
+      console.log(
+        `Sous-titres découpés pour le segment ${segment.segment_id} :`,
+        lines
+      );
+
+      // Durée totale du segment
+      let segmentDuration = endTime - startTime;
+      let idealDuration = sanitizedText.length / maxCPS;
+      let adjustedDuration = Math.max(
+        minSubtitleDuration,
+        Math.min(segmentDuration, idealDuration)
+      );
+
+      if (segmentIndex === 0 && adjustedDuration < minFirstSegmentDuration) {
+        adjustedDuration = minFirstSegmentDuration;
+      }
+
+      const lineDuration = Math.max(
+        minSubtitleDuration,
+        adjustedDuration / lines.length
+      );
+      let visibleLines: string[] = []; // Stocke les lignes affichées progressivement
+
+      // Génération des sous-titres en affichage progressif
+      const srtBlocks = lines.map((line, i) => {
+        const blockStartTime = startTime + i * lineDuration;
+        const blockEndTime = Math.min(endTime, blockStartTime + lineDuration);
+
+        // Ajout progressif des lignes à l'affichage
+        visibleLines.push(line);
+        if (visibleLines.length > maxVisibleLines) {
+          visibleLines.shift(); // Supprime la plus ancienne ligne pour un effet de "défilement"
+        }
+
+        const formattedStartTime = this.formatTimeToSRT(blockStartTime);
+        const formattedEndTime = this.formatTimeToSRT(blockEndTime);
+
+        const blockText = visibleLines.join('\n'); // Afficher les lignes empilées
+        const srtBlock = `${subtitleIndex}\n${formattedStartTime} --> ${formattedEndTime}\n${blockText}`;
+        subtitleIndex++;
+
+        return srtBlock;
+      });
+
+      return srtBlocks.join('\n\n');
+    })
+    .join('\n\n');
+}
   downloadSubtitles(): void {
     const srtContent = this.exportToSRT();
     const blob = new Blob([srtContent], { type: 'text/plain' });
@@ -451,7 +590,7 @@ this.segments.sort((a, b) => this.convertTimeToSeconds(a.start_time) - this.conv
     if (segment.timer) return; 
 
     console.log(`🚀 Démarrage du timer pour le segment ${segment.segment_id}`);
-    segment.timeRemaining += 10;
+    segment.timeRemaining += 3;
 
     segment.timer = setInterval(() => {
         if (segment.timeRemaining > 0) {
@@ -498,24 +637,26 @@ this.segments.sort((a, b) => this.convertTimeToSeconds(a.start_time) - this.conv
    * Active le prochain segment basé sur `start_time`.
    */
   activateNextSegment(currentSegment: any): void {
-    // Trouver l'index du segment actuel
     const currentIndex = this.segments.findIndex(seg => seg.segment_id === currentSegment.segment_id);
   
     if (currentIndex !== -1 && currentIndex < this.segments.length - 1) {
-      const nextSegment = this.segments[currentIndex + 1];
-      console.log(`Segment suivant activé : Segment ID ${nextSegment.segment_id}`);
-  
-      // Activer le segment avec une transition de 5 secondes
-      nextSegment.isBlinking = true;
-      setTimeout(() => {
-        nextSegment.isBlinking = false;
-        nextSegment.isActive = true;
-      }, 5000);
+        const nextSegment = this.segments[currentIndex + 1];
+        console.log(`Segment suivant activé : Segment ID ${nextSegment.segment_id}`);
+
+        // ✅ Ajout de la marge de 5 secondes pour tous les segments activés
+        nextSegment.timeRemaining += 3;
+
+        nextSegment.isBlinking = true;
+        setTimeout(() => {
+            nextSegment.isBlinking = false;
+            nextSegment.isActive = true;
+            console.log(`⏳ Timer démarré pour le segment ${nextSegment.segment_id}`);
+        }, 5000);
     } else {
-      console.log("Aucun segment suivant trouvé localement.");
+        console.log("Aucun segment suivant trouvé localement.");
     }
-  }
-  
+}
+
   
   calculateDurationInSeconds(startTime: string, endTime: string): number {
     const [startHours, startMinutes, startSeconds] = startTime.split(':').map(Number);
@@ -614,11 +755,28 @@ this.segments.sort((a, b) => this.convertTimeToSeconds(a.start_time) - this.conv
     this.socketService.onSubtitleUpdate().subscribe((data: any) => {
       console.log("📝 Nouveau mot reçu :", data);
   
-      // 🔹 Trouver le segment correspondant
-      const segment = this.segments.find(s => s.segment_id === data.segment_id);
-      if (segment) {
-        segment.subtitleText += ' ' + data.text; // Ajoute le mot au texte en cours
+      if (!data?.text) {
+        console.warn("⚠️ Mot reçu invalide :", data);
+        return;
       }
+  
+      // ✅ Vérifie s'il existe déjà une ligne active
+      if (this.liveSubtitles.length > 0) {
+        // Ajoute le nouveau mot à la dernière ligne existante
+        this.liveSubtitles[this.liveSubtitles.length - 1].text += " " + data.text;
+      } else {
+        // Si c'est le premier mot, crée une ligne
+        this.liveSubtitles.push({ text: data.text });
+      }
+  
+      // ✅ Empêcher une phrase trop longue
+      const maxChars = 100; // Limite à 100 caractères
+      if (this.liveSubtitles[this.liveSubtitles.length - 1].text.length > maxChars) {
+        this.liveSubtitles[this.liveSubtitles.length - 1].text = 
+          this.liveSubtitles[this.liveSubtitles.length - 1].text.slice(-maxChars);
+      }
+  
+      this.cdRef.detectChanges(); // 🔄 Met à jour l'affichage
     });
   }
   

@@ -153,6 +153,9 @@ async function assignUserToSegmentController(req, res) {
  */
 async function addSubtitle(req, res) {
   console.log("🛠️ [BACKEND] Requête reçue pour ajouter un sous-titre :", req.body);
+  const receivedTime = Date.now(); // 🕒 Capture du moment où le backend reçoit la requête
+  console.log(`📩 [BACKEND] Sous-titre reçu à ${receivedTime} :`, req.body);
+
   try {
     const { segment_id, text, created_by } = req.body;
 
@@ -176,11 +179,21 @@ async function addSubtitle(req, res) {
 
     // Nettoyage et validation du texte
     let cleanedText = cleanWord(text.trim());
-    // Vérification et correction via le dictionnaire
-    if (!isWordValid(cleanedText)) {
-      const suggestion = suggestCorrection(cleanedText);
-      cleanedText = suggestion ? suggestion : cleanedText;  // ✅ Si invalide, on garde le texte original
+
+// Vérification et correction via le dictionnaire
+if (!isWordValid(cleanedText)) {
+  const suggestion = suggestCorrection(cleanedText);
+
+  console.warn(`🚨 Mot invalide détecté : "${cleanedText}"`);
+
+  if (suggestion) {
+    console.log(`💡 Suggestion de correction : "${suggestion}"`);
+    cleanedText = suggestion;
+  } else {
+    console.log("⚠️ Aucune suggestion trouvée, on garde le mot original.");
   }
+}
+
     // Vérification du chevauchement avec le dernier mot du segment précédent
     const lastWordKey = `segment:last_word:${segment.session_id}`;
     const lastWord = await redisClient.get(lastWordKey);
@@ -213,7 +226,10 @@ async function addSubtitle(req, res) {
  * Finaliser le sous-titre après validation de tous les mots
  */
 async function finalizeSubtitle(req, res) {
-  console.log("🛠️ [BACKEND] Requête reçue pour finaliser un sous-titre :", req.body);
+  //console.log("🛠️ [BACKEND] Requête reçue pour finaliser un sous-titre :", req.body);
+  const receivedFinalizationTime = Date.now(); // 🕒 Capture du moment de la requête
+  console.log(`🛠️ [BACKEND] Requête de finalisation reçue à ${receivedFinalizationTime} :`, req.body);
+
 
   const { segment_id, created_by } = req.body;
 
@@ -268,11 +284,14 @@ if (lastWord) {
 
       // Nettoyage des sous-titres de Redis après finalisation
       await redisClient.del(redisKey);
-
+      const finalizedTime = Date.now(); // 🕒 Capture du moment de finalisation
+      console.log(`✅ [BACKEND] Sous-titre finalisé à ${finalizedTime} (Délai : ${finalizedTime - receivedFinalizationTime}ms)`);
+  
       // Notifier le frontend via WebSocket
       io.to(`session:${segment.session_id}`).emit("subtitle_finalized", { 
         segment_id, 
-        finalText 
+        finalText ,
+        finalizedTime
       });
 
       // Vérifier s'il y a un segment suivant
@@ -293,7 +312,8 @@ if (lastWord) {
           console.log(`🟢 Notification envoyée pour le segment ${nextSegment.segment_id}`);
       }
 
-      return res.status(200).json({ message: "Segment finalisé avec succès.", finalText });
+      return res.status(200).json({ message: "Segment finalisé avec succès.", finalText ,receivedFinalizationTime,
+        finalizedTime});
 
   } catch (error) {
       console.error("❌ Erreur lors de la finalisation du sous-titre :", error);

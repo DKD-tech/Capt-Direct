@@ -13,7 +13,7 @@ import {
 } from '@angular/common/http';
 import { AuthInterceptor } from './services/auth/auth.interceptor';
 
-const socket = new Socket({ url: 'http://localhost:3000', options: {} });
+const socket = new Socket({ url: 'http://172.20.10.2:3000', options: {} });
 
 export const appConfig: ApplicationConfig = {
   providers: [
