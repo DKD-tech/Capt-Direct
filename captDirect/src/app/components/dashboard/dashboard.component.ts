@@ -27,7 +27,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   displayedSubtitle = '';
   userId: number = 0; // Identifiant utilisateur récupéré dynamiquement
   videoUrl = ''; // URL de la vidéo récupérée dynamiquement
-  sessionId: number = 18; // ID de la session à afficher
+  sessionId: number = 21; // ID de la session à afficher
   segments: any[] = [];
   username: string = '';
   collaborators: number = 1; // Nombre de collaborateurs en ligne
@@ -42,6 +42,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   hasStartedTyping = false; // ✅ Ajout : Variable pour vérifier si l'utilisateur a commencé à écrire
   videoLoaded = false; // ✅ Ajout : Variable pour suivre le chargement de la vidéo
   activeSegment: any = null; // Le segment actuellement en cours
+  sessionStartTime: number = Date.now(); // 🕒 Temps de début de session (sera mis à jour dynamiquement)
 
   // // Méthode pour calculer la durée de la vidéo
   // calculateVideoDuration(videoUrl: string): void {
@@ -250,9 +251,15 @@ export class DashboardComponent implements OnInit, OnDestroy {
   loadSegments(): void {
     this.sessionService.getSegmentsWithSession(this.sessionId).subscribe({
       next: (response) => {
+        if (!response.segments || response.segments.length === 0) {
+          console.warn('Aucun segment assigné à cet utilisateur.');
+          alert('Aucun segment ne vous est assigné dans cette session.');
+          this.segments = [];
+          return;
+        }
+
         this.segments = this.mergeSort(response.segments).map(
           (segment: any) => {
-            // Calcul de la durée en secondes
             const duration = this.calculateDurationInSeconds(
               segment.start_time,
               segment.end_time
@@ -260,22 +267,22 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
             return {
               ...segment,
-              subtitleText: '', // Texte en cours de saisie
-              timeRemaining: duration, // Temps restant pour le segment
-              timer: null, // Référence au timer pour arrêter si nécessaire
-              isDisabled: false, // Indique si la saisie est désactivée
-              assigned_to: segment.assigned_to || 'Utilisateur inconnu', // Nom de l'utilisateur assigné
+              subtitleText: '',
+              timeRemaining: duration,
+              timer: null,
+              isDisabled: false, // toujours false
+              assigned_to: segment.assigned_to || 'Utilisateur inconnu',
+              subtitles: segment.subtitles || [],
             };
           }
         );
 
         console.log('Segments chargés avec timers :', this.segments);
-
-        // Démarrer les timers
         this.startTimers();
       },
       error: (error) => {
         console.error('Erreur lors du chargement des segments :', error);
+        alert('Erreur lors du chargement des segments. Veuillez réessayer.');
       },
     });
   }
@@ -295,39 +302,58 @@ export class DashboardComponent implements OnInit, OnDestroy {
     return endTotalSeconds - startTotalSeconds;
   }
 
+  // startTimers(): void {
+  //   const globalStartTime = Date.now(); // Référence commune
+  //   console.log(
+  //     '🕒 Démarrage global des timers à',
+  //     new Date(globalStartTime).toISOString()
+  //   );
+
+  //   this.segments.forEach((segment, index) => {
+  //     const startDelay = this.timeStringToSeconds(segment.start_time) * 1000; // delay en ms
+  //     const duration = this.calculateDurationInSeconds(
+  //       segment.start_time,
+  //       segment.end_time
+  //     );
+
+  //     // Timer de début basé sur le moment global
+  //     setTimeout(() => {
+  //       console.log(`🚀 Démarrage du segment ${segment.segment_id}`);
+  //       segment.timeRemaining = duration;
+
+  //       segment.timer = setInterval(() => {
+  //         if (segment.timeRemaining > 0) {
+  //           segment.timeRemaining--;
+  //         } else {
+  //           clearInterval(segment.timer);
+  //           this.autoSaveSubtitle(segment); // Sauvegarde automatique
+  //           console.log(`✅ Fin du segment ${segment.segment_id}`);
+  //         }
+  //       }, 1000);
+  //     }, startDelay);
+  //   });
+  // }
   startTimers(): void {
-    let currentSegmentIndex = 0; // Démarrer par le premier segment
+    const globalStart = Date.now(); // Horodatage de démarrage local
 
-    const startSegmentTimer = (index: number) => {
-      if (index >= this.segments.length) {
-        console.log('Tous les segments ont été exécutés.');
-        this.onAllSegmentsComplete();
-        return; // Tous les segments ont été joués
-      }
+    this.segments.forEach((segment, index) => {
+      const delayBeforeStart =
+        this.timeStringToSeconds(segment.start_time) * 1000;
 
-      const segment = this.segments[index];
-      console.log(`Démarrage du timer pour le segment ${segment.segment_id}`);
+      setTimeout(() => {
+        // Lancer le timer uniquement si l'utilisateur est assigné à ce segment
+        console.log(`🟢 Timer lancé pour le segment ${segment.segment_id}`);
 
-      // Initialiser un timer pour le segment actuel
-      segment.timer = setInterval(() => {
-        if (segment.timeRemaining > 0) {
-          segment.timeRemaining--;
-        } else {
-          // Sauvegarder automatiquement à la fin
-          clearInterval(segment.timer);
-          this.autoSaveSubtitle(segment);
-
-          // Démarrer le timer du segment suivant
-          startSegmentTimer(index + 1);
-        }
-      }, 1000); // Décompte toutes les secondes
-    };
-
-    // ✅ Relancer le premier segment dès le clic
-    if (this.hasStartedTyping && this.segments.length > 0) {
-      console.log('🔄 Relance du premier segment après clic !');
-      startSegmentTimer(currentSegmentIndex);
-    }
+        segment.timer = setInterval(() => {
+          if (segment.timeRemaining > 0) {
+            segment.timeRemaining--;
+          } else {
+            clearInterval(segment.timer);
+            this.autoSaveSubtitle(segment);
+          }
+        }, 1000);
+      }, delayBeforeStart);
+    });
   }
 
   autoSaveSubtitle(segment: any): void {

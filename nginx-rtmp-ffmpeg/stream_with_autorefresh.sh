@@ -5,7 +5,7 @@
 # # Arguments
 # SESSION_ID=$1
 # VIDEO_PATH=$2
-# RTMP_URL="rtmp://localhost/live/stream"
+# RTMP_URL="rtmp:// 192.168.118.212/live/stream"
 
 # # Vérifier si le fichier vidéo existe
 # # Vérifier les arguments

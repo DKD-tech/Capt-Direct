@@ -13,7 +13,7 @@ async function streamSessions(req, res) {
 
     sessions.forEach((session) => {
       const { session_id, video_url } = session;
-      const rtmpUrl = `rtmp://localhost/live/session_${session_id}`;
+      const rtmpUrl = `rtmp:// 192.168.118.212/live/session_${session_id}`;
 
       console.log(
         `Streaming session ${session_id} from ${video_url} to ${rtmpUrl}`

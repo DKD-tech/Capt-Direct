@@ -80,7 +80,7 @@ class VideoSegmentModel extends Model {
     return await this.findOneById(segment_id, "segment_id");
   }
 
-  async findManyByWithUsers(session_id) {
+  async findManyByWithUsers(session_id, user_id) {
     const query = `
       SELECT 
         s.segment_id,
@@ -90,22 +90,23 @@ class VideoSegmentModel extends Model {
         u.username AS assigned_to,
         s.session_id
       FROM public.video_segments AS s
-      LEFT JOIN public.segment_users AS su ON su.segment_id = s.segment_id
-      LEFT JOIN public.users AS u ON su.user_id = u.user_id
-      WHERE s.session_id = $1
+      JOIN public.segment_users AS su ON su.segment_id = s.segment_id
+      JOIN public.users AS u ON su.user_id = u.user_id
+      WHERE s.session_id = $1 AND su.user_id = $2
       ORDER BY s.start_time ASC;
     `;
     try {
-      const result = await pool.query(query, [session_id]);
+      const result = await pool.query(query, [session_id, user_id]);
       return result.rows;
     } catch (error) {
       console.error(
-        `Erreur lors de la récupération des segments avec utilisateurs pour la session ${session_id} :`,
+        `Erreur lors de la récupération des segments pour session ${session_id} et user ${user_id} :`,
         error
       );
       throw error;
     }
   }
+
   async getPreviousSegment(segment_id) {
     const query = `
       SELECT * 

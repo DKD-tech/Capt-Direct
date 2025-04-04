@@ -33,15 +33,19 @@
           {{ duration | number : "1.0-2" }} secondes
         </p>
       </div> -->
-      <div class="collaborators-count">
+      <!-- <div class="collaborators-count">
         <span>Vous êtes {{ collaborators }} collaborateurs en ligne</span>
         <ul>
           <li *ngFor="let user of users">{{ user }}</li>
         </ul>
-      </div>
+      </div> -->
     </div>
+
     <section class="segments">
       <h3>Segments assignés</h3>
+      <div *ngIf="segments.length === 0" class="no-segments">
+        Aucun segment ne vous est assigné pour cette session.
+      </div>
       <ul>
         <li *ngFor="let segment of segments">
           <!-- <p>
@@ -85,14 +89,11 @@
           <!-- Zone de texte pour saisir un sous-titre -->
           <textarea
             [(ngModel)]="segment.subtitleText"
+            (focus)="onUserTyping(segment)"
+            rows="2"
             placeholder="Saisir un sous-titre"
-            [disabled]="
-              segment.isDisabled ||
-              segment.timeRemaining <= 0 ||
-              segment.isLocked
-            "
-            (keyup)="onUserTyping(segment)"
           ></textarea>
+
           <!-- <button
             (click)="addSubtitleToSegment(segment)"
             [disabled]="segment.isDisabled || segment.timeRemaining <= 0"

@@ -218,3 +218,56 @@ body {
   background-color: #4caf50; /* Couleur de l'onde */
   transition: width 1s linear; /* Animation fluide */
 }
+.no-segments {
+  padding: 1rem;
+  color: #f44336;
+  font-style: italic;
+}
+.alert-warning-upcoming {
+  background-color: #fff3cd;
+  color: #856404;
+  border: 1px solid #ffeeba;
+  padding: 15px;
+  margin: 20px 0;
+  border-radius: 5px;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  animation: pulse 1s infinite alternate;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+  }
+  100% {
+    transform: scale(1.02);
+  }
+}
+.global-state-banner {
+  font-weight: bold;
+  margin: 20px 0;
+  padding: 15px;
+  border-radius: 6px;
+  text-align: center;
+  font-size: 18px;
+}
+
+.global-state-banner.en_cours {
+  background-color: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+
+.global-state-banner.bientot {
+  background-color: #fff3cd;
+  color: #856404;
+  border: 1px solid #ffeeba;
+}
+
+.global-state-banner.attente {
+  background-color: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+}
