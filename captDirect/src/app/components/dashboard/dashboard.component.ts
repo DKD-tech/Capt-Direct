@@ -962,8 +962,13 @@ export class DashboardComponent implements OnInit, OnDestroy {
 // Signaux 
 
 getCurrentSignal(): 'green' | 'orange' | 'red' {
-  const username = (this.username || '').toLowerCase().trim(); // Nom utilisateur standardisé
-  const now = this.elapsedTime; // Temps actuel dans la session
+  const username = (this.username || '').toLowerCase().trim();
+  const now = this.elapsedTime;
+
+  // 🔒 Sécurité : tant que la session n'est pas officiellement lancée, on force le rouge
+  if (!this.streamStarted || !this.officialStartTime || now === 0) {
+    return 'red';
+  }
 
   // Cas 1 : l'utilisateur est en train de sous-titrer (signal vert)
   const isActive = this.segments.some((s) => {
@@ -978,7 +983,7 @@ getCurrentSignal(): 'green' | 'orange' | 'red' {
 
   if (isActive) return 'green';
 
-  //  Cas 2 : l'utilisateur commence bientôt (signal orange)
+  // Cas 2 : l'utilisateur commence bientôt (signal orange)
   const isSoon = this.segments.some((s) => {
     const start = this.timeStringToSeconds(s.start_time);
     const timeBeforeStart = start - now;
@@ -991,7 +996,6 @@ getCurrentSignal(): 'green' | 'orange' | 'red' {
 
   if (isSoon) return 'orange';
 
-  //  Cas 3 : aucun segment actif ou imminent (signal rouge)
   return 'red';
 }
 
