@@ -14,6 +14,7 @@
 
   <main class="main-content">
     <div class="streaming-info">
+<<<<<<< HEAD
       <!-- Bouton de démarrage -->
 <div class="stream-start">
   <button (click)="startStream()" [disabled]="streamStarted">
@@ -38,6 +39,12 @@
       <span class="status-text orange-text" *ngIf="getCurrentSignal() === 'orange'"> C'est bientot à vous!</span>
       <span class="status-text red-text" *ngIf="getCurrentSignal() === 'red'"> En attente</span>
       
+=======
+      <div class="status-header">
+        <span class="dot red"></span>
+        <span class="status-text">Session en cours</span>
+
+>>>>>>> 674c77ed34e1c47deb521db74c8ed3e699ddb6ba
         <div class="clock">
           <mat-icon>access_time</mat-icon>
           <span id="clock">12:12 à 12:22</span>
@@ -133,11 +140,35 @@
       <button (click)="downloadSubtitles()">Exporter les sous-titres</button>
     </section>
 
+<<<<<<< HEAD
     <section class="live-broadcast">
       <span class="live-badge"> LIVE</span>
       <p>La session a commencé. Suivez le flux en direct sur l’écran principal.</p>
     </section>
     
+=======
+    <section class="live-video" *ngIf="videoUrl" (error)="onVideoError()">
+      <video
+        id="liveVideo"
+        class="live-stream"
+        width="100%"
+        height="500px"
+        controls
+        autoplay
+        muted
+        [src]="videoUrl"
+        (error)="onVideoError()"
+      >
+        <!-- <source [src]="videoUrl" type="application/x-mpegURL" /> -->
+        Votre navigateur ne prend pas en charge la lecture de vidéos.
+      </video>
+      <!-- Affichage de la durée de la vidéo -->
+      <p *ngIf="duration === null">Chargement de la durée de la vidéo...</p>
+      <span class="live-badge">LIVE</span>
+      <div class="subtitle-display">{{ displayedSubtitle }}</div>
+    </section>
+
+>>>>>>> 674c77ed34e1c47deb521db74c8ed3e699ddb6ba
     <div class="transcription-info">
       <div class="audio-wave">
         <mat-icon class="audio-icon">graphic_eq</mat-icon>

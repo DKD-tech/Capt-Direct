@@ -6,8 +6,13 @@ import { Observable, tap } from 'rxjs';
   providedIn: 'root',
 })
 export class SessionService {
+<<<<<<< HEAD
   private apiUrl = 'http://192.168.1.69:3000/api/sessions/info'; // URL de l'API backend
   baseUrl = `http://192.168.1.69:3000:api/sessions`;
+=======
+  private apiUrl = 'http://192.168.118.212:3000/api/sessions/info'; // URL de l'API backend
+  baseUrl = `http://192.168.118.212:3000:api/sessions`;
+>>>>>>> 674c77ed34e1c47deb521db74c8ed3e699ddb6ba
   // private apiUrl1 =
   // 'http:// 192.168.118.212:3000/api/sessions/sessionId/store-duration';
 
@@ -29,7 +34,11 @@ export class SessionService {
   }
 
   storeVideoDuration(sessionId: number, duration: number): Observable<any> {
+<<<<<<< HEAD
     const url = `http://192.168.1.69:3000/api/sessions/store-duration/${sessionId}`;
+=======
+    const url = `http://192.168.118.212:3000/api/sessions/store-duration/${sessionId}`;
+>>>>>>> 674c77ed34e1c47deb521db74c8ed3e699ddb6ba
     return this.http.post(url, {
       duration,
     });
@@ -37,11 +46,16 @@ export class SessionService {
   // **Nouvelle méthode : démarrer le streaming**
   startStreaming(sessionId: number): Observable<any> {
     return this.http.post<any>(
+<<<<<<< HEAD
       `http://192.168.1.69:3000/api/sessions/stream/${sessionId}`,
+=======
+      `http://192.168.118.212:3000/api/sessions/stream/${sessionId}`,
+>>>>>>> 674c77ed34e1c47deb521db74c8ed3e699ddb6ba
       {}
     );
   }
 
+<<<<<<< HEAD
   startStream(sessionId: number): Observable<{ startTime: number }> {
     const url = `http://192.168.1.69:3000/api/sessions/start-stream/${sessionId}`;
     return this.http.post<{ startTime: number }>(url, {});
@@ -50,6 +64,10 @@ export class SessionService {
   
   getSegmentsWithSession(sessionId: number): Observable<any> {
     const segurl = `http://192.168.1.69:3000/api/sessions/segments/${sessionId}`;
+=======
+  getSegmentsWithSession(sessionId: number): Observable<any> {
+    const segurl = `http://192.168.118.212:3000/api/sessions/segments/${sessionId}`;
+>>>>>>> 674c77ed34e1c47deb521db74c8ed3e699ddb6ba
     return this.http.get<any>(segurl).pipe(
       tap((response) => {
         console.log('Segments récupérés pour la session :', response);
@@ -58,7 +76,11 @@ export class SessionService {
   }
 
   saveSubtitle(segmentId: number, text: string): Observable<any> {
+<<<<<<< HEAD
     const suburl = `http://192.168.1.69:3000/api/sessions/segments/${segmentId}/subtitles`;
+=======
+    const suburl = `http://192.168.118.212:3000/api/sessions/segments/${segmentId}/subtitles`;
+>>>>>>> 674c77ed34e1c47deb521db74c8ed3e699ddb6ba
     return this.http.post<any>(suburl, { text }).pipe(
       tap((response) => {
         console.log('Sous-titre sauvegardé :', response);
@@ -71,7 +93,11 @@ export class SessionService {
     text: string,
     createdBy: number
   ): Observable<any> {
+<<<<<<< HEAD
     const url = `http://192.168.1.69:3000/api/sessions/add-subtitle`;
+=======
+    const url = `http://192.168.118.212:3000/api/sessions/add-subtitle`;
+>>>>>>> 674c77ed34e1c47deb521db74c8ed3e699ddb6ba
     const payload = {
       segment_id: segmentId,
       text: text,

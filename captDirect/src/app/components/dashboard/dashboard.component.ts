@@ -9,12 +9,16 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { SessionService } from '../../services/sessions/session.service';
 import { CommonModule } from '@angular/common';
+<<<<<<< HEAD
 import { ViewChild, ElementRef, AfterViewInit } from '@angular/core';
 import { NgZone } from '@angular/core';
 import { ChangeDetectorRef } from '@angular/core';
 
 
 
+=======
+import test from 'node:test';
+>>>>>>> 674c77ed34e1c47deb521db74c8ed3e699ddb6ba
 // import videojs from 'video.js';
 // import WaveSurfer from 'wavesurfer.js';
 
@@ -26,14 +30,21 @@ import { ChangeDetectorRef } from '@angular/core';
   styleUrl: './dashboard.component.scss',
 })
 export class DashboardComponent implements OnInit, OnDestroy {
+<<<<<<< HEAD
   
+=======
+>>>>>>> 674c77ed34e1c47deb521db74c8ed3e699ddb6ba
   isAuthenticated: boolean = false;
   isLoading = true;
   subtitleText = '';
   displayedSubtitle = '';
   userId: number = 0; // Identifiant utilisateur récupéré dynamiquement
   videoUrl = ''; // URL de la vidéo récupérée dynamiquement
+<<<<<<< HEAD
   sessionId: number = 28; // ID de la session à afficher
+=======
+  sessionId: number = 21; // ID de la session à afficher
+>>>>>>> 674c77ed34e1c47deb521db74c8ed3e699ddb6ba
   segments: any[] = [];
   username: string = '';
   collaborators: number = 1; // Nombre de collaborateurs en ligne
@@ -48,6 +59,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   hasStartedTyping = false; // ✅ Ajout : Variable pour vérifier si l'utilisateur a commencé à écrire
   videoLoaded = false; // ✅ Ajout : Variable pour suivre le chargement de la vidéo
   activeSegment: any = null; // Le segment actuellement en cours
+<<<<<<< HEAD
   nextSegment: any = null;
   sessionStartTime: number = Date.now(); // 
   officialStartTime = 0;//🕒 Temps de début de session (sera mis à jour dynamiquement)
@@ -61,6 +73,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
 
   
+=======
+  sessionStartTime: number = Date.now(); // 🕒 Temps de début de session (sera mis à jour dynamiquement)
+>>>>>>> 674c77ed34e1c47deb521db74c8ed3e699ddb6ba
 
   // // Méthode pour calculer la durée de la vidéo
   // calculateVideoDuration(videoUrl: string): void {
@@ -104,6 +119,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     private router: Router,
     private sessionService: SessionService,
     private videoService: VideoService,
+<<<<<<< HEAD
     private ngZone: NgZone,
     private cdr: ChangeDetectorRef,
     private cdRef: ChangeDetectorRef,
@@ -111,6 +127,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
   ) {}
 
   
+=======
+    private SubtitleService: SubtitleService
+  ) {}
+
+>>>>>>> 674c77ed34e1c47deb521db74c8ed3e699ddb6ba
   ngOnInit() {
     this.loadUserSession();
     this.loadSessionDetails();
@@ -135,6 +156,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       });
     });
   }
+<<<<<<< HEAD
 
   startStream(): void {
     this.sessionService.startStream(this.sessionId).subscribe({
@@ -162,13 +184,19 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
  
   
+=======
+>>>>>>> 674c77ed34e1c47deb521db74c8ed3e699ddb6ba
   onUserTyping(segment: any) {
     if (!this.hasStartedTyping) {
       this.hasStartedTyping = true;
       console.log(
         '🖱️ L’utilisateur a cliqué sur la zone de texte, démarrage des timers.'
       );
+<<<<<<< HEAD
       //this.startTimers(); // ✅ Démarrer immédiatement le minuteur
+=======
+      this.startTimers(); // ✅ Démarrer immédiatement le minuteur
+>>>>>>> 674c77ed34e1c47deb521db74c8ed3e699ddb6ba
     }
   }
 
@@ -327,7 +355,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
         );
 
         console.log('Segments chargés avec timers :', this.segments);
+<<<<<<< HEAD
         
+=======
+        this.startTimers();
+>>>>>>> 674c77ed34e1c47deb521db74c8ed3e699ddb6ba
       },
       error: (error) => {
         console.error('Erreur lors du chargement des segments :', error);
@@ -383,6 +415,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   //   });
   // }
   startTimers(): void {
+<<<<<<< HEAD
     
     this.segments.forEach((segment) => {
       const delayBeforeStart =
@@ -399,11 +432,30 @@ export class DashboardComponent implements OnInit, OnDestroy {
             clearInterval(segment.timer);
             this.autoSaveSubtitle(segment);
             this.cdr.detectChanges();
+=======
+    const globalStart = Date.now(); // Horodatage de démarrage local
+
+    this.segments.forEach((segment, index) => {
+      const delayBeforeStart =
+        this.timeStringToSeconds(segment.start_time) * 1000;
+
+      setTimeout(() => {
+        // Lancer le timer uniquement si l'utilisateur est assigné à ce segment
+        console.log(`🟢 Timer lancé pour le segment ${segment.segment_id}`);
+
+        segment.timer = setInterval(() => {
+          if (segment.timeRemaining > 0) {
+            segment.timeRemaining--;
+          } else {
+            clearInterval(segment.timer);
+            this.autoSaveSubtitle(segment);
+>>>>>>> 674c77ed34e1c47deb521db74c8ed3e699ddb6ba
           }
         }, 1000);
       }, delayBeforeStart);
     });
   }
+<<<<<<< HEAD
   
 
   startGlobalTimer(): void {
@@ -438,6 +490,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
     }, delay);
   }
   
+=======
+
+>>>>>>> 674c77ed34e1c47deb521db74c8ed3e699ddb6ba
   autoSaveSubtitle(segment: any): void {
     console.log(
       `Texte saisi pour le segment ${segment.segment_id} :`,
@@ -543,6 +598,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     return hours * 3600 + minutes * 60 + seconds;
   }
 
+<<<<<<< HEAD
   //getCurrentVideoTime(): number {
     //if (this._videoReady && this.videoRef?.nativeElement) {
     //  return this.videoRef.nativeElement.currentTime;
@@ -580,6 +636,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
   
   
 
+=======
+>>>>>>> 674c77ed34e1c47deb521db74c8ed3e699ddb6ba
   // // Normaliser le texte des sous-titres (supprime espaces inutiles, etc.)
   // normalizeSubtitle(text: string): string {
   //   // Supprime les espaces multiples et normalise le texte
@@ -841,6 +899,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
         this.segments = data.segments; // Met à jour les segments affichés
       }
     });
+<<<<<<< HEAD
 
     this.socketService.onStreamStarted().subscribe(({ startTime }) => {
       this.officialStartTime = startTime;
@@ -887,6 +946,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
     });
   }
   
+=======
+  }
+
+>>>>>>> 674c77ed34e1c47deb521db74c8ed3e699ddb6ba
   // Gérer une erreur de chargement vidéo
   onVideoError(): void {
     console.error('La vidéo ne peut pas être chargée :', this.videoUrl);
@@ -905,10 +968,13 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy() {
+<<<<<<< HEAD
     if (this.signalUpdateInterval) {
       clearInterval(this.signalUpdateInterval);
       this.signalUpdateInterval = null;
     }  
+=======
+>>>>>>> 674c77ed34e1c47deb521db74c8ed3e699ddb6ba
     this.socketService.leaveVideoSession({
       userId: this.userId,
       sessionId: this.sessionId,
@@ -926,6 +992,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       },
     });
   }
+<<<<<<< HEAD
 
 
   updateSignalStatus(): void {
@@ -1004,4 +1071,6 @@ getNextSegment(): any {
   return this.nextSegment;
 }
 
+=======
+>>>>>>> 674c77ed34e1c47deb521db74c8ed3e699ddb6ba
 }

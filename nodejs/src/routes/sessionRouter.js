@@ -60,7 +60,11 @@ const {
   addSubtitle,
   getSubtitlesBySegment,
 } = require("../controllers/stc/segmentUsersController");
+
 const {  startStream } = require("../controllers/rtmp/streamController");
+
+
+//const { streamSessions } = require("../controllers/rtmp/streamController");
 
 const authMiddleware = require("../middlewares/authMiddleware");
 
@@ -74,8 +78,12 @@ sessionRouter.post("/disconnect-user", handleUserDisconnection);
 sessionRouter.post("/add-subtitle", addSubtitle);
 sessionRouter.get("/get-subtitles/:segment_id", getSubtitlesBySegment);
 sessionRouter.post("/generate-hls", createHlsSegmentsController);
+
 //sessionRouter.post("/start", streamSessions);
-sessionRouter.post('/start-stream/:sessionId', startStream);
+sessionRouter.post('/start-stream/:sessionId', startStream);//route demarrage session
+
+
+//sessionRouter.post("/start", streamSessions);
 
 sessionRouter.get("/:session_id", getSegmentsWithSubtitles);
 sessionRouter.get(

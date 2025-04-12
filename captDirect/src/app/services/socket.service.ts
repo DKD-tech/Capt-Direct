@@ -117,6 +117,7 @@ export class SocketService {
     return this.socket.fromEvent('notification');
   }
 
+
   //  Quand le flux démarre
 onStreamStarted(): Observable<{ startTime: number }> {
   return this.socket.fromEvent<{ startTime: number }>('stream-started');
@@ -126,5 +127,6 @@ onStreamStarted(): Observable<{ startTime: number }> {
 onElapsedTime(): Observable<{ elapsedTime: number }> {
   return this.socket.fromEvent<{ elapsedTime: number }>('elapsedTime');
 }
+
 
 }
