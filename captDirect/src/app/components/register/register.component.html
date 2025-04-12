@@ -1,0 +1,49 @@
+<div class="register-container">
+  <h2>Inscription</h2>
+  <form (ngSubmit)="onRegister()" #registerForm="ngForm">
+    <div class="form-group">
+      <label for="nom">Nom d'utilisateur:</label>
+      <input type="text" id="nom" name="nom" [(ngModel)]="username" required />
+    </div>
+    <div class="form-group">
+      <label for="email">Email:</label>
+      <input
+        type="email"
+        id="email"
+        name="email"
+        [(ngModel)]="email"
+        required
+      />
+    </div>
+    <div class="form-group">
+      <label for="password">Mot de passe:</label>
+      <input
+        type="password"
+        id="password"
+        name="password"
+        [(ngModel)]="password"
+        required
+      />
+    </div>
+    <button
+      type="submit"
+      class="btn btn-primary"
+      [disabled]="!registerForm.valid"
+    >
+      S'inscrire
+    </button>
+  </form>
+
+  <div class="login-link">
+    <p>
+      J'ai déjà un compte ?
+      <a routerLink="/login-page" (click)="onLogin()">Se connecter</a>
+    </p>
+  </div>
+
+  <!-- Popup d'erreur -->
+  <div *ngIf="showErrorPopup" class="popup-error">
+    <p>{{ errorMessage }}</p>
+    <button (click)="closePopup()">Fermer</button>
+  </div>
+</div>

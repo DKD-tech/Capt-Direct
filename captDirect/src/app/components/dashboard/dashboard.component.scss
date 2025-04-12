@@ -1,0 +1,341 @@
+html,
+body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden; /* Empêche le défilement global */
+}
+
+.dashboard-container {
+  display: flex;
+  height: 100vh; /* Occupe la totalité de la fenêtre */
+}
+
+.sidebar {
+  width: 250px;
+  background-color: #333;
+  color: white;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 100%; /* Hauteur de la barre latérale alignée avec le conteneur */
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.user-icon {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  margin-right: 15px;
+}
+
+.user-name {
+  font-size: 18px;
+  font-weight: bold;
+}
+
+.nav-links ul {
+  list-style: none;
+  padding: 0;
+}
+
+.nav-links li {
+  margin: 10px 0;
+}
+
+.nav-links a {
+  color: white;
+  text-decoration: none;
+  font-size: 16px;
+}
+
+.nav-links a:hover {
+  text-decoration: underline;
+}
+
+.main-content {
+  flex: 1;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  overflow-y: auto; /* Défilement interne pour éviter le débordement global */
+  height: 100%; /* Fixe la hauteur pour correspondre au conteneur */
+}
+
+.status-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 10px;
+}
+
+.status-indicator {
+  display: flex;
+  align-items: center;
+}
+
+.dot {
+  height: 15px;
+  width: 15px;
+  border-radius: 50%;
+  display: inline-block;
+  margin-right: 5px;
+}
+
+.red {
+  background-color: rgb(0, 255, 149);
+}
+
+.status-text {
+  font-size: 16px;
+  font-weight: bold;
+  color: #333;
+}
+
+.clock {
+  display: flex;
+  align-items: center;
+  font-size: 16px;
+  font-weight: bold;
+}
+
+.clock mat-icon {
+  margin-right: 5px;
+}
+
+.collaborators-count {
+  font-size: 14px;
+  font-weight: bold;
+  text-align: center;
+  width: 100%;
+  color: #333;
+}
+
+.live-video {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-grow: 1;
+}
+
+.live-stream {
+  width: 100%;
+  height: 60vh; /* Ajuster la hauteur de la vidéo */
+  border: none;
+  border-radius: 8px;
+}
+
+.live-badge {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  background-color: red;
+  color: white;
+  padding: 5px 10px;
+  font-size: 12px;
+  border-radius: 4px;
+}
+
+.transcription-info {
+  margin-top: 10px;
+}
+
+.transcription-info textarea {
+  width: 100%;
+  height: 60px;
+  margin-top: 15px;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.audio-wave {
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.audio-icon {
+  font-size: 24px;
+  margin-right: 10px;
+  color: #4caf50; /* Couleur verte pour l'icône audio */
+}
+
+.audio-sections {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.section {
+  flex: 1;
+  height: 10px;
+  margin: 0 2px;
+  background-color: #4caf50; /* Couleur verte */
+}
+
+.section.green {
+  background-color: #4caf50;
+}
+.subtitle-display {
+  position: absolute; /* Position absolue pour placer en bas de la vidéo */
+  bottom: 30px; /* Espace au bas de la vidéo */
+  width: 100%;
+  text-align: center;
+  font-size: 18px;
+  color: white;
+  background-color: rgba(0, 0, 0, 0.6); /* Fond noir semi-transparent */
+  padding: 10px;
+  border-radius: 5px;
+  max-width: 90%; /* Limite la largeur du texte */
+  margin: 0 auto;
+  font-family: Arial, sans-serif;
+  box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.4); /* Légère ombre pour plus de lisibilité */
+  line-height: 1.4; /* Espacement pour une meilleure lisibilité */
+}
+
+.audio-wave-container {
+  width: 100%; /* Largeur de la barre complète */
+  height: 20px;
+  background-color: #ddd; /* Couleur de fond */
+  position: relative;
+  margin: 10px 0;
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+.audio-wave {
+  height: 100%;
+  width: 0; /* Commence à 0%, sera mis à jour dynamiquement */
+  background-color: #4caf50; /* Couleur de l'onde */
+  transition: width 1s linear; /* Animation fluide */
+}
+.no-segments {
+  padding: 1rem;
+  color: #f44336;
+  font-style: italic;
+}
+.alert-warning-upcoming {
+  background-color: #fff3cd;
+  color: #856404;
+  border: 1px solid #ffeeba;
+  padding: 15px;
+  margin: 20px 0;
+  border-radius: 5px;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  animation: pulse 1s infinite alternate;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+  }
+  100% {
+    transform: scale(1.02);
+  }
+}
+.global-state-banner {
+  font-weight: bold;
+  margin: 20px 0;
+  padding: 15px;
+  border-radius: 6px;
+  text-align: center;
+  font-size: 18px;
+}
+
+.global-state-banner.en_cours {
+  background-color: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+
+.global-state-banner.bientot {
+  background-color: #fff3cd;
+  color: #856404;
+  border: 1px solid #ffeeba;
+}
+
+.global-state-banner.attente {
+  background-color: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+}
+
+.signal-light {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  display: inline-block;
+  margin-right: 8px;
+}
+
+.signal-red {
+  background-color: red;
+}
+
+.signal-orange {
+  background-color: orange;
+  animation: blink 1s ease-in-out infinite;
+}
+
+
+.signal-green {
+  background-color: green;
+}
+
+.blinking {
+  animation: blink 1s steps(2, start) infinite;
+}
+
+@keyframes blink {
+  0% { opacity: 1; }
+  50% { opacity: 0.3; }
+  100% { opacity: 1; }
+}
+
+
+.status-text {
+  font-weight: bold;
+  font-size: 1.1rem;
+}
+
+.orange-text {
+  color: #ff9800;
+  animation: blink 1s step-start infinite;
+}
+
+.red-text {
+  color: #f44336;
+}
+
+.stream-start {
+  margin: 20px 0;
+
+  button {
+    padding: 10px 16px;
+    background-color: #1976d2;
+    color: white;
+    font-weight: bold;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+  }
+
+  .countdown-message {
+    margin-top: 10px;
+    font-size: 1.1rem;
+    color: #f57c00;
+    font-weight: bold;
+  }
+}
