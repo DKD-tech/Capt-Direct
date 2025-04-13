@@ -2,14 +2,6 @@ import { createRequire } from 'module';const require = createRequire(import.meta
 import {
   InjectionToken,
   NgModule,
-<<<<<<< HEAD
-  require_cjs,
-  require_operators,
-  setClassMetadata,
-  ɵɵdefineInjector,
-  ɵɵdefineNgModule
-} from "./chunk-KSFTFUF6.js";
-=======
   setClassMetadata,
   ɵɵdefineInjector,
   ɵɵdefineNgModule
@@ -21,7 +13,6 @@ import {
   require_cjs
 } from "./chunk-X5NLSII4.js";
 import "./chunk-DCYMPORG.js";
->>>>>>> merge
 import {
   __commonJS,
   __export,

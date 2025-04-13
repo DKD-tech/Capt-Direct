@@ -462,14 +462,10 @@ import {
   ɵɵvalidateIframeAttribute,
   ɵɵviewQuery,
   ɵɵviewQuerySignal
-<<<<<<< HEAD
-} from "./chunk-KSFTFUF6.js";
-=======
 } from "./chunk-MKW3A4VJ.js";
 import "./chunk-IGNQQJCH.js";
 import "./chunk-X5NLSII4.js";
 import "./chunk-DCYMPORG.js";
->>>>>>> merge
 import "./chunk-LDODSSGN.js";
 export {
   ANIMATION_MODULE_TYPE,

@@ -3,11 +3,7 @@
   "version": "0.0.0",
   "scripts": {
     "ng": "ng",
-<<<<<<< HEAD
-    "start": "ng serve",
-=======
     "start": "ng serve --host 0.0.0.0 --port 4200",
->>>>>>> merge
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
@@ -27,22 +23,15 @@
     "@angular/platform-server": "^18.2.0",
     "@angular/router": "^18.2.0",
     "@angular/ssr": "^18.2.10",
-<<<<<<< HEAD
-    "express": "^4.18.2",
-=======
     "@types/video.js": "^7.3.58",
     "express": "^4.18.2",
     "jwt-decode": "^4.0.0",
->>>>>>> merge
     "ngx-socket-io": "^4.7.0",
     "rxjs": "~7.8.0",
     "socket.io-client": "^4.8.1",
     "tslib": "^2.3.0",
-<<<<<<< HEAD
-=======
     "validator": "^13.12.0",
     "video.js": "^8.21.0",
->>>>>>> merge
     "zone.js": "~0.14.10"
   },
   "devDependencies": {
@@ -52,10 +41,7 @@
     "@types/express": "^4.17.17",
     "@types/jasmine": "~5.1.0",
     "@types/node": "^18.18.0",
-<<<<<<< HEAD
-=======
     "@types/validator": "^13.12.2",
->>>>>>> merge
     "jasmine-core": "~5.2.0",
     "karma": "~6.4.0",
     "karma-chrome-launcher": "~3.2.0",

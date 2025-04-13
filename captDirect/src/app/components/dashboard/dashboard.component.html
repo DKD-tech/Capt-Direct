@@ -2,34 +2,18 @@
   <aside class="sidebar">
     <div class="user-info">
       <mat-icon class="user-icon">person</mat-icon>
-<<<<<<< HEAD
-      <span class="user-name">djeneba Kaba</span>
-=======
       <span class="user-name">{{ user?.username || "Utilisateur" }}</span>
->>>>>>> merge
     </div>
     <nav class="nav-links">
       <ul>
         <li><a href="#">Settings</a></li>
-<<<<<<< HEAD
-        <li><a href="#">Logout</a></li>
-=======
         <li><a (click)="onLogout()">Déconnexion</a></li>
->>>>>>> merge
       </ul>
     </nav>
   </aside>
 
   <main class="main-content">
     <div class="streaming-info">
-<<<<<<< HEAD
-      <div class="status-header">
-        <span class="dot red"></span>
-        <!-- Point rouge pour indiquer le statut -->
-        <span class="status-text">En attente</span>
-
-        <!-- Ajout de l'horloge ici -->
-=======
       <!-- Bouton de démarrage -->
 <div class="stream-start">
   <button (click)="startStream()" [disabled]="streamStarted">
@@ -54,47 +38,11 @@
       <span class="status-text orange-text" *ngIf="getCurrentSignal() === 'orange'"> C'est bientot à vous!</span>
       <span class="status-text red-text" *ngIf="getCurrentSignal() === 'red'"> En attente</span>
       
->>>>>>> merge
         <div class="clock">
           <mat-icon>access_time</mat-icon>
           <span id="clock">12:12 à 12:22</span>
         </div>
       </div>
-<<<<<<< HEAD
-      <div class="collaborators-count">
-        <span>Vous êtes 3 collaborateurs en ligne</span>
-      </div>
-    </div>
-
-    <section class="live-video">
-      <!-- <video controls autoplay muted class="live-stream">
-        <source
-          src="https://www.youtube.com/watch?v=sxt6rilYJkY"
-          type="video/mp4"
-        />
-        Votre navigateur ne prend pas en charge la lecture de vidéos.
-      </video> -->
-      <iframe
-        class="live-stream"
-        width="100%"
-        height="500px"
-        src="https://www.youtube.com/embed/RIQFon1Kbn8?autoplay=1&mute=1"
-        title="YouTube video player"
-        frameborder="0"
-        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-        allowfullscreen
-      >
-      </iframe>
-      <span class="live-badge">LIVE</span>
-      <div class="subtitle-display">{{ displayedSubtitle }}</div>
-    </section>
-
-    <div class="transcription-info">
-      <div class="audio-wave">
-        <mat-icon class="audio-icon">graphic_eq</mat-icon>
-        <!-- Icône représentant le flux audio -->
-        <!-- Ici, vous pouvez mettre une animation SVG ou un graphe audio si nécessaire -->
-=======
       <!-- Affichage des informations de la session -->
       <!-- <div class="session-info">
         <p><strong>Nom de la session :</strong> {{ sessionName }}</p>
@@ -193,7 +141,6 @@
     <div class="transcription-info">
       <div class="audio-wave">
         <mat-icon class="audio-icon">graphic_eq</mat-icon>
->>>>>>> merge
         <div class="audio-sections">
           <div class="section green"></div>
           <div class="section green"></div>

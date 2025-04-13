@@ -2,26 +2,6 @@
   <h2>Inscription</h2>
   <form (ngSubmit)="onRegister()" #registerForm="ngForm">
     <div class="form-group">
-<<<<<<< HEAD
-      <label for="nom">Nom:</label>
-      <input type="text" id="nom" name="nom" ngModel required />
-    </div>
-    <div class="form-group">
-      <label for="prenom">Prénom:</label>
-      <input type="text" id="prenom" name="prenom" ngModel required />
-    </div>
-    <div class="form-group">
-      <label for="email">Email:</label>
-      <input type="email" id="email" name="email" ngModel required />
-    </div>
-    <div class="form-group">
-      <label for="adresse">Adresse:</label>
-      <input type="text" id="adresse" name="adresse" ngModel />
-    </div>
-    <div class="form-group">
-      <label for="password">Mot de passe:</label>
-      <input type="password" id="password" name="password" ngModel required />
-=======
       <label for="nom">Nom d'utilisateur:</label>
       <input type="text" id="nom" name="nom" [(ngModel)]="username" required />
     </div>
@@ -44,7 +24,6 @@
         [(ngModel)]="password"
         required
       />
->>>>>>> merge
     </div>
     <button
       type="submit"
@@ -61,13 +40,10 @@
       <a routerLink="/login-page" (click)="onLogin()">Se connecter</a>
     </p>
   </div>
-<<<<<<< HEAD
-=======
 
   <!-- Popup d'erreur -->
   <div *ngIf="showErrorPopup" class="popup-error">
     <p>{{ errorMessage }}</p>
     <button (click)="closePopup()">Fermer</button>
   </div>
->>>>>>> merge
 </div>

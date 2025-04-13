@@ -9,21 +9,6 @@ import { from } from 'rxjs';
 export class SocketService {
   constructor(private socket: Socket) {}
 
-<<<<<<< HEAD
-  // Méthodes pour envoyer des événements
-  joinVideoSession(data: {
-    userId: string;
-    userName: string;
-    videoId: string;
-  }) {
-    this.socket.emit('joinVideoSession', data);
-  }
-
-  leaveVideoSession(data: { userId: string; videoId: string }) {
-    this.socket.emit('leaveVideoSession', data);
-  }
-
-=======
   // Rejoindre une session
   joinSession(session_id: number, username: string, user_id: number): void {
     this.socket.emit('join-session', { session_id, username, user_id });
@@ -59,7 +44,6 @@ export class SocketService {
   onSegmentsUpdated(): Observable<any> {
     return this.socket.fromEvent('segments-updated');
   }
->>>>>>> merge
   sendSubtitle(subtitle: { text: string; videoId: string; timestamp: number }) {
     this.socket.emit('editSubtitle', subtitle);
   }
@@ -96,14 +80,11 @@ export class SocketService {
   }> {
     return this.socket.fromEvent('updateSubtitle');
   }
-<<<<<<< HEAD
-=======
 
   // onSegmentsUpdated(): Observable<any[]> {
   //   return this.socket.fromEvent<any[]>('updateSegments');
   // }
 
->>>>>>> merge
   onUserJoined(): Observable<{ userId: string; userName: string }> {
     return this.socket.fromEvent('userJoined');
   }
@@ -135,8 +116,6 @@ export class SocketService {
   }> {
     return this.socket.fromEvent('notification');
   }
-<<<<<<< HEAD
-=======
 
   //  Quand le flux démarre
 onStreamStarted(): Observable<{ startTime: number }> {
@@ -148,5 +127,4 @@ onElapsedTime(): Observable<{ elapsedTime: number }> {
   return this.socket.fromEvent<{ elapsedTime: number }>('elapsedTime');
 }
 
->>>>>>> merge
 }

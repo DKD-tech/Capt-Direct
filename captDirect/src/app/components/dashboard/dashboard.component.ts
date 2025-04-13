@@ -1,9 +1,3 @@
-<<<<<<< HEAD
-import { Component, OnDestroy, OnInit } from '@angular/core';
-import { MatIconModule } from '@angular/material/icon';
-import { SocketService } from '../../services/socket.service';
-import { FormsModule } from '@angular/forms';
-=======
 import { SubtitleService } from './../../services/sessions/subtitle.service';
 import { VideoService } from './../../services/sessions/video.service';
 import { AuthService } from './../../services/auth/auth.service';
@@ -21,47 +15,15 @@ import { ChangeDetectorRef } from '@angular/core';
 
 // import videojs from 'video.js';
 // import WaveSurfer from 'wavesurfer.js';
->>>>>>> merge
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-<<<<<<< HEAD
-  imports: [MatIconModule, FormsModule],
-=======
   imports: [MatIconModule, FormsModule, CommonModule],
->>>>>>> merge
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.scss',
 })
 export class DashboardComponent implements OnInit, OnDestroy {
-<<<<<<< HEAD
-  subtitleText = '';
-  displayedSubtitle = '';
-  userId = 'user1'; // Identifiant utilisateur fictif
-  videoId = 'video1'; // Identifiant vidéo fictif
-
-  constructor(private socketService: SocketService) {}
-
-  ngOnInit() {
-    console.log('Initialisation de ngOnInit dans DashboardComponent'); // Vérifiez que ngOnInit est appelé
-
-    // Rejoindre une session vidéo
-    this.socketService.joinVideoSession({
-      userId: this.userId,
-      userName: 'John Doe',
-      videoId: this.videoId,
-    });
-
-    // Écoute des événements
-    this.socketService.onSubtitleUpdate().subscribe((subtitle) => {
-      if (subtitle.videoId === this.videoId) {
-        this.displayedSubtitle = subtitle.text;
-      }
-    });
-
-    this.socketService.onUserJoined().subscribe((user) => {
-=======
   isAuthenticated: boolean = false;
   isLoading = true;
   subtitleText = '';
@@ -826,17 +788,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
     // Écouter les événements du serveur
     this.socketService.onUserJoined().subscribe((user) => {
       this.collaborators += 1;
->>>>>>> merge
       console.log(`${user.userName} a rejoint la session.`);
     });
 
     this.socketService.onUserLeft().subscribe((user) => {
-<<<<<<< HEAD
-      console.log(`${user.userName} a quitté la session.`);
-    });
-  }
-
-=======
       this.collaborators -= 1;
       console.log(`${user.userName} a quitté la session.`);
     });
@@ -916,28 +871,16 @@ export class DashboardComponent implements OnInit, OnDestroy {
     );
   }
   // Envoyer un sous-titre via le socket
->>>>>>> merge
   onSubtitleChange() {
     const timestamp = Date.now();
     this.socketService.sendSubtitle({
       text: this.subtitleText,
-<<<<<<< HEAD
-      videoId: this.videoId,
-=======
       videoId: this.videoUrl,
->>>>>>> merge
       timestamp,
     });
   }
 
   ngOnDestroy() {
-<<<<<<< HEAD
-    this.socketService.leaveVideoSession({
-      userId: this.userId,
-      videoId: this.videoId,
-    });
-  }
-=======
     if (this.signalUpdateInterval) {
       clearInterval(this.signalUpdateInterval);
       this.signalUpdateInterval = null;
@@ -1029,5 +972,4 @@ export class DashboardComponent implements OnInit, OnDestroy {
   getNextSegment(): any {
     return this.nextSegment;
   }
->>>>>>> merge
 }

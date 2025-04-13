@@ -1,14 +1,5 @@
 import { createRequire } from 'module';const require = createRequire(import.meta.url);
 import {
-<<<<<<< HEAD
-  DomSanitizer,
-  HttpClient
-} from "./chunk-NKO74ZFF.js";
-import {
-  DOCUMENT,
-  isPlatformBrowser
-} from "./chunk-V2KK6NLT.js";
-=======
   DomSanitizer
 } from "./chunk-D7SHVX5V.js";
 import {
@@ -18,7 +9,6 @@ import {
   DOCUMENT,
   isPlatformBrowser
 } from "./chunk-Y5JXB3QJ.js";
->>>>>>> merge
 import {
   ANIMATION_MODULE_TYPE,
   APP_ID,
@@ -51,11 +41,6 @@ import {
   afterNextRender,
   booleanAttribute,
   inject,
-<<<<<<< HEAD
-  require_cjs,
-  require_operators,
-=======
->>>>>>> merge
   setClassMetadata,
   ɵɵInputTransformsFeature,
   ɵɵNgOnChangesFeature,
@@ -89,9 +74,6 @@ import {
   ɵɵtext,
   ɵɵtextInterpolate1,
   ɵɵviewQuery
-<<<<<<< HEAD
-} from "./chunk-KSFTFUF6.js";
-=======
 } from "./chunk-MKW3A4VJ.js";
 import {
   require_operators
@@ -100,7 +82,6 @@ import {
   require_cjs
 } from "./chunk-X5NLSII4.js";
 import "./chunk-DCYMPORG.js";
->>>>>>> merge
 import {
   __spreadProps,
   __spreadValues,

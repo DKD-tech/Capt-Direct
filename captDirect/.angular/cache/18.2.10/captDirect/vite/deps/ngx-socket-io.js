@@ -1,15 +1,6 @@
 import {
   InjectionToken,
   NgModule,
-<<<<<<< HEAD
-  Observable,
-  __export,
-  setClassMetadata,
-  share,
-  ɵɵdefineInjector,
-  ɵɵdefineNgModule
-} from "./chunk-I2LHZQ2L.js";
-=======
   setClassMetadata,
   ɵɵdefineInjector,
   ɵɵdefineNgModule
@@ -23,7 +14,6 @@ import {
 import {
   __export
 } from "./chunk-CX3I3NQG.js";
->>>>>>> merge
 
 // node_modules/socket.io-client/build/esm/index.js
 var esm_exports2 = {};
