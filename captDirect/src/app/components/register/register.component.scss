@@ -53,3 +53,30 @@
 .login-link a:hover {
   text-decoration: underline;
 }
+<<<<<<< HEAD
+=======
+
+.popup-error {
+  position: fixed;
+  top: 50%; /* Centré verticalement */
+  left: 50%; /* Centré horizontalement */
+  transform: translate(-50%, -50%); /* Centre le popup */
+  background-color: #f8d7da;
+  padding: 20px;
+  border: 1px solid #f5c2c7;
+  color: #721c24;
+  border-radius: 5px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  text-align: center;
+  z-index: 1000; /* Pour s'assurer qu'il est au-dessus des autres éléments */
+}
+
+.popup-error button {
+  margin-top: 10px;
+  background-color: #f5c2c7;
+  border: none;
+  padding: 5px 10px;
+  cursor: pointer;
+  border-radius: 3px;
+}
+>>>>>>> merge

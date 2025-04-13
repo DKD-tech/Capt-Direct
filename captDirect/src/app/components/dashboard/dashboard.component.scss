@@ -201,3 +201,144 @@ body {
   box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.4); /* Légère ombre pour plus de lisibilité */
   line-height: 1.4; /* Espacement pour une meilleure lisibilité */
 }
+<<<<<<< HEAD
+=======
+
+.audio-wave-container {
+  width: 100%; /* Largeur de la barre complète */
+  height: 20px;
+  background-color: #ddd; /* Couleur de fond */
+  position: relative;
+  margin: 10px 0;
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+.audio-wave {
+  height: 100%;
+  width: 0; /* Commence à 0%, sera mis à jour dynamiquement */
+  background-color: #4caf50; /* Couleur de l'onde */
+  transition: width 1s linear; /* Animation fluide */
+}
+.no-segments {
+  padding: 1rem;
+  color: #f44336;
+  font-style: italic;
+}
+.alert-warning-upcoming {
+  background-color: #fff3cd;
+  color: #856404;
+  border: 1px solid #ffeeba;
+  padding: 15px;
+  margin: 20px 0;
+  border-radius: 5px;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  animation: pulse 1s infinite alternate;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+  }
+  100% {
+    transform: scale(1.02);
+  }
+}
+.global-state-banner {
+  font-weight: bold;
+  margin: 20px 0;
+  padding: 15px;
+  border-radius: 6px;
+  text-align: center;
+  font-size: 18px;
+}
+
+.global-state-banner.en_cours {
+  background-color: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+
+.global-state-banner.bientot {
+  background-color: #fff3cd;
+  color: #856404;
+  border: 1px solid #ffeeba;
+}
+
+.global-state-banner.attente {
+  background-color: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+}
+
+.signal-light {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  display: inline-block;
+  margin-right: 8px;
+}
+
+.signal-red {
+  background-color: red;
+}
+
+.signal-orange {
+  background-color: orange;
+  animation: blink 1s ease-in-out infinite;
+}
+
+
+.signal-green {
+  background-color: green;
+}
+
+.blinking {
+  animation: blink 1s steps(2, start) infinite;
+}
+
+@keyframes blink {
+  0% { opacity: 1; }
+  50% { opacity: 0.3; }
+  100% { opacity: 1; }
+}
+
+
+.status-text {
+  font-weight: bold;
+  font-size: 1.1rem;
+}
+
+.orange-text {
+  color: #ff9800;
+  animation: blink 1s step-start infinite;
+}
+
+.red-text {
+  color: #f44336;
+}
+
+.stream-start {
+  margin: 20px 0;
+
+  button {
+    padding: 10px 16px;
+    background-color: #1976d2;
+    color: white;
+    font-weight: bold;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+  }
+
+  .countdown-message {
+    margin-top: 10px;
+    font-size: 1.1rem;
+    color: #f57c00;
+    font-weight: bold;
+  }
+}
+>>>>>>> merge

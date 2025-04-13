@@ -2,22 +2,49 @@
   <h2>Veuillez vous connecter</h2>
   <form (ngSubmit)="onLogin()" #loginForm="ngForm">
     <div class="form-group">
+<<<<<<< HEAD
       <input type="email" placeholder="Email" name="email" ngModel required />
+=======
+      <input
+        type="email"
+        placeholder="Email"
+        name="email"
+        [(ngModel)]="email"
+        required
+      />
+>>>>>>> merge
     </div>
     <div class="form-group">
       <input
         type="password"
         placeholder="Mot de passe"
         name="password"
+<<<<<<< HEAD
         ngModel
+=======
+        [(ngModel)]="password"
+>>>>>>> merge
         required
       />
     </div>
     <button type="submit" class="btn btn-primary" [disabled]="!loginForm.valid">
+<<<<<<< HEAD
       Connexion
+=======
+      Se connecter
+>>>>>>> merge
     </button>
     <button type="button" class="btn btn-secondary" (click)="onRegister()">
       S'inscrire
     </button>
   </form>
 </div>
+<<<<<<< HEAD
+=======
+
+<!-- Popup d'erreur -->
+<div *ngIf="showErrorPopup" class="popup-error">
+  <p>{{ errorMessage }}</p>
+  <button (click)="closePopup()">Fermer</button>
+</div>
+>>>>>>> merge

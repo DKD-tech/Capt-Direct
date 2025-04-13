@@ -2,29 +2,65 @@
   <aside class="sidebar">
     <div class="user-info">
       <mat-icon class="user-icon">person</mat-icon>
+<<<<<<< HEAD
       <span class="user-name">djeneba Kaba</span>
+=======
+      <span class="user-name">{{ user?.username || "Utilisateur" }}</span>
+>>>>>>> merge
     </div>
     <nav class="nav-links">
       <ul>
         <li><a href="#">Settings</a></li>
+<<<<<<< HEAD
         <li><a href="#">Logout</a></li>
+=======
+        <li><a (click)="onLogout()">Déconnexion</a></li>
+>>>>>>> merge
       </ul>
     </nav>
   </aside>
 
   <main class="main-content">
     <div class="streaming-info">
+<<<<<<< HEAD
       <div class="status-header">
         <span class="dot red"></span>
         <!-- Point rouge pour indiquer le statut -->
         <span class="status-text">En attente</span>
 
         <!-- Ajout de l'horloge ici -->
+=======
+      <!-- Bouton de démarrage -->
+<div class="stream-start">
+  <button (click)="startStream()" [disabled]="streamStarted">
+    Lancer la session
+  </button>
+  <div *ngIf="countdownMessage" class="countdown-message">
+    {{ countdownMessage }}
+  </div>
+</div>
+
+      <div class="status-header">
+        <span
+        class="signal-light"
+        [ngClass]="{
+          'signal-green': getCurrentSignal() === 'green',
+          'signal-orange': getCurrentSignal() === 'orange',
+          'signal-red': getCurrentSignal() === 'red'
+        }"
+      ></span>
+      
+      <span class="status-text" *ngIf="getCurrentSignal() === 'green'"> C'est à vous de sous-titrer</span>
+      <span class="status-text orange-text" *ngIf="getCurrentSignal() === 'orange'"> C'est bientot à vous!</span>
+      <span class="status-text red-text" *ngIf="getCurrentSignal() === 'red'"> En attente</span>
+      
+>>>>>>> merge
         <div class="clock">
           <mat-icon>access_time</mat-icon>
           <span id="clock">12:12 à 12:22</span>
         </div>
       </div>
+<<<<<<< HEAD
       <div class="collaborators-count">
         <span>Vous êtes 3 collaborateurs en ligne</span>
       </div>
@@ -58,6 +94,106 @@
         <mat-icon class="audio-icon">graphic_eq</mat-icon>
         <!-- Icône représentant le flux audio -->
         <!-- Ici, vous pouvez mettre une animation SVG ou un graphe audio si nécessaire -->
+=======
+      <!-- Affichage des informations de la session -->
+      <!-- <div class="session-info">
+        <p><strong>Nom de la session :</strong> {{ sessionName }}</p>
+        <p><strong>Description :</strong> {{ sessionDescription }}</p>
+        <p><strong>Statut :</strong> {{ sessionStatus }}</p>
+        <p *ngIf="duration !== null">
+          <strong>Durée de la vidéo :</strong>
+          {{ duration | number : "1.0-2" }} secondes
+        </p>
+      </div> -->
+      <!-- <div class="collaborators-count">
+        <span>Vous êtes {{ collaborators }} collaborateurs en ligne</span>
+        <ul>
+          <li *ngFor="let user of users">{{ user }}</li>
+        </ul>
+      </div> -->
+    </div>
+
+    <section class="segments">
+      <h3>Segments assignés</h3>
+      <div *ngIf="segments.length === 0" class="no-segments">
+        Aucun segment ne vous est assigné pour cette session.
+      </div>
+      <ul>
+        <li *ngFor="let segment of segments">
+          <!-- <p>
+            Segment {{ segment.segment_id }} - Début : {{ segment.start_time }},
+            Fin : {{ segment.end_time }}, Statut : {{ segment.status }}
+          </p> -->
+
+          <p>
+            <!-- Nom de l'utilisateur assigné -->
+            <strong>Utilisateur assigné :</strong>
+            {{ segment.assigned_to || "Non spécifié" }}
+          </p>
+          <div class="audio-wave-container">
+            <div
+              class="audio-wave"
+              [style.width]="
+                calculateWaveWidth(
+                  segment.timeRemaining,
+                  segment.end_time,
+                  segment.start_time
+                )
+              "
+              [style.backgroundColor]="
+                segment.timeRemaining > 0 ? '#4caf50' : '#f44336'
+              "
+            ></div>
+          </div>
+
+          <!-- Barre de progression
+          <div class="progress-container">
+            <div
+              class="progress-bar"
+              [style.width.%]="
+                100 - (segment.timeRemaining / segment.duration) * 100
+              "
+            ></div>
+          </div> -->
+
+          <p>Temps restant : {{ segment.timeRemaining }} secondes</p>
+
+          <!-- Zone de texte pour saisir un sous-titre -->
+          <textarea
+            [(ngModel)]="segment.subtitleText"
+            (focus)="onUserTyping(segment)"
+            rows="2"
+            placeholder="Saisir un sous-titre"
+          ></textarea>
+
+          <!-- <button
+            (click)="addSubtitleToSegment(segment)"
+            [disabled]="segment.isDisabled || segment.timeRemaining <= 0"
+          >
+            Enregistrer
+          </button> -->
+
+          <!-- Afficher les sous-titres existants -->
+
+          <ul>
+            <li *ngFor="let subtitle of segment.subtitles">
+              {{ subtitle.text }} (Créé par : {{ subtitle.created_by }})
+            </li>
+          </ul>
+        </li>
+      </ul>
+      <button (click)="downloadSubtitles()">Exporter les sous-titres</button>
+    </section>
+
+    <section class="live-broadcast">
+      <span class="live-badge"> LIVE</span>
+      <p>La session a commencé. Suivez le flux en direct sur l’écran principal.</p>
+    </section>
+    
+    <div class="transcription-info">
+      <div class="audio-wave">
+        <mat-icon class="audio-icon">graphic_eq</mat-icon>
+>>>>>>> merge
         <div class="audio-sections">
           <div class="section green"></div>
           <div class="section green"></div>

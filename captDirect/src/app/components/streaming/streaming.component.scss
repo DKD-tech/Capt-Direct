@@ -1,0 +1,33 @@
+.streaming-container {
+  max-width: 800px;
+  margin: auto;
+  text-align: center;
+}
+
+ul {
+  list-style: none;
+  padding: 0;
+}
+
+li {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  border: 1px solid #ddd;
+  padding: 10px;
+  margin-bottom: 10px;
+}
+
+.video-thumbnail video {
+  width: 150px;
+  height: 100px;
+  object-fit: cover;
+}
+
+.video-info {
+  margin-left: 20px;
+}
+
+li:hover {
+  background: #f0f0f0;
+}
