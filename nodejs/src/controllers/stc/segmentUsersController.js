@@ -101,12 +101,12 @@ async function addSubtitle(req, res) {
       `✏️ Ajout du sous-titre pour le segment ${segment_id} : "${text}"`
     );
 
-    // // ✅ Utilisation de `predictNextWord()` pour compléter automatiquement le texte
-    // const predictedWord = predictNextWord(text, trigramModel);
-    // if (predictedWord) {
-    //   text = `${text} ${predictedWord}`;
-    //   console.log(`🔮 Correction automatique avec n-gram : "${text}"`);
-    // }
+    // ✅ Utilisation de `predictNextWord()` pour compléter automatiquement le texte
+    const predictedWord = predictNextWord(text, trigramModel);
+    if (predictedWord) {
+      text = `${text} ${predictedWord}`;
+      console.log(`🔮 Correction automatique avec n-gram : "${text}"`);
+    }
 
     // ✅ Vérifier les chevauchements avec les segments voisins
     const adjustedText = await adjustTextWithNeighbors(currentSegment, text);

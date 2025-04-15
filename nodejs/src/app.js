@@ -11,7 +11,6 @@ const signupController = require("./controllers/auth/signUpController");
 const loginController = require("./controllers/auth/loginController");
 const authMiddleware = require("./middlewares/authMiddleware");
 const logoutController = require("./controllers/user/logoutController");
-const { getSessionStartTime } = require("./controllers/rtmp/streamController");
 const {
   assignUserToSegmentController,
 } = require("./controllers/stc/segmentUsersController");
@@ -31,8 +30,6 @@ const io = socketIO(server, {
 app.use(express.json());
 app.use(cors());
 app.use("/api", router);
-app.set('io', io); // ✅ Attache io à app pour qu’il soit accessible dans les contrôleurs
-
 
 // Stockage des sous-titres, utilisateurs et sessions
 const subtitles = {};
@@ -277,29 +274,10 @@ io.on("connection", (socket) => {
   });
 });
 
-// Envoie `elapsedTime` chaque seconde à chaque session active
-setInterval(async () => {
-  const rooms = Array.from(io.sockets.adapter.rooms.keys());
-
-  for (const roomName of rooms) {
-    if (roomName.startsWith('session:')) {
-      const sessionId = roomName.split(':')[1];
-
-      const startTime = await getSessionStartTime(sessionId);
-      if (!startTime) continue;
-
-      const elapsedTime = (Date.now() - startTime) / 1000;
-      io.to(roomName).emit('elapsedTime', { elapsedTime });
-    }
-  }
-}, 1000);
-
-
 // Démarrer le serveur sur le port défini
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, '0.0.0.0', () => {
-
-  console.log(`Serveur en écoute sur http:// 192.168.1.69:${PORT}`);
+server.listen(PORT, () => {
+  console.log(`Serveur en écoute sur http://localhost:${PORT}`);
 });
 
 module.exports = { server, io };

@@ -1,7 +1,8 @@
-//const express = require('express');
-//const router = express.Router();
-//const streamController = require('../controllers/rtmp/streamController');
+const { Router } = require("express");
+const { streamSessions } = require("../controllers/streamController");
 
-//router.post('/start-stream/:sessionId', streamController.startStream);
+const router = Router();
 
-//module.exports = router;
+router.post("/start", streamSessions);
+
+module.exports = router;

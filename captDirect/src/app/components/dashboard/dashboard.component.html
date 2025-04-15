@@ -14,30 +14,10 @@
 
   <main class="main-content">
     <div class="streaming-info">
-      <!-- Bouton de démarrage -->
-<div class="stream-start">
-  <button (click)="startStream()" [disabled]="streamStarted">
-    Lancer la session
-  </button>
-  <div *ngIf="countdownMessage" class="countdown-message">
-    {{ countdownMessage }}
-  </div>
-</div>
-
       <div class="status-header">
-        <span
-        class="signal-light"
-        [ngClass]="{
-          'signal-green': getCurrentSignal() === 'green',
-          'signal-orange': getCurrentSignal() === 'orange',
-          'signal-red': getCurrentSignal() === 'red'
-        }"
-      ></span>
-      
-      <span class="status-text" *ngIf="getCurrentSignal() === 'green'"> C'est à vous de sous-titrer</span>
-      <span class="status-text orange-text" *ngIf="getCurrentSignal() === 'orange'"> C'est bientot à vous!</span>
-      <span class="status-text red-text" *ngIf="getCurrentSignal() === 'red'"> En attente</span>
-      
+        <span class="dot red"></span>
+        <span class="status-text">Session en cours</span>
+
         <div class="clock">
           <mat-icon>access_time</mat-icon>
           <span id="clock">12:12 à 12:22</span>
@@ -53,19 +33,15 @@
           {{ duration | number : "1.0-2" }} secondes
         </p>
       </div> -->
-      <!-- <div class="collaborators-count">
+      <div class="collaborators-count">
         <span>Vous êtes {{ collaborators }} collaborateurs en ligne</span>
         <ul>
           <li *ngFor="let user of users">{{ user }}</li>
         </ul>
-      </div> -->
+      </div>
     </div>
-
     <section class="segments">
       <h3>Segments assignés</h3>
-      <div *ngIf="segments.length === 0" class="no-segments">
-        Aucun segment ne vous est assigné pour cette session.
-      </div>
       <ul>
         <li *ngFor="let segment of segments">
           <!-- <p>
@@ -107,13 +83,16 @@
           <p>Temps restant : {{ segment.timeRemaining }} secondes</p>
 
           <!-- Zone de texte pour saisir un sous-titre -->
-          <textarea
+          <!-- <textarea
             [(ngModel)]="segment.subtitleText"
-            (focus)="onUserTyping(segment)"
-            rows="2"
             placeholder="Saisir un sous-titre"
-          ></textarea>
-
+            [disabled]="
+              segment.isDisabled ||
+              segment.timeRemaining <= 0 ||
+              segment.isLocked
+            "
+            (keyup)="onUserTyping(segment)"
+          ></textarea> -->
           <!-- <button
             (click)="addSubtitleToSegment(segment)"
             [disabled]="segment.isDisabled || segment.timeRemaining <= 0"
@@ -130,14 +109,41 @@
           </ul>
         </li>
       </ul>
+      <!-- ✅ Zone de texte toujours visible dès le début -->
+      <div class="subtitle-editor" *ngIf="activeSegment">
+        <h3>Segment en cours : {{ activeSegment.segment_id }}</h3>
+        <textarea
+          [(ngModel)]="activeSegment.subtitleText"
+          placeholder="Saisir un sous-titre..."
+          (focus)="onUserTyping()"
+        >
+        </textarea>
+      </div>
+
       <button (click)="downloadSubtitles()">Exporter les sous-titres</button>
     </section>
 
-    <section class="live-broadcast">
-      <span class="live-badge"> LIVE</span>
-      <p>La session a commencé. Suivez le flux en direct sur l’écran principal.</p>
+    <section class="live-video" *ngIf="videoUrl" (error)="onVideoError()">
+      <video
+        id="liveVideo"
+        class="live-stream"
+        width="100%"
+        height="500px"
+        controls
+        autoplay
+        muted
+        [src]="videoUrl"
+        (error)="onVideoError()"
+      >
+        <!-- <source [src]="videoUrl" type="application/x-mpegURL" /> -->
+        Votre navigateur ne prend pas en charge la lecture de vidéos.
+      </video>
+      <!-- Affichage de la durée de la vidéo -->
+      <p *ngIf="duration === null">Chargement de la durée de la vidéo...</p>
+      <span class="live-badge">LIVE</span>
+      <div class="subtitle-display">{{ displayedSubtitle }}</div>
     </section>
-    
+
     <div class="transcription-info">
       <div class="audio-wave">
         <mat-icon class="audio-icon">graphic_eq</mat-icon>

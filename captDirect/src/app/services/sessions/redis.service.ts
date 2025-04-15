@@ -6,7 +6,7 @@
 //   providedIn: 'root',
 // })
 // export class RedisService {
-//   private redisApiUrl = 'http:// 192.168.118.212:3000/api/sessions//save-video-duration'; // URL de l'API Redis backend
+//   private redisApiUrl = 'http://localhost:3000/api/sessions//save-video-duration'; // URL de l'API Redis backend
 
 //   constructor(private http: HttpClient) {}
 

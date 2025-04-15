@@ -1,21 +1,21 @@
 services:
-  # nginx:
-  #   build:
-  #     context: .
-  #     dockerfile: ./nginx-rtmp-ffmpeg/Dockerfile
-  #   container_name: nginx
-  #   ports:
-  #     - "80:80"
-  #     - "1935:1935"
-  #   volumes:
-  #     - ./nginx-rtmp-ffmpeg/nginx.conf:/usr/local/nginx/conf/nginx.conf:ro
-  #     - ./hls:/opt/data/hls
-  #     - ./nginx-rtmp-ffmpeg/videos:/usr/src/app/videos
-  #   networks:
-  #     - capt_direct_net
-  #   environment:
-  #     - PATH=/usr/local/nginx/sbin:$PATH
-  #   command: ["/usr/local/nginx/sbin/nginx", "-g", "daemon off;"]
+  nginx:
+    build:
+      context: .
+      dockerfile: ./nginx-rtmp-ffmpeg/Dockerfile
+    container_name: nginx
+    ports:
+      - "80:80"
+      - "1935:1935"
+    volumes:
+      - ./nginx-rtmp-ffmpeg/nginx.conf:/usr/local/nginx/conf/nginx.conf:ro
+      - ./hls:/opt/data/hls
+      - ./nginx-rtmp-ffmpeg/videos:/usr/src/app/videos
+    networks:
+      - capt_direct_net
+    environment:
+      - PATH=/usr/local/nginx/sbin:$PATH
+    command: ["/usr/local/nginx/sbin/nginx", "-g", "daemon off;"]
 
   redis:
     image: redis:alpine
@@ -80,5 +80,3 @@ networks:
 
 volumes:
   postgres_data:
-
-

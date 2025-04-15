@@ -6,13 +6,11 @@ const sessionController = require("../controllers/sessionController");
 const authMiddleware = require("../middlewares/authMiddleware");
 const userRouter = require("./userRouter");
 
-
 const router = Router({ mergeParams: true });
 
 // Route de santé
 router.get("/health", healthController);
 
-//router.use('/stream', streamRouter);
 // Routes d'authentification
 router.use("/auth", authRouter);
 

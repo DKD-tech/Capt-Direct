@@ -1,85 +1,144 @@
 {
+<<<<<<< HEAD
+  "hash": "38d9a87e",
+  "configHash": "3c2253a3",
+  "lockfileHash": "4330ea9e",
+  "browserHash": "05c8cc5b",
+=======
   "hash": "53e214ac",
   "configHash": "b06c0503",
   "lockfileHash": "7b3b62ee",
   "browserHash": "bd259155",
+>>>>>>> origin/master
   "optimized": {
     "@angular/common": {
       "src": "../../../../../../node_modules/@angular/common/fesm2022/common.mjs",
       "file": "@angular_common.js",
+<<<<<<< HEAD
+      "fileHash": "e83d7ea6",
+=======
       "fileHash": "5e881a41",
+>>>>>>> origin/master
       "needsInterop": false
     },
     "@angular/common/http": {
       "src": "../../../../../../node_modules/@angular/common/fesm2022/http.mjs",
       "file": "@angular_common_http.js",
+<<<<<<< HEAD
+      "fileHash": "87e6b756",
+=======
       "fileHash": "4f242ae4",
+>>>>>>> origin/master
       "needsInterop": false
     },
     "@angular/core": {
       "src": "../../../../../../node_modules/@angular/core/fesm2022/core.mjs",
       "file": "@angular_core.js",
+<<<<<<< HEAD
+      "fileHash": "0d2030d7",
+=======
       "fileHash": "47c8f83c",
+>>>>>>> origin/master
       "needsInterop": false
     },
     "@angular/forms": {
       "src": "../../../../../../node_modules/@angular/forms/fesm2022/forms.mjs",
       "file": "@angular_forms.js",
+<<<<<<< HEAD
+      "fileHash": "422424b8",
+=======
       "fileHash": "1a19187d",
+>>>>>>> origin/master
       "needsInterop": false
     },
     "@angular/material/icon": {
       "src": "../../../../../../node_modules/@angular/material/fesm2022/icon.mjs",
       "file": "@angular_material_icon.js",
+<<<<<<< HEAD
+      "fileHash": "75645e3d",
+=======
       "fileHash": "dafc005e",
+>>>>>>> origin/master
       "needsInterop": false
     },
     "@angular/platform-browser": {
       "src": "../../../../../../node_modules/@angular/platform-browser/fesm2022/platform-browser.mjs",
       "file": "@angular_platform-browser.js",
+<<<<<<< HEAD
+      "fileHash": "ed008bf0",
+=======
       "fileHash": "c072be8f",
+>>>>>>> origin/master
       "needsInterop": false
     },
     "@angular/platform-browser/animations/async": {
       "src": "../../../../../../node_modules/@angular/platform-browser/fesm2022/animations/async.mjs",
       "file": "@angular_platform-browser_animations_async.js",
+<<<<<<< HEAD
+      "fileHash": "1c588d58",
+=======
       "fileHash": "1102c63f",
+>>>>>>> origin/master
       "needsInterop": false
     },
     "@angular/platform-server": {
       "src": "../../../../../../node_modules/@angular/platform-server/fesm2022/platform-server.mjs",
       "file": "@angular_platform-server.js",
+<<<<<<< HEAD
+      "fileHash": "1a604231",
+=======
       "fileHash": "6128bc4d",
+>>>>>>> origin/master
       "needsInterop": false
     },
     "@angular/router": {
       "src": "../../../../../../node_modules/@angular/router/fesm2022/router.mjs",
       "file": "@angular_router.js",
+<<<<<<< HEAD
+      "fileHash": "958d06eb",
+=======
       "fileHash": "ca31e14e",
+>>>>>>> origin/master
       "needsInterop": false
     },
     "ngx-socket-io": {
       "src": "../../../../../../node_modules/ngx-socket-io/fesm2022/ngx-socket-io.mjs",
       "file": "ngx-socket-io.js",
+<<<<<<< HEAD
+      "fileHash": "9312234d",
+=======
       "fileHash": "9d94c08c",
+>>>>>>> origin/master
       "needsInterop": false
     },
     "rxjs": {
       "src": "../../../../../../node_modules/rxjs/dist/cjs/index.js",
       "file": "rxjs.js",
+<<<<<<< HEAD
+      "fileHash": "c2d45e5a",
+=======
       "fileHash": "bdf34c30",
+>>>>>>> origin/master
       "needsInterop": true
     },
     "rxjs/operators": {
       "src": "../../../../../../node_modules/rxjs/dist/cjs/operators/index.js",
       "file": "rxjs_operators.js",
+<<<<<<< HEAD
+      "fileHash": "c77e2fb3",
+=======
       "fileHash": "cc674adf",
+>>>>>>> origin/master
       "needsInterop": true
     },
     "validator": {
       "src": "../../../../../../node_modules/validator/index.js",
       "file": "validator.js",
+<<<<<<< HEAD
+      "fileHash": "766957b3",
+=======
       "fileHash": "535a2126",
+>>>>>>> origin/master
       "needsInterop": true
     }
   },

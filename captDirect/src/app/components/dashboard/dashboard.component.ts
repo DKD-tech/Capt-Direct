@@ -9,10 +9,7 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { SessionService } from '../../services/sessions/session.service';
 import { CommonModule } from '@angular/common';
-import { ViewChild, ElementRef, AfterViewInit } from '@angular/core';
-import { NgZone } from '@angular/core';
-import { ChangeDetectorRef } from '@angular/core';
-
+import test from 'node:test';
 // import videojs from 'video.js';
 // import WaveSurfer from 'wavesurfer.js';
 
@@ -30,7 +27,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   displayedSubtitle = '';
   userId: number = 0; // Identifiant utilisateur récupéré dynamiquement
   videoUrl = ''; // URL de la vidéo récupérée dynamiquement
-  sessionId: number = 21; // ID de la session à afficher
+  sessionId: number = 7; // ID de la session à afficher
   segments: any[] = [];
   username: string = '';
   collaborators: number = 1; // Nombre de collaborateurs en ligne
@@ -45,14 +42,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
   hasStartedTyping = false; // ✅ Ajout : Variable pour vérifier si l'utilisateur a commencé à écrire
   videoLoaded = false; // ✅ Ajout : Variable pour suivre le chargement de la vidéo
   activeSegment: any = null; // Le segment actuellement en cours
-  nextSegment: any = null;
-  sessionStartTime: number = Date.now(); //
-  officialStartTime = 0; //🕒 Temps de début de session (sera mis à jour dynamiquement)
-  elapsedTime = 0;
-  streamStarted = false;
-  countdown = 5;
-  countdownMessage = '';
-  private signalUpdateInterval: any = null;
 
   // // Méthode pour calculer la durée de la vidéo
   // calculateVideoDuration(videoUrl: string): void {
@@ -96,9 +85,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
     private router: Router,
     private sessionService: SessionService,
     private videoService: VideoService,
-    private ngZone: NgZone,
-    private cdr: ChangeDetectorRef,
-    private cdRef: ChangeDetectorRef,
     private SubtitleService: SubtitleService
   ) {}
 
@@ -126,36 +112,13 @@ export class DashboardComponent implements OnInit, OnDestroy {
       });
     });
   }
-
-  startStream(): void {
-    this.sessionService.startStream(this.sessionId).subscribe({
-      next: (res: any) => {
-        this.countdown = 5;
-        this.streamStarted = true;
-
-        const interval = setInterval(() => {
-          if (this.countdown > 0) {
-            this.countdownMessage = `Démarrage dans ${this.countdown} seconde(s)...`;
-            this.countdown--;
-          } else {
-            clearInterval(interval);
-            this.countdownMessage = '';
-          }
-        }, 1000);
-      },
-      error: (err) => {
-        console.error('Erreur lors du démarrage du flux', err);
-      },
-    });
-  }
-
-  onUserTyping(segment: any) {
+  onUserTyping() {
     if (!this.hasStartedTyping) {
       this.hasStartedTyping = true;
       console.log(
         '🖱️ L’utilisateur a cliqué sur la zone de texte, démarrage des timers.'
       );
-      //this.startTimers(); // ✅ Démarrer immédiatement le minuteur
+      this.startTimers(); // ✅ Démarrer immédiatement le minuteur
     }
   }
 
@@ -287,15 +250,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
   loadSegments(): void {
     this.sessionService.getSegmentsWithSession(this.sessionId).subscribe({
       next: (response) => {
-        if (!response.segments || response.segments.length === 0) {
-          console.warn('Aucun segment assigné à cet utilisateur.');
-          alert('Aucun segment ne vous est assigné dans cette session.');
-          this.segments = [];
-          return;
-        }
-
         this.segments = this.mergeSort(response.segments).map(
           (segment: any) => {
+            // Calcul de la durée en secondes
             const duration = this.calculateDurationInSeconds(
               segment.start_time,
               segment.end_time
@@ -303,21 +260,24 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
             return {
               ...segment,
-              subtitleText: '',
-              timeRemaining: duration,
-              timer: null,
-              isDisabled: false, // toujours false
-              assigned_to: segment.assigned_to || 'Utilisateur inconnu',
-              subtitles: segment.subtitles || [],
+              subtitleText: '', // Texte en cours de saisie
+              timeRemaining: duration, // Temps restant pour le segment
+              timer: null, // Référence au timer pour arrêter si nécessaire
+              isDisabled: false, // Indique si la saisie est désactivée
+              assigned_to: segment.assigned_to || 'Utilisateur inconnu', // Nom de l'utilisateur assigné
             };
           }
         );
 
         console.log('Segments chargés avec timers :', this.segments);
+
+        // ✅ Assigner immédiatement le premier segment actif
+        if (this.segments.length > 0) {
+          this.activeSegment = this.segments[0];
+        }
       },
       error: (error) => {
         console.error('Erreur lors du chargement des segments :', error);
-        alert('Erreur lors du chargement des segments. Veuillez réessayer.');
       },
     });
   }
@@ -337,95 +297,39 @@ export class DashboardComponent implements OnInit, OnDestroy {
     return endTotalSeconds - startTotalSeconds;
   }
 
-  // startTimers(): void {
-  //   const globalStartTime = Date.now(); // Référence commune
-  //   console.log(
-  //     '🕒 Démarrage global des timers à',
-  //     new Date(globalStartTime).toISOString()
-  //   );
-
-  //   this.segments.forEach((segment, index) => {
-  //     const startDelay = this.timeStringToSeconds(segment.start_time) * 1000; // delay en ms
-  //     const duration = this.calculateDurationInSeconds(
-  //       segment.start_time,
-  //       segment.end_time
-  //     );
-
-  //     // Timer de début basé sur le moment global
-  //     setTimeout(() => {
-  //       console.log(`🚀 Démarrage du segment ${segment.segment_id}`);
-  //       segment.timeRemaining = duration;
-
-  //       segment.timer = setInterval(() => {
-  //         if (segment.timeRemaining > 0) {
-  //           segment.timeRemaining--;
-  //         } else {
-  //           clearInterval(segment.timer);
-  //           this.autoSaveSubtitle(segment); // Sauvegarde automatique
-  //           console.log(`✅ Fin du segment ${segment.segment_id}`);
-  //         }
-  //       }, 1000);
-  //     }, startDelay);
-  //   });
-  // }
   startTimers(): void {
-    this.segments.forEach((segment) => {
-      const delayBeforeStart =
-        this.timeStringToSeconds(segment.start_time) * 1000;
+    let currentSegmentIndex = 0; // Démarrer par le premier segment
 
-      setTimeout(() => {
-        console.log(`🟢 Timer lancé pour le segment ${segment.segment_id}`);
-
-        segment.timer = setInterval(() => {
-          if (segment.timeRemaining > 0) {
-            segment.timeRemaining--;
-            this.cdr.detectChanges();
-          } else {
-            clearInterval(segment.timer);
-            this.autoSaveSubtitle(segment);
-            this.cdr.detectChanges();
-          }
-        }, 1000);
-      }, delayBeforeStart);
-    });
-  }
-
-  startGlobalTimer(): void {
-    const now = Date.now();
-    const delay = Math.max(0, this.officialStartTime - now);
-
-    console.log(`⏱️ Délai avant démarrage global: ${delay}ms`);
-
-    setTimeout(() => {
-      console.log(`⏱️ Flux officiellement lancé !`);
-      this.startTimers();
-
-      // Nettoyage si un ancien interval est déjà là
-      if (this.signalUpdateInterval) {
-        clearInterval(this.signalUpdateInterval);
+    const startSegmentTimer = (index: number) => {
+      if (index >= this.segments.length) {
+        console.log('Tous les segments ont été exécutés.');
+        this.onAllSegmentsComplete();
+        return; // Tous les segments ont été joués
       }
 
-      // Démarrage de l'interval
-      this.signalUpdateInterval = setInterval(() => {
-        const elapsed = Math.floor(
-          (Date.now() - this.officialStartTime) / 1000
-        );
-        this.elapsedTime = elapsed;
-        this.updateSignalStatus();
+      const segment = this.segments[index];
+      console.log(`Démarrage du timer pour le segment ${segment.segment_id}`);
 
-        // Arrêt automatique quand tous les segments sont terminés
-        const allSegmentsDone = this.segments.every(
-          (s) => s.timeRemaining <= 0
-        );
-        if (allSegmentsDone) {
-          console.log(
-            '🛑 Tous les segments sont terminés, arrêt du signal update.'
-          );
-          clearInterval(this.signalUpdateInterval);
-          this.signalUpdateInterval = null;
+      // Initialiser un timer pour le segment actuel
+      segment.timer = setInterval(() => {
+        if (segment.timeRemaining > 0) {
+          segment.timeRemaining--;
+        } else {
+          // Sauvegarder automatiquement à la fin
+          clearInterval(segment.timer);
+          this.autoSaveSubtitle(segment);
+
+          // Démarrer le timer du segment suivant
+          startSegmentTimer(index + 1);
         }
-      }, 1000);
-    }, delay);
+      }, 1000); // Décompte toutes les secondes
+    };
+
+    // ✅ Relancer le premier segment dès le clic
+    if (this.hasStartedTyping && this.segments.length > 0) {
+      console.log('🔄 Relance du premier segment après clic !');
+      startSegmentTimer(currentSegmentIndex);
+    }
   }
 
   autoSaveSubtitle(segment: any): void {
@@ -532,34 +436,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
     const [hours, minutes, seconds] = time.split(':').map(Number);
     return hours * 3600 + minutes * 60 + seconds;
   }
-
-  //getCurrentVideoTime(): number {
-  //if (this._videoReady && this.videoRef?.nativeElement) {
-  //  return this.videoRef.nativeElement.currentTime;
-  // } else {
-  //  console.warn('⏳ Vidéo pas encore prête');
-  //  return 0;
-  // }
-  //}
-
-  //isWaiting(segment: any): boolean {
-  //const now = this.getCurrentVideoTime();
-  // const start = this.timeStringToSeconds(segment.start_time);
-  // return now < start - 5;
-  //}
-
-  //(segment: any): boolean {
-  // const now = this.getCurrentVideoTime();
-  //  const start = this.timeStringToSeconds(segment.start_time);
-  //  return start - now <= 5 && now < start;
-  // }
-
-  //isCurrentTurn(segment: any): boolean {
-  // const now = this.getCurrentVideoTime();
-  // const start = this.timeStringToSeconds(segment.start_time);
-  // const end = this.timeStringToSeconds(segment.end_time);
-  // return now >= start && now <= end;
-  //}
 
   // // Normaliser le texte des sous-titres (supprime espaces inutiles, etc.)
   // normalizeSubtitle(text: string): string {
@@ -822,45 +698,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
         this.segments = data.segments; // Met à jour les segments affichés
       }
     });
-
-    this.socketService.onStreamStarted().subscribe(({ startTime }) => {
-      this.officialStartTime = startTime;
-      console.log('📡 Flux démarré à', new Date(startTime));
-
-      this.streamStarted = true;
-      this.startGlobalTimer();
-    });
-
-    this.socketService.onElapsedTime().subscribe(({ elapsedTime }) => {
-      this.elapsedTime = elapsedTime;
-    });
-  }
-
-  startTimersFromElapsed(elapsed: number): void {
-    this.segments.forEach((segment) => {
-      const segmentStart = this.timeStringToSeconds(segment.start_time);
-      const segmentEnd = this.timeStringToSeconds(segment.end_time);
-      const duration = segmentEnd - segmentStart;
-
-      // Si le segment a déjà fini, on ne le lance pas
-      if (elapsed >= segmentEnd) return;
-
-      const delay = Math.max((segmentStart - elapsed) * 1000, 0);
-
-      segment.timeRemaining = segmentEnd - Math.max(elapsed, segmentStart);
-
-      setTimeout(() => {
-        console.log(`🚀 Timer lancé pour le segment ${segment.segment_id}`);
-        segment.timer = setInterval(() => {
-          if (segment.timeRemaining > 0) {
-            segment.timeRemaining--;
-          } else {
-            clearInterval(segment.timer);
-            this.autoSaveSubtitle(segment);
-          }
-        }, 1000);
-      }, delay);
-    });
   }
 
   // Gérer une erreur de chargement vidéo
@@ -881,10 +718,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy() {
-    if (this.signalUpdateInterval) {
-      clearInterval(this.signalUpdateInterval);
-      this.signalUpdateInterval = null;
-    }
     this.socketService.leaveVideoSession({
       userId: this.userId,
       sessionId: this.sessionId,
@@ -901,75 +734,5 @@ export class DashboardComponent implements OnInit, OnDestroy {
         console.error('Erreur lors de la déconnexion:', error);
       },
     });
-  }
-
-  updateSignalStatus(): void {
-    const username = (this.username || '').toLowerCase().trim();
-    const now = this.elapsedTime; // Temps écoulé depuis le début de la session
-
-    //  Détection du segment actif (utilisateur doit sous-titrer maintenant)
-    this.activeSegment = this.segments.find((s) => {
-      const assignedTo = (s.assigned_to || '').toLowerCase().trim();
-      const start = this.timeStringToSeconds(s.start_time);
-      const end = this.timeStringToSeconds(s.end_time);
-      return assignedTo === username && now >= start && now <= end;
-    });
-
-    //  Détection du prochain segment imminent (dans moins de 6 secondes)
-    this.nextSegment = this.segments.find((s) => {
-      const assignedTo = (s.assigned_to || '').toLowerCase().trim();
-      const start = this.timeStringToSeconds(s.start_time);
-      const timeBeforeStart = start - now;
-
-      return (
-        assignedTo === username &&
-        !isNaN(timeBeforeStart) &&
-        timeBeforeStart > 0 &&
-        timeBeforeStart <= 6
-      );
-    });
-
-    // 🔄 Forcer l’actualisation de l’affichage (si nécessaire)
-    this.cdRef.detectChanges();
-  }
-
-  // Signaux
-
-  getCurrentSignal(): 'green' | 'orange' | 'red' {
-    const username = (this.username || '').toLowerCase().trim(); // Nom utilisateur standardisé
-    const now = this.elapsedTime; // Temps actuel dans la session
-
-    // Cas 1 : l'utilisateur est en train de sous-titrer (signal vert)
-    const isActive = this.segments.some((s) => {
-      const start = this.timeStringToSeconds(s.start_time);
-      const end = this.timeStringToSeconds(s.end_time);
-      return (
-        s.assigned_to?.toLowerCase().trim() === username &&
-        now >= start &&
-        now <= end
-      );
-    });
-
-    if (isActive) return 'green';
-
-    //  Cas 2 : l'utilisateur commence bientôt (signal orange)
-    const isSoon = this.segments.some((s) => {
-      const start = this.timeStringToSeconds(s.start_time);
-      const timeBeforeStart = start - now;
-      return (
-        s.assigned_to?.toLowerCase().trim() === username &&
-        timeBeforeStart > 0 &&
-        timeBeforeStart <= 5
-      );
-    });
-
-    if (isSoon) return 'orange';
-
-    //  Cas 3 : aucun segment actif ou imminent (signal rouge)
-    return 'red';
-  }
-
-  getNextSegment(): any {
-    return this.nextSegment;
   }
 }

@@ -465,12 +465,9 @@ async function createHlsSegmentsController(req, res) {
 //Recuperation des segments
 async function getSegmentsWithSubtitles(req, res) {
   const { session_id } = req.params;
-  const user_id = req.user?.user_id || req.user?.id;
 
-  if (!session_id || !user_id) {
-    return res
-      .status(400)
-      .json({ message: "Session ID et User ID sont requis." });
+  if (!session_id) {
+    return res.status(400).json({ message: "Session ID est requis." });
   }
 
   try {
@@ -479,10 +476,7 @@ async function getSegmentsWithSubtitles(req, res) {
     // const segments = await VideoSegmentModel.findManyBy({ session_id });
 
     // Récupérer les segments associés à la session avec les noms des utilisateurs assignés
-    const segments = await VideoSegmentModel.findManyByWithUsers(
-      session_id,
-      user_id
-    );
+    const segments = await VideoSegmentModel.findManyByWithUsers(session_id);
 
     // Trier les segments par start_time
     const sortedSegments = mergeSortSegments(segments);
