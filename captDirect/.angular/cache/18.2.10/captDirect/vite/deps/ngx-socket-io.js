@@ -5,8 +5,13 @@ import {
   ɵɵdefineInjector,
   ɵɵdefineNgModule
 } from "./chunk-PGKQOIZD.js";
+<<<<<<< HEAD
 import "./chunk-WNPMEE2K.js";
 import "./chunk-6XISFZPP.js";
+=======
+import "./chunk-6XISFZPP.js";
+import "./chunk-WNPMEE2K.js";
+>>>>>>> origin/master
 import {
   Observable,
   share
