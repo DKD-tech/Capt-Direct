@@ -2,10 +2,10 @@ const jwt = require("../utils/jwt"); // Ajuste le chemin selon ta structure
 const Redis = require("../redis/index"); // Connexion Redis
 
 async function authMiddleware(req, res, next) {
-  console.log("Middleware authMiddleware démarré");
+  // console.log("Middleware authMiddleware démarré");
 
   const authHeader = req.headers["authorization"];
-  console.log("En-tête Authorization:", authHeader);
+  // console.log("En-tête Authorization:", authHeader);
 
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
     console.error("Erreur: Token non fourni ou mal formaté"); // Log d'erreur explicite
@@ -13,7 +13,7 @@ async function authMiddleware(req, res, next) {
   }
 
   const token = authHeader.split(" ")[1];
-  console.log("Token extrait:", token);
+  // console.log("Token extrait:", token);
 
   // if (!token) return res.status(401).json({ error: "Token non fourni" });
 
@@ -26,17 +26,17 @@ async function authMiddleware(req, res, next) {
     }
 
     // Ajoutez un log pour vérifier l'ID de l'utilisateur extrait
-    console.log("ID utilisateur extrait du JWT:", userSession.id);
+    // console.log("ID utilisateur extrait du JWT:", userSession.id);
 
     // Vérifie si le token existe encore dans Redis
     const storedToken = await Redis.getSession(userSession.id);
-    console.log("Token stocké dans Redis:", storedToken);
+    // console.log("Token stocké dans Redis:", storedToken);
 
     // Ajoutez un log pour vérifier la clé utilisée dans Redis
-    console.log("Clé utilisée pour Redis:", userSession.id);
+    // console.log("Clé utilisée pour Redis:", userSession.id);
 
     // Ajoutez un log pour comparer le token reçu et celui stocké
-    console.log("Token reçu:", token);
+    // console.log("Token reçu:", token);
 
     if (!storedToken || storedToken !== token) {
       console.error("Erreur: Session expirée ou invalide");

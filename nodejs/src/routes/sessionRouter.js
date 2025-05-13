@@ -49,7 +49,8 @@ const {
   getSegmentsWithSubtitles,
   storeVideoDurationController,
   getVideoDuration,
-  startStreaming,
+  startSegmentationController,
+  stopSegmentationController,
 } = require("../controllers/stc/videoSegmentController");
 const {
   assignSegmentsToUsers,
@@ -60,7 +61,7 @@ const {
   addSubtitle,
   getSubtitlesBySegment,
 } = require("../controllers/stc/segmentUsersController");
-const {  startStream } = require("../controllers/rtmp/streamController");
+const { startStream } = require("../controllers/rtmp/streamController");
 
 const authMiddleware = require("../middlewares/authMiddleware");
 
@@ -75,7 +76,12 @@ sessionRouter.post("/add-subtitle", addSubtitle);
 sessionRouter.get("/get-subtitles/:segment_id", getSubtitlesBySegment);
 sessionRouter.post("/generate-hls", createHlsSegmentsController);
 //sessionRouter.post("/start", streamSessions);
-sessionRouter.post('/start-stream/:sessionId', startStream);
+sessionRouter.post("/start-stream/:sessionId", startStream);
+sessionRouter.post(
+  "/start-segmentation/:sessionId",
+  startSegmentationController
+);
+sessionRouter.post("/stop-segmentation/:sessionId", stopSegmentationController);
 
 sessionRouter.get("/:session_id", getSegmentsWithSubtitles);
 sessionRouter.get(
@@ -86,7 +92,7 @@ sessionRouter.get(
 sessionRouter.get("/info/:sessionId", getSessionController);
 sessionRouter.post("/store-duration/:sessionId", storeVideoDurationController);
 sessionRouter.post("/get-duration/:sessionId", getVideoDuration);
-sessionRouter.post("/stream/:sessionId", startStreaming);
+// sessionRouter.post("/stream/:sessionId", startStreaming);
 
 sessionRouter.get("/connected-users/:session_id", async (req, res) => {
   const { session_id } = req.params;

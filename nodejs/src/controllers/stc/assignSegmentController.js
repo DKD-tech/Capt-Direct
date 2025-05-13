@@ -131,7 +131,7 @@ async function handleUserDisconnection({ user_id, session_id }) {
     await SegmentUserModel.deleteAssignmentsByUser(user_id);
 
     // Identifier les utilisateurs connectés restants
-    const connectedUsers = await getConnectedUsers(session_id);
+    const connectedUsers = await getConnectedUsers(io, session_id);
 
     if (connectedUsers.length === 0) {
       // Si aucun utilisateur connecté, remettre les segments en "available"
@@ -166,7 +166,7 @@ async function handleUserDisconnection({ user_id, session_id }) {
 async function assignSegmentsToUsers(session_id, createdSegments) {
   try {
     // Étape 1 : Récupérer les utilisateurs connectés via Socket.IO
-    const usersInSession = await getConnectedUsers(session_id);
+    const usersInSession = await getConnectedUsers(io, session_id);
 
     if (!usersInSession || usersInSession.length === 0) {
       throw new Error("Aucun utilisateur connecté pour cette session.");

@@ -150,6 +150,16 @@ class VideoSegmentModel extends Model {
     const result = await pool.query(query, [segment_id]);
     return result.rows[0]; // Retourne le segment suivant ou `undefined`
   }
+  async getLastSegment(session_id) {
+    const query = `
+      SELECT * FROM ${this.tableName}
+      WHERE session_id = $1
+      ORDER BY start_time DESC
+      LIMIT 1
+    `;
+    const result = await pool.query(query, [session_id]);
+    return result.rows[0];
+  }
 }
 
 module.exports = new VideoSegmentModel();

@@ -18,7 +18,9 @@ const {
 const {
   assignDynamicSegment,
 } = require("./controllers/stc/assignSegmentController");
-
+const { setAsync } = require("./redis/index");
+const { startSegmentScheduler } = require("./helpers/segmentScheduler");
+const socketUsers = new Map();
 const app = express();
 const server = http.createServer(app);
 const io = socketIO(server, {
@@ -31,8 +33,7 @@ const io = socketIO(server, {
 app.use(express.json());
 app.use(cors());
 app.use("/api", router);
-app.set('io', io); // ✅ Attache io à app pour qu’il soit accessible dans les contrôleurs
-
+app.set("io", io); // ✅ Attache io à app pour qu’il soit accessible dans les contrôleurs
 
 // Stockage des sous-titres, utilisateurs et sessions
 const subtitles = {};
@@ -101,68 +102,232 @@ io.on("connection", (socket) => {
   // });
 
   // Rejoindre une session spécifique
-  socket.on("join-session", async ({ session_id, username, user_id }) => {
-    if (!session_id || !username || !user_id) {
-      console.error("session_id, user_id ou username manquant !");
-      return;
-    }
+  // socket.on("join-session", async ({ session_id, username, user_id }) => {
+  //   if (!session_id || !username || !user_id) {
+  //     console.error("session_id, user_id ou username manquant !");
+  //     return;
+  //   }
 
-    try {
-      // Ajouter le socket à la room correspondant à la session
-      socket.join(`session:${session_id}`);
-      socket.data.user_id = user_id;
-      socket.data.username = username;
+  //   try {
+  //     socket.data.user_id = user_id;
+  //     socket.data.username = username;
+  //     socket.data.session_id = session_id;
+  //     // Ajouter le socket à la room correspondant à la session
+  //     socket.join(`session:${session_id}`);
+  //     console.log(`${username} a rejoint la session ${session_id}`);
 
-      console.log(`${username} a rejoint la session ${session_id}`);
-      // Liste des utilisateurs connectés à la session
-      const clientsInRoom = await io.in(`session:${session_id}`).allSockets();
-      const users = [...clientsInRoom].map((socketId) => {
-        const clientSocket = io.sockets.sockets.get(socketId);
-        return clientSocket?.data.username || "Utilisateur inconnu";
-      });
+  //     //  Stocker user_id → socket.id dans Redis
+  //     await setAsync(`socket:${user_id}`, socket.id);
+  //     console.log(` Redis : user_id ${user_id} → socket.id ${socket.id}`);
 
-      console.log(`Utilisateurs dans la session ${session_id} :`, users);
+  //     // Liste des utilisateurs connectés à la session
+  //     const clientsInRoom = await io.in(`session:${session_id}`).allSockets();
+  //     console.log(
+  //       `Clients trouvés dans room session:${session_id}`,
+  //       clientsInRoom
+  //     );
+  //     const users = [...clientsInRoom].map((socketId) => {
+  //       const clientSocket = io.sockets.sockets.get(socketId);
+  //       return clientSocket?.data.username || "Utilisateur inconnu";
+  //     });
 
-      // Notifier tous les utilisateurs de la session
-      io.to(`session:${session_id}`).emit("update-users", users);
-    } catch (err) {
-      console.error("Erreur lors de la récupération des utilisateurs :", err);
-    }
+  //     console.log(`Utilisateurs dans la session ${session_id} :`, users);
+
+  //     // Notifier tous les utilisateurs de la session
+  //     io.to(`session:${session_id}`).emit("update-users", users);
+  //   } catch (err) {
+  //     console.error("Erreur lors de la récupération des utilisateurs :", err);
+  //   }
+  // });
+  console.log("🔌 Nouveau client connecté :", socket.id);
+
+  socket.onAny((event, ...args) => {
+    console.log(`📨 Reçu [${event}] avec :`, args);
   });
+  // socket.on("join-session", async ({ session_id, username, user_id }) => {
+  //   console.log("[join-session] Reçu avec :", {
+  //     session_id,
+  //     username,
+  //     user_id,
+  //   });
+  //   if (!session_id || !username || !user_id) {
+  //     console.error("session_id, user_id ou username manquant !");
+  //     socket.emit("join-error", "Informations incomplètes");
+  //     return;
+  //   }
+
+  //   try {
+  //     socket.data.user_id = user_id;
+  //     socket.data.username = username;
+  //     socket.data.session_id = session_id;
+
+  //     socket.join(`session:${session_id}`);
+  //     console.log(`${username} a rejoint la session ${session_id}`);
+  //     console.log("Stocké dans socket.data :", socket.data);
+
+  //     await setAsync(`socket:${user_id}`, socket.id);
+  //     console.log(` Redis : user_id ${user_id} → socket.id ${socket.id}`);
+
+  //     // Confirmation au client que la jointure a réussi
+  //     socket.emit("session-joined", { success: true });
+
+  //     // Met à jour la liste des utilisateurs
+  //     const clientsInRoom = await io.in(`session:${session_id}`).allSockets();
+  //     console.log(`Clients dans session:${session_id} =>`, clientsInRoom);
+
+  //     const users = [...clientsInRoom].map((socketId) => {
+  //       const clientSocket = io.sockets.sockets.get(socketId);
+  //       console.log(`Socket ${socketId} →`, clientSocket?.data);
+  //       return clientSocket?.data.username || "Utilisateur inconnu";
+  //     });
+
+  //     console.log(`Utilisateurs dans la session ${session_id} :`, users);
+  //     io.to(`session:${session_id}`).emit("update-users", users);
+  //   } catch (err) {
+  //     console.error("Erreur join-session :", err);
+  //     socket.emit("join-error", "Erreur serveur");
+  //   }
+  // });
 
   // Quitter une session vidéo
 
-  socket.on("leaveVideoSession", ({ userId, videoId }) => {
-    console.log("Requête pour quitter la session vidéo :", { userId, videoId });
+  // socket.on("leaveVideoSession", ({ userId, sessionId }) => {
+  //   console.log("Requête pour quitter la session vidéo :", { userId, sessionId });
 
-    // Vérifiez si l'utilisateur existe
-    if (!users[userId]) {
-      console.error(
-        `Utilisateur avec ID ${userId} introuvable dans l'objet users.`
-      );
-      return socket.emit("error", {
-        message: `Utilisateur ${userId} introuvable.`,
-      });
-    }
+  //   // Vérifiez si l'utilisateur existe
+  //   if (!users[userId]) {
+  //     console.error(
+  //       `Utilisateur avec ID ${userId} introuvable dans l'objet users.`
+  //     );
+  //     return socket.emit("error", {
+  //       message: `Utilisateur ${userId} introuvable.`,
+  //     });
+  //   }
 
-    // Retirez l'utilisateur de la session
-    socket.leave(videoId);
-    io.in(videoId).emit("userLeft", {
-      userId,
-      userName: users[userId].userName,
+  //   // Retirez l'utilisateur de la session
+  //   socket.leave(videoId);
+  //   io.in(videoId).emit("userLeft", {
+  //     userId,
+  //     userName: users[userId].userName,
+  //   });
+
+  //   // Optionnel : Supprimez l'utilisateur de la liste locale si nécessaire
+  //   delete users[userId];
+  //   console.log(`Utilisateur ${userId} a quitté la session vidéo ${videoId}.`);
+  // });
+  socket.on("join-session", ({ session_id, username, user_id }) => {
+    console.log("[join-session] Reçu avec :", {
+      session_id,
+      username,
+      user_id,
     });
 
-    // Optionnel : Supprimez l'utilisateur de la liste locale si nécessaire
-    delete users[userId];
-    console.log(`Utilisateur ${userId} a quitté la session vidéo ${videoId}.`);
+    if (!session_id || !username || !user_id) {
+      console.error("❌ session_id, user_id ou username manquant !");
+      socket.emit("join-error", "Informations incomplètes");
+      return;
+    }
+
+    socket.data.user_id = user_id;
+    socket.data.username = username.trim();
+    socket.data.session_id = session_id;
+
+    // 🧠 Stocke dans la map
+    socketUsers.set(user_id, socket.id);
+
+    socket.join(`session:${session_id}`);
+    console.log(`${username} a rejoint la session ${session_id}`);
+
+    // ⚡ Mettre à jour la liste des utilisateurs connectés
+    const sockets = Array.from(
+      io.sockets.adapter.rooms.get(`session:${session_id}`) || []
+    );
+    const connectedUsers = sockets.map(
+      (id) => io.sockets.sockets.get(id)?.data.username || "Utilisateur inconnu"
+    );
+
+    io.to(`session:${session_id}`).emit("update-users", connectedUsers);
+  });
+  // Quitter une session vidéo
+  // socket.on("leaveVideoSession", ({ userId, sessionId }) => {
+  //   console.log("Requête pour quitter la session :", { userId, sessionId });
+
+  //   const roomName = `session:${sessionId}`;
+
+  //   // Retirer le socket de la room
+  //   socket.leave(roomName);
+
+  //   // Émettre un événement aux autres membres de la session
+  //   io.to(roomName).emit("userLeft", {
+  //     userId,
+  //     userName: socket.data.username || `User ${userId}`,
+  //   });
+
+  //   console.log(`Utilisateur ${userId} a quitté la session ${sessionId}.`);
+
+  //   // Supprimer la socket de Redis si nécessaire
+  //   const { delAsync } = require("./redis/index");
+  //   delAsync(`socket:${userId}`).then((result) => {
+  //     console.log(
+  //       `Clé Redis supprimée pour user ${userId} → Résultat: ${result}`
+  //     );
+  //   });
+
+  //   // Mettre à jour la liste des utilisateurs dans la session
+  //   io.in(roomName)
+  //     .fetchSockets()
+  //     .then((sockets) => {
+  //       const usernames = sockets.map(
+  //         (s) => s.data.username || "Utilisateur inconnu"
+  //       );
+  //       console.log(
+  //         `Utilisateurs restants dans la session ${sessionId} :`,
+  //         usernames
+  //       ); // <== AJOUT
+  //       io.to(roomName).emit("update-users", usernames);
+  //     })
+  //     .catch((err) => {
+  //       console.error("Erreur lors de la mise à jour des utilisateurs :", err);
+  //     });
+  // });
+  socket.on("disconnect", () => {
+    const { user_id, session_id } = socket.data || {};
+    if (!user_id || !session_id) {
+      console.warn(`Socket ${socket.id} déconnecté sans données utilisateur`);
+      return;
+    }
+
+    console.log(
+      `🛑 Déconnexion de l'utilisateur ${user_id} (socket ${socket.id})`
+    );
+    socketUsers.delete(user_id);
+    socket.leave(`session:${session_id}`);
+
+    const sockets = Array.from(
+      io.sockets.adapter.rooms.get(`session:${session_id}`) || []
+    );
+    const connectedUsers = sockets.map(
+      (id) => io.sockets.sockets.get(id)?.data.username || "Utilisateur inconnu"
+    );
+
+    io.to(`session:${session_id}`).emit("update-users", connectedUsers);
   });
 
-  // Gestion des sous-titres en temps réel
-  socket.on("editSubtitle", (subtitle) => {
-    console.log("Sous-titre reçu côté serveur :", subtitle);
-    subtitles[subtitle.videoId] = subtitles[subtitle.videoId] || [];
-    subtitles[subtitle.videoId].push(subtitle);
-    io.in(subtitle.videoId).emit("updateSubtitle", subtitle);
+  // ❌ Déconnexion manuelle (ex: bouton logout)
+  socket.on("leaveVideoSession", ({ userId, sessionId }) => {
+    console.log(`💨 Reçu leaveVideoSession :`, { userId, sessionId });
+
+    socketUsers.delete(userId);
+    socket.leave(`session:${sessionId}`);
+
+    const sockets = Array.from(
+      io.sockets.adapter.rooms.get(`session:${sessionId}`) || []
+    );
+    const connectedUsers = sockets.map(
+      (id) => io.sockets.sockets.get(id)?.data.username || "Utilisateur inconnu"
+    );
+
+    io.to(`session:${sessionId}`).emit("update-users", connectedUsers);
   });
 
   // Suppression des sous-titres
@@ -251,26 +416,31 @@ io.on("connection", (socket) => {
       console.log(
         `Utilisateur ${user_id} déconnecté de la session ${session_id}`
       );
+      const { delAsync } = require("./redis/index"); // ou "../redis/index" selon ta structure
+      const result = await delAsync(`socket:${user_id}`);
+      console.log(
+        ` Clé Redis supprimée pour user ${user_id} → Résultat: ${result}`
+      );
 
       // Étape 1 : Supprimer les assignations des segments de cet utilisateur
-      const {
-        handleUserDisconnection,
-      } = require("./controllers/stc/assignSegmentController");
+      // const {
+      //   handleUserDisconnection,
+      // } = require("./controllers/stc/assignSegmentController");
       const { getConnectedUsers } = require("./utils/socketUtils");
 
-      const userSegments = await handleUserDisconnection({
-        user_id,
-        session_id,
-      });
+      // const userSegments = await handleUserDisconnection({
+      //   user_id,
+      //   session_id,
+      // });
 
       // Étape 2 : Récupérer la liste mise à jour des utilisateurs connectés
-      const connectedUsers = await getConnectedUsers(session_id);
+      const connectedUsers = await getConnectedUsers(io, session_id);
 
       // Étape 3 : Émettre des événements pour informer les autres utilisateurs
       io.to(`session:${session_id}`).emit("update-users", connectedUsers);
-      io.to(`session:${session_id}`).emit("segments-redistributed", {
-        updatedSegments: userSegments,
-      });
+      // io.to(`session:${session_id}`).emit("segments-redistributed", {
+      //   updatedSegments: userSegments,
+      // });
     } else {
       console.log(`Socket déconnecté sans données utilisateur : ${socket.id}`);
     }
@@ -282,24 +452,22 @@ setInterval(async () => {
   const rooms = Array.from(io.sockets.adapter.rooms.keys());
 
   for (const roomName of rooms) {
-    if (roomName.startsWith('session:')) {
-      const sessionId = roomName.split(':')[1];
+    if (roomName.startsWith("session:")) {
+      const sessionId = roomName.split(":")[1];
 
       const startTime = await getSessionStartTime(sessionId);
       if (!startTime) continue;
 
       const elapsedTime = (Date.now() - startTime) / 1000;
-      io.to(roomName).emit('elapsedTime', { elapsedTime });
+      io.to(roomName).emit("elapsedTime", { elapsedTime });
     }
   }
 }, 1000);
 
-
 // Démarrer le serveur sur le port défini
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, '0.0.0.0', () => {
-
+server.listen(PORT, "0.0.0.0", () => {
   console.log(`Serveur en écoute sur http:// 192.168.1.69:${PORT}`);
 });
 
-module.exports = { server, io };
+module.exports = { app, server, io, socketUsers };

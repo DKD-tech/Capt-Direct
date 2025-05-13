@@ -179,6 +179,10 @@ const SubtitlesModel = require("../../models/SubtitleModel");
 const axios = require("axios");
 const { mergeSortSegments } = require("../../utils/mergeSortSegment");
 const { setAsync, getAsync } = require("../../redis/index");
+const {
+  startSegmentScheduler,
+  stopSegmentScheduler,
+} = require("../../helpers/segmentScheduler");
 // const { requestHlsGeneration } = require("../../../../hls_service/hls_service");
 
 // async function segmentVideo(session_id, video_duration) {
@@ -225,7 +229,6 @@ const { setAsync, getAsync } = require("../../redis/index");
 // }
 
 // module.exports = { createVideoSegmentController };
-
 const {
   convertSecondsToTime,
   convertTimeToSeconds,
@@ -233,6 +236,7 @@ const {
 const { getConnectedUsers } = require("../../utils/socketUtils");
 const client = require("../../redis/index");
 const { assignSegmentsToUsers } = require("./assignSegmentController");
+const { socketUsers } = require("../../app"); // Assurez-vous que socketUsers est exporté depuis app.js
 /**
  *
  * @param {Object} req
@@ -474,7 +478,7 @@ async function getSegmentsWithSubtitles(req, res) {
   }
 
   try {
-    console.log(`Fetching segments for session ID: ${session_id}`);
+    // console.log(`Fetching segments for session ID: ${session_id}`);
     // Récupérer les segments associés à la session
     // const segments = await VideoSegmentModel.findManyBy({ session_id });
 
@@ -490,7 +494,7 @@ async function getSegmentsWithSubtitles(req, res) {
     // Récupérer les sous-titres associés à chaque segment
     const segmentsWithSubtitles = await Promise.all(
       sortedSegments.map(async (segment) => {
-        console.log(`Fetching subtitles for segment ID: ${segment.segment_id}`);
+        // console.log(`Fetching subtitles for segment ID: ${segment.segment_id}`);
         const subtitles = await SubtitlesModel.findManyBy({
           segment_id: segment.segment_id,
         });
@@ -741,47 +745,106 @@ async function saveSubtitlesToDB(req, res) {
 //     res.status(500).json({ message: "Erreur serveur." });
 //   }
 // }
-async function startStreaming(req, res) {
-  const { sessionId } = req.params;
-  console.log("Session ID reçu :", sessionId); // Journal du sessionId
+// async function startStreaming(req, res) {
+//   const { sessionId } = req.params;
+//   console.log("Session ID reçu :", sessionId); // Journal du sessionId
+
+//   try {
+//     const session = await SessionModel.findOneById(sessionId, ["video_url"]);
+//     console.log("Session trouvée :", session); // Journal de la session trouvée
+
+//     if (!session || !session.video_url) {
+//       console.log("Session ou vidéo introuvable.");
+//       return res.status(404).json({ message: "Session ou vidéo introuvable." });
+//     }
+
+//     const videoPath = path.join(VIDEO_DIRECTORY, session.video_url);
+//     console.log("Chemin absolu de la vidéo :", videoPath); // Journal du chemin vidéo
+
+//     if (!fs.existsSync(videoPath)) {
+//       console.log("Le fichier vidéo n’existe pas :", videoPath);
+//       return res
+//         .status(404)
+//         .json({ message: "Le fichier vidéo n’existe pas." });
+//     }
+
+//     // Lancer le script de streaming
+//     exec(
+//       `bash ./stream_video.sh ${sessionId} ${videoPath}`,
+//       (error, stdout, stderr) => {
+//         if (error) {
+//           console.error("Erreur lors du streaming :", stderr);
+//           return res.status(500).json({ message: "Erreur lors du streaming." });
+//         }
+//         console.log("Streaming démarré :", stdout);
+//         res.status(200).json({ message: "Streaming démarré avec succès." });
+//       }
+//     );
+//   } catch (error) {
+//     console.error("Erreur serveur :", error);
+//     res.status(500).json({ message: "Erreur serveur." });
+//   }
+// }
+async function startSegmentationController(req, res) {
+  const session_id = req.params.sessionId;
+
+  if (!session_id) {
+    return res.status(400).json({ message: "session_id manquant" });
+  }
 
   try {
-    const session = await SessionModel.findOneById(sessionId, ["video_url"]);
-    console.log("Session trouvée :", session); // Journal de la session trouvée
+    const io = req.app.get("io"); // ✅ d'abord récupérer io
 
-    if (!session || !session.video_url) {
-      console.log("Session ou vidéo introuvable.");
-      return res.status(404).json({ message: "Session ou vidéo introuvable." });
+    if (!io) {
+      return res.status(500).json({ message: "Socket.io non initialisé" });
     }
 
-    const videoPath = path.join(VIDEO_DIRECTORY, session.video_url);
-    console.log("Chemin absolu de la vidéo :", videoPath); // Journal du chemin vidéo
+    const connectedUsers = await getConnectedUsers(io, session_id); // ✅ maintenant utiliser io
 
-    if (!fs.existsSync(videoPath)) {
-      console.log("Le fichier vidéo n’existe pas :", videoPath);
+    if (!connectedUsers || connectedUsers.length === 0) {
       return res
-        .status(404)
-        .json({ message: "Le fichier vidéo n’existe pas." });
+        .status(200)
+        .json({ message: "Aucun utilisateur connecté à cette session" });
     }
 
-    // Lancer le script de streaming
-    exec(
-      `bash ./stream_video.sh ${sessionId} ${videoPath}`,
-      (error, stdout, stderr) => {
-        if (error) {
-          console.error("Erreur lors du streaming :", stderr);
-          return res.status(500).json({ message: "Erreur lors du streaming." });
-        }
-        console.log("Streaming démarré :", stdout);
-        res.status(200).json({ message: "Streaming démarré avec succès." });
-      }
-    );
-  } catch (error) {
-    console.error("Erreur serveur :", error);
-    res.status(500).json({ message: "Erreur serveur." });
+    const users = connectedUsers.map((user) => ({
+      id: user.user_id,
+      username: user.username,
+      activeSegmentCount: 0,
+      lastActiveAt: new Date(),
+    }));
+
+    startSegmentScheduler({
+      sessionId: session_id,
+      segmentDuration: 10,
+      step: 5,
+      users,
+      io: req.app.get("io"),
+      socketUsers,
+    });
+
+    return res
+      .status(200)
+      .json({ message: "Segmentation collaborative lancée" });
+  } catch (err) {
+    console.error("Erreur démarrage segmentation :", err);
+    return res.status(500).json({ message: "Erreur interne" });
   }
 }
 
+async function stopSegmentationController(req, res) {
+  const sessionId = req.params.sessionId;
+
+  if (!sessionId) {
+    return res.status(400).json({ message: "sessionId manquant" });
+  }
+
+  stopSegmentScheduler(sessionId);
+
+  return res.status(200).json({
+    message: `Segmentation arrêtée pour la session ${sessionId}`,
+  });
+}
 module.exports = {
   createVideoSegmentController,
   createHlsSegmentsController,
@@ -791,6 +854,7 @@ module.exports = {
   storeVideoDurationController,
   addSegments,
   saveSubtitlesToDB,
-  startStreaming,
   handleUserDisconnection,
+  startSegmentationController,
+  stopSegmentationController,
 };

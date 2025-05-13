@@ -28,7 +28,7 @@ async function loginController(req, res) {
         username: user.username,
       });
 
-      console.log("ID utilisateur pour setSession:", user.user_id);
+      // console.log("ID utilisateur pour setSession:", user.user_id);
       // Stocker la session dans Redis
       await Redis.setSession(user.user_id, token, 7 * 24 * 60 * 60);
 
