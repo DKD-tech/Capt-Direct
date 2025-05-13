@@ -56,8 +56,8 @@ class Model {
       .join(" AND ");
 
     const query = `SELECT * FROM ${this.tableName} WHERE ${whereClause}`;
-    console.log("Requête SQL générée :", query);
-    console.log("Valeurs :", values);
+    // console.log("Requête SQL générée :", query);
+    // console.log("Valeurs :", values);
     const result = await pool.query(query, values);
     return result.rows;
   }

@@ -7,10 +7,44 @@ import { from } from 'rxjs';
   providedIn: 'root',
 })
 export class SocketService {
-  constructor(private socket: Socket) {}
+  constructor(private socket: Socket) {
+    // this.socket.ioSocket.on('connect', () => {
+    //   console.log('[SocketService] reconnecté au serveur');
+
+    //   const sessionId = localStorage.getItem('sessionId');
+    //   const userId = localStorage.getItem('userId');
+    //   const username = localStorage.getItem('username');
+
+    //   console.log('[SocketService] LocalStorage récupéré :', {
+    //     sessionId,
+    //     userId,
+    //     username,
+    //   });
+
+    //   if (sessionId && userId && username) {
+    //     this.joinSession(+sessionId, username, +userId);
+    //   }
+    // });
+    this.socket.ioSocket.on('connect', () => {
+      console.log('[SocketService] connecté au serveur');
+
+      const sessionId = localStorage.getItem('sessionId');
+      const userId = localStorage.getItem('userId');
+      const username = localStorage.getItem('username');
+
+      if (sessionId && userId && username) {
+        this.joinSession(+sessionId, username.trim(), +userId);
+      }
+    });
+  }
 
   // Rejoindre une session
   joinSession(session_id: number, username: string, user_id: number): void {
+    console.log('[SocketService] joinSession envoyé avec :', {
+      session_id,
+      username,
+      user_id,
+    });
     this.socket.emit('join-session', { session_id, username, user_id });
   }
   // onSegmentAssigned(callback: (segment: any) => void) {
@@ -19,6 +53,19 @@ export class SocketService {
   // Quitter une session
   leaveVideoSession(data: { userId: number; sessionId: number }) {
     this.socket.emit('leaveVideoSession', data);
+  }
+
+  waitForConnection(): Promise<void> {
+    return new Promise((resolve) => {
+      if (this.socket.ioSocket.connected) {
+        return resolve();
+      }
+
+      this.socket.ioSocket.once('connect', () => {
+        console.log('[SocketService] ✅ connect (waitForConnection)');
+        resolve();
+      });
+    });
   }
 
   // Recevoir les utilisateurs connectés
@@ -118,13 +165,12 @@ export class SocketService {
   }
 
   //  Quand le flux démarre
-onStreamStarted(): Observable<{ startTime: number }> {
-  return this.socket.fromEvent<{ startTime: number }>('stream-started');
-}
+  onStreamStarted(): Observable<{ startTime: number }> {
+    return this.socket.fromEvent<{ startTime: number }>('stream-started');
+  }
 
-// Temps écoulé depuis le début du flux
-onElapsedTime(): Observable<{ elapsedTime: number }> {
-  return this.socket.fromEvent<{ elapsedTime: number }>('elapsedTime');
-}
-
+  // Temps écoulé depuis le début du flux
+  onElapsedTime(): Observable<{ elapsedTime: number }> {
+    return this.socket.fromEvent<{ elapsedTime: number }>('elapsedTime');
+  }
 }

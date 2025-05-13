@@ -8,8 +8,8 @@ import { Observable, tap } from 'rxjs';
 export class SessionService {
   // private apiUrl = 'http://192.168.1.69:3000/api/sessions/info'; // URL de l'API backend
   // baseUrl = `http://192.168.1.69:3000:api/sessions`;
-  private apiUrl = 'http://192.168.118.212:3000/api/sessions/info'; // URL de l'API backend
-  baseUrl = `http://192.168.118.212:3000:api/sessions`;
+  private apiUrl = 'http://localhost:3000/api/sessions/info'; // URL de l'API backend
+  baseUrl = `http://192.168.118.204:3000:api/sessions`;
   // private apiUrl1 =
   // 'http:// 192.168.118.212:3000/api/sessions/sessionId/store-duration';
 
@@ -32,7 +32,7 @@ export class SessionService {
 
   storeVideoDuration(sessionId: number, duration: number): Observable<any> {
     // const url = `http://192.168.1.69:3000/api/sessions/store-duration/${sessionId}`;
-    const url = `http://192.168.118.212:3000/api/sessions/store-duration/${sessionId}`;
+    const url = `http://localhost:3000/api/sessions/store-duration/${sessionId}`;
     return this.http.post(url, {
       duration,
     });
@@ -41,20 +41,20 @@ export class SessionService {
   startStreaming(sessionId: number): Observable<any> {
     return this.http.post<any>(
       // `http://192.168.1.69:3000/api/sessions/stream/${sessionId}`,
-      `http://192.168.118.212:3000/api/sessions/stream/${sessionId}`,
+      `http://localhost:3000/api/sessions/stream/${sessionId}`,
       {}
     );
   }
 
   startStream(sessionId: number): Observable<{ startTime: number }> {
     // const url = `http://192.168.1.69:3000/api/sessions/start-stream/${sessionId}`;
-    const url = `http://192.168.118.212:3000/api/sessions/start-stream/${sessionId}`;
+    const url = `http://localhost:3000/api/sessions/start-stream/${sessionId}`;
     return this.http.post<{ startTime: number }>(url, {});
   }
 
   getSegmentsWithSession(sessionId: number): Observable<any> {
     // const segurl = `http://192.168.1.69:3000/api/sessions/segments/${sessionId}`;
-    const segurl = `http://192.168.118.212:3000/api/sessions/segments/${sessionId}`;
+    const segurl = `http://localhost:3000/api/sessions/segments/${sessionId}`;
     return this.http.get<any>(segurl).pipe(
       tap((response) => {
         console.log('Segments récupérés pour la session :', response);
@@ -64,7 +64,7 @@ export class SessionService {
 
   saveSubtitle(segmentId: number, text: string): Observable<any> {
     // const suburl = `http://192.168.1.69:3000/api/sessions/segments/${segmentId}/subtitles`;
-    const suburl = `http://192.168.118.212:3000/api/sessions/segments/${segmentId}/subtitles`;
+    const suburl = `http://localhost:3000/api/sessions/segments/${segmentId}/subtitles`;
     return this.http.post<any>(suburl, { text }).pipe(
       tap((response) => {
         console.log('Sous-titre sauvegardé :', response);
@@ -78,7 +78,7 @@ export class SessionService {
     createdBy: number
   ): Observable<any> {
     // const url = `http://192.168.1.69:3000/api/sessions/add-subtitle`;
-    const url = `http://192.168.118.212:3000/api/sessions/add-subtitle`;
+    const url = `http://localhost:3000/api/sessions/add-subtitle`;
     const payload = {
       segment_id: segmentId,
       text: text,

@@ -1,4 +1,33 @@
+# Ignorer les dépendances
 node_modules/
-dist/
-.env
 
+# Fichiers de build Angular/Node.js
+dist/
+build/
+
+# Configs locales
+.env
+.DS_Store
+*.log
+
+# Caches Angular & Vite
+.angular/
+.vite/
+*.tsbuildinfo
+
+# Systèmes d'exploitation
+Thumbs.db
+ehthumbs.db
+*.swp
+
+# Git spécifiques
+*.orig
+*.rej
+
+# Éditeurs
+.vscode/
+.idea/
+*.code-workspace
+
+# Ignorer les caches lourds de Angular
+captDirect/.angular/cache/

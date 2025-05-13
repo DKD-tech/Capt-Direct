@@ -30,7 +30,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   displayedSubtitle = '';
   userId: number = 0; // Identifiant utilisateur récupéré dynamiquement
   videoUrl = ''; // URL de la vidéo récupérée dynamiquement
-  sessionId: number = 21; // ID de la session à afficher
+  sessionId: number = 23; // ID de la session à afficher
   segments: any[] = [];
   username: string = '';
   collaborators: number = 1; // Nombre de collaborateurs en ligne
@@ -105,25 +105,66 @@ export class DashboardComponent implements OnInit, OnDestroy {
   ngOnInit() {
     this.loadUserSession();
     this.loadSessionDetails();
-    this.connectToSocket();
+    // this.connectToSocket();
     this.loadSessionInfo();
     this.loadSegments();
-    this.authService.getUserSession().subscribe((user) => {
-      this.username = user.username.trim();
-      this.userId = Number(user.user_id);
+    // this.authService.getUserSession().subscribe((user) => {
+    //   this.user = user;
+    //   this.username = (user.username || '').trim();
+    //   this.userId = Number(user.user_id);
 
-      // Rejoindre la session via Socket.IO
-      this.socketService.joinSession(
-        this.sessionId,
-        this.username,
-        this.userId
-      );
+    //   // Rejoindre la session via Socket.IO
+    //   // this.socketService.joinSession(
+    //   //   this.sessionId,
+    //   //   this.username,
+    //   //   this.userId
+    //   // );
+    //   // ✅ Affiche ce log pour vérifier les valeurs nettoyées
+    //   console.log('📦 Session utilisateur chargée et nettoyée :', {
+    //     userId: this.userId,
+    //     username: this.username,
+    //     sessionId: this.sessionId,
+    //   });
+    //   // Écouter les mises à jour des utilisateurs connectés
+    //   // ✅ Ajoute ici seulement : stocker localStorage
+    //   localStorage.setItem('userId', this.userId.toString());
+    //   localStorage.setItem('username', this.username);
+    //   localStorage.setItem('sessionId', this.sessionId.toString());
+    //   this.socketService.joinSession(
+    //     this.sessionId,
+    //     this.username,
+    //     this.userId
+    //   );
+    // });
+    this.authService.getUserSession().subscribe({
+      next: async (user) => {
+        this.username = (user.username || '').trim();
+        this.userId = Number(user.user_id);
 
-      // Écouter les mises à jour des utilisateurs connectés
-      this.socketService.getUsers().subscribe((users) => {
-        this.users = users;
-        console.log('Utilisateurs connectés à la session :', this.users);
-      });
+        console.log(
+          '📦 Appel joinSession avec :',
+          this.sessionId,
+          this.username,
+          this.userId
+        );
+
+        localStorage.setItem('userId', this.userId.toString());
+        localStorage.setItem('username', this.username);
+        localStorage.setItem('sessionId', this.sessionId.toString());
+
+        await this.socketService.waitForConnection();
+        this.socketService.joinSession(
+          this.sessionId,
+          this.username,
+          this.userId
+        );
+
+        // ⚠️ Connecter aux événements socket après avoir fait joinSession
+        this.connectToSocket();
+      },
+      error: (err) => {
+        console.error('Erreur dans getUserSession:', err);
+      },
     });
   }
 
@@ -893,8 +934,16 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   // Déconnexion utilisateur
   onLogout() {
+    this.socketService.leaveVideoSession({
+      userId: this.userId,
+      sessionId: this.sessionId,
+    });
     this.authService.logout().subscribe({
       next: () => {
+        // 🧹 Nettoyage du localStorage
+        localStorage.removeItem('userId');
+        localStorage.removeItem('username');
+        localStorage.removeItem('sessionId');
         this.router.navigate(['/login-page']);
       },
       error: (error) => {

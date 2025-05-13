@@ -13,13 +13,13 @@ const startStream = async (req, res) => {
     officialStartTime.toString()
   );
 
-  const io = req.app.get('io');
-  io.to(`session:${sessionId}`).emit('stream-started', {
+  const io = req.app.get("io");
+  io.to(`session:${sessionId}`).emit("stream-started", {
     startTime: officialStartTime,
   });
 
   return res.status(200).json({
-    message: 'Flux démarré avec succès',
+    message: "Flux démarré avec succès",
     startTime: officialStartTime,
   });
 };

@@ -1,5 +1,6 @@
 require("dotenv").config();
 const redis = require("redis");
+const { promisify } = require("util");
 
 const client = redis.createClient({
   url: `redis://:${process.env.REDIS_PASSWORD}@${process.env.REDIS_HOST}:${process.env.REDIS_PORT}`,
@@ -34,6 +35,14 @@ async function getAsync(key) {
       "Erreur lors de la récupération de la clé dans Redis:",
       error
     );
+    throw error;
+  }
+}
+async function delAsync(key) {
+  try {
+    return await client.del(key);
+  } catch (error) {
+    console.error("Erreur lors de la suppression de la clé dans Redis:", error);
     throw error;
   }
 }
@@ -90,6 +99,60 @@ async function deleteSession(userId) {
   }
 }
 
+async function addUserToSession(sessionId, userId) {
+  try {
+    return await client.sAdd(`session:${sessionId}:users`, String(userId));
+  } catch (err) {
+    console.error(
+      `Erreur lors de l'ajout de l'utilisateur ${userId} à session:${sessionId}:`,
+      err
+    );
+    throw err;
+  }
+}
+
+async function removeUserFromSession(sessionId, userId) {
+  try {
+    return await client.sRem(`session:${sessionId}:users`, String(userId));
+  } catch (err) {
+    console.error(
+      `Erreur lors de la suppression de l'utilisateur ${userId} de session:${sessionId}:`,
+      err
+    );
+    throw err;
+  }
+}
+
+async function getSessionUsers(sessionId) {
+  try {
+    return await client.sMembers(`session:${sessionId}:users`);
+  } catch (err) {
+    console.error(
+      `Erreur lors de la récupération des utilisateurs de session:${sessionId}:`,
+      err
+    );
+    throw err;
+  }
+}
+
+async function incrUserSegmentCount(sessionId, userId) {
+  return await client.incr(`seg:scheduler:${sessionId}:user:${userId}`);
+}
+
+async function getUserSegmentCount(sessionId, userId) {
+  const val = await client.get(`seg:scheduler:${sessionId}:user:${userId}`);
+  return parseInt(val) || 0;
+}
+
+async function getRoundRobinIndex(sessionId) {
+  const val = await client.get(`seg:scheduler:${sessionId}:index`);
+  return parseInt(val) || 0;
+}
+
+async function updateRoundRobinIndex(sessionId, nextIndex) {
+  return await client.set(`seg:scheduler:${sessionId}:index`, nextIndex);
+}
+
 module.exports = {
   client,
   setSession,
@@ -98,4 +161,12 @@ module.exports = {
   getAsync,
   setAsync,
   lRangeAsync,
+  getRoundRobinIndex,
+  updateRoundRobinIndex,
+  getUserSegmentCount,
+  incrUserSegmentCount,
+  delAsync,
+  addUserToSession,
+  removeUserFromSession,
+  getSessionUsers,
 };
