@@ -1,10 +1,11 @@
-//Commande
+//Command
 -- node src/app.js
 
 /src
 ├── config          // Configurations pour PostgreSQL et Redis
-├── controllers     // Logique métier (services)
-├── models          // Modèles de données (PostgreSQL)
+├── controllers     // Logique métier et gestion des requêtes
+├── db              // Initialisation de la base de données PostgreSQL
+├── models          // Modèles de données
 ├── routes          // Routes de l''API REST
 ├── redis           // Gestion des sessions et sous-titres en Redis
 ├── middlewares     // Middlewares pour la validation, auth, etc.

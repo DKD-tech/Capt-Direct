@@ -37,7 +37,14 @@ export class SocketService {
       }
     });
   }
-
+  onSegmentationStopped(): Observable<void> {
+    return new Observable((observer) => {
+      this.socket.on('segmentation-stopped', () => {
+        console.log('🛑 Segmentation arrêtée (event reçu du serveur)');
+        observer.next();
+      });
+    });
+  }
   // Rejoindre une session
   joinSession(session_id: number, username: string, user_id: number): void {
     console.log('[SocketService] joinSession envoyé avec :', {

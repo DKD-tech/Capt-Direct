@@ -115,7 +115,17 @@ async function redistributeSegments(session_id) {
   }
 }
 
-async function handleUserDisconnection({ user_id, session_id }) {
+async function handleUserDisconnection(req, res) {
+  const { user_id, session_id } = req.body;
+
+  if (!user_id || !session_id) {
+    return res
+      .status(400)
+      .json({
+        message: "Les champs obligatoires user_id et session_id manquent.",
+      });
+  }
+
   try {
     console.log(
       `Déconnexion de l'utilisateur ${user_id} dans la session ${session_id}`
@@ -127,39 +137,107 @@ async function handleUserDisconnection({ user_id, session_id }) {
       session_id
     );
 
+    if (!userSegments || userSegments.length === 0) {
+      console.log("Aucun segment assigné à cet utilisateur.");
+      return res.status(200).json({ message: "Aucun segment à libérer." });
+    }
+
     // Supprimer les assignations de cet utilisateur
     await SegmentUserModel.deleteAssignmentsByUser(user_id);
 
+    // Étape 3 : Pour chaque segment, vérifier son statut et agir en conséquence
+    for (const segment of userSegments) {
+      if (segment.status === "completed") {
+        // Segment déjà fini, rien à faire
+        continue;
+      }
+      if (segment.status === "in_progress") {
+        // Segment commencé mais non fini → marquer comme abandonné
+        await VideoSegmentModel.updateSegmentStatus(
+          segment.segment_id,
+          "abandoned"
+        );
+        console.log(
+          `Segment ${segment.segment_id} marqué comme abandonné pour l'utilisateur ${user_id}`
+        );
+      }
+
+      // segments "available" ou "pending" → rien à faire
+      // Vérifier si le segment est déjà "available" ou "pending"
+      // if (segment.status === "available" || segment.status === "pending") {
+      //   // Segment non commencé ou déjà libre, rien à faire ici
+      //   continue;
+      // }
+    }
+
+    // Récupérer io
+    const io = req.app.get("io");
     // Identifier les utilisateurs connectés restants
     const connectedUsers = await getConnectedUsers(io, session_id);
 
-    if (connectedUsers.length === 0) {
+    if (!connectedUsers || connectedUsers.length === 0) {
       // Si aucun utilisateur connecté, remettre les segments en "available"
-      for (const segment of userSegments) {
-        await VideoSegmentModel.updateOneById(segment.segment_id, {
-          status: "available",
-        });
-      }
-      console.log("Aucun utilisateur connecté, segments remis disponibles.");
-      return userSegments;
+      console.log(
+        "Aucun utilisateur connecté. Les segments restent disponibles."
+      );
+      return res.status(200).json({
+        message: "Aucun utilisateur connecté. Redistribution non effectuée.",
+        segmentsFreed: userSegments,
+      });
+    }
+
+    // Étape 5 : Récupérer les segments "abandoned" et "available" pour redistribution
+    const segmentsToRedistribute = await VideoSegmentModel.getSegmentsByStatus(
+      session_id,
+      "abandoned"
+    );
+
+    // On peut aussi récupérer les "available" si nécessaire
+    const availableSegments = await VideoSegmentModel.getSegmentsByStatus(
+      session_id,
+      "available"
+    );
+
+    const allSegmentsToRedistribute = [
+      ...segmentsToRedistribute,
+      ...availableSegments,
+    ];
+
+    if (allSegmentsToRedistribute.length === 0) {
+      return res.status(200).json({ message: "Aucun segment à redistribuer." });
     }
 
     // Redistribuer les segments équitablement
     const totalUsers = connectedUsers.length;
-    for (const [index, segment] of userSegments.entries()) {
-      const userToAssign = connectedUsers[index % totalUsers];
-      await SegmentUserModel.assignUserToSegment(
-        userToAssign.user_id,
-        segment.segment_id
-      );
-      await VideoSegmentModel.markSegmentInProgress(segment.segment_id);
-    }
 
-    console.log("Segments redistribués avec succès.");
-    return userSegments;
+    // Redistribuer les segments en parallèle pour la rapidité
+    await Promise.all(
+      allSegmentsToRedistribute.map((segment, index) => {
+        const user = connectedUsers[index % totalUsers];
+        return Promise.all([
+          SegmentUserModel.assignUserToSegment(
+            user.user_id,
+            segment.segment_id
+          ),
+          VideoSegmentModel.updateSegmentStatus(
+            segment.segment_id,
+            "in_progress"
+          ),
+        ]).then(() => {
+          console.log(
+            `Segment ${segment.segment_id} redistribué à utilisateur ${user.user_id}`
+          );
+        });
+      })
+    );
+
+    return res.status(200).json({
+      message: "Segments redistribués avec succès.",
+      segmentsRedistributed: allSegmentsToRedistribute,
+    });
   } catch (error) {
     console.error("Erreur lors de la gestion de la déconnexion :", error);
-    throw error;
+    return res.status(500).json({ message: "Erreur serveur." });
   }
 }
 

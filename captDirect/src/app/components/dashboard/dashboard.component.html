@@ -15,29 +15,47 @@
   <main class="main-content">
     <div class="streaming-info">
       <!-- Bouton de démarrage -->
-<div class="stream-start">
-  <button (click)="startStream()" [disabled]="streamStarted">
-    Lancer la session
-  </button>
-  <div *ngIf="countdownMessage" class="countdown-message">
-    {{ countdownMessage }}
-  </div>
-</div>
+      <div class="stream-start">
+        <button (click)="startStream()" [disabled]="streamStarted">
+          Lancer la session
+        </button>
+        <button
+          (click)="stopSegmentation()"
+          [disabled]="!streamStarted"
+          class="stop-button"
+        >
+          Stopper la session
+        </button>
+
+        <div *ngIf="countdownMessage" class="countdown-message">
+          {{ countdownMessage }}
+        </div>
+      </div>
 
       <div class="status-header">
         <span
-        class="signal-light"
-        [ngClass]="{
-          'signal-green': getCurrentSignal() === 'green',
-          'signal-orange': getCurrentSignal() === 'orange',
-          'signal-red': getCurrentSignal() === 'red'
-        }"
-      ></span>
-      
-      <span class="status-text" *ngIf="getCurrentSignal() === 'green'"> C'est à vous de sous-titrer</span>
-      <span class="status-text orange-text" *ngIf="getCurrentSignal() === 'orange'"> C'est bientot à vous!</span>
-      <span class="status-text red-text" *ngIf="getCurrentSignal() === 'red'"> En attente</span>
-      
+          class="signal-light"
+          [ngClass]="{
+            'signal-green': getCurrentSignal() === 'green',
+            'signal-orange': getCurrentSignal() === 'orange',
+            'signal-red': getCurrentSignal() === 'red'
+          }"
+        ></span>
+
+        <span class="status-text" *ngIf="getCurrentSignal() === 'green'">
+          C'est à vous de sous-titrer</span
+        >
+        <span
+          class="status-text orange-text"
+          *ngIf="getCurrentSignal() === 'orange'"
+        >
+          C'est bientot à vous dans
+          {{ getSecondsToNextSegment() }} seconde(s)...</span
+        >
+        <span class="status-text red-text" *ngIf="getCurrentSignal() === 'red'">
+          En attente</span
+        >
+
         <div class="clock">
           <mat-icon>access_time</mat-icon>
           <span id="clock">12:12 à 12:22</span>
@@ -67,7 +85,7 @@
         Aucun segment ne vous est assigné pour cette session.
       </div>
       <ul>
-        <li *ngFor="let segment of segments">
+        <li *ngFor="let segment of segments" [hidden]="!segment.isVisible">
           <!-- <p>
             Segment {{ segment.segment_id }} - Début : {{ segment.start_time }},
             Fin : {{ segment.end_time }}, Statut : {{ segment.status }}
@@ -104,7 +122,10 @@
             ></div>
           </div> -->
 
-          <p>Temps restant : {{ segment.timeRemaining }} secondes</p>
+          <p>
+            Temps restant :
+            {{ segment.timeRemaining | number : "1.0-0" }} secondes
+          </p>
 
           <!-- Zone de texte pour saisir un sous-titre -->
           <textarea
@@ -135,9 +156,11 @@
 
     <section class="live-broadcast">
       <span class="live-badge"> LIVE</span>
-      <p>La session a commencé. Suivez le flux en direct sur l’écran principal.</p>
+      <p>
+        La session a commencé. Suivez le flux en direct sur l’écran principal.
+      </p>
     </section>
-    
+
     <div class="transcription-info">
       <div class="audio-wave">
         <mat-icon class="audio-icon">graphic_eq</mat-icon>

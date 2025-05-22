@@ -51,10 +51,11 @@ const {
   getVideoDuration,
   startSegmentationController,
   stopSegmentationController,
+  handleUserDisconnection,
 } = require("../controllers/stc/videoSegmentController");
 const {
   assignSegmentsToUsers,
-  handleUserDisconnection,
+
   redistributeSegments,
 } = require("../controllers/stc/assignSegmentController");
 const {
@@ -71,6 +72,7 @@ sessionRouter.post("/create-session", createSessionController);
 sessionRouter.post("/create-segment", createVideoSegmentController);
 sessionRouter.post("/assign-user", redistributeSegments);
 sessionRouter.post("/assign-user-seg", assignSegmentsToUsers);
+sessionRouter.post("/user-disconnect", handleUserDisconnection);
 sessionRouter.post("/disconnect-user", handleUserDisconnection);
 sessionRouter.post("/add-subtitle", addSubtitle);
 sessionRouter.get("/get-subtitles/:segment_id", getSubtitlesBySegment);

@@ -289,7 +289,6 @@ body {
   animation: blink 1s ease-in-out infinite;
 }
 
-
 .signal-green {
   background-color: green;
 }
@@ -299,11 +298,16 @@ body {
 }
 
 @keyframes blink {
-  0% { opacity: 1; }
-  50% { opacity: 0.3; }
-  100% { opacity: 1; }
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.3;
+  }
+  100% {
+    opacity: 1;
+  }
 }
-
 
 .status-text {
   font-weight: bold;
@@ -330,6 +334,21 @@ body {
     border: none;
     border-radius: 8px;
     cursor: pointer;
+  }
+
+  .stop-button {
+    margin-left: 10px;
+    background-color: #e53935;
+    color: white;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+
+  .stop-button:disabled {
+    background-color: #aaa;
+    cursor: not-allowed;
   }
 
   .countdown-message {

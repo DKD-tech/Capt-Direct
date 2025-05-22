@@ -30,7 +30,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   displayedSubtitle = '';
   userId: number = 0; // Identifiant utilisateur récupéré dynamiquement
   videoUrl = ''; // URL de la vidéo récupérée dynamiquement
-  sessionId: number = 23; // ID de la session à afficher
+  sessionId: number = 25; // ID de la session à afficher
   segments: any[] = [];
   username: string = '';
   collaborators: number = 1; // Nombre de collaborateurs en ligne
@@ -168,7 +168,58 @@ export class DashboardComponent implements OnInit, OnDestroy {
     });
   }
 
+  startSegmentation(): void {
+    console.log(
+      'Déclenchement de startSegmentation avec sessionId:',
+      this.sessionId
+    );
+    this.sessionService.startSegmentation(this.sessionId).subscribe({
+      next: (res: any) => {
+        console.log('Segmentation démarrée:', res);
+        // Ici tu peux afficher un message ou mettre à jour l’UI pour indiquer que la segmentation est active
+      },
+      error: (err: any) => {
+        console.error('Erreur lors du démarrage de la segmentation', err);
+      },
+    });
+  }
+
+  stopSegmentation(): void {
+    this.sessionService.stopSegmentation(this.sessionId).subscribe({
+      next: (res: any) => {
+        console.log('Segmentation arrêtée:', res);
+        // Mise à jour UI ou message de confirmation
+      },
+      error: (err: any) => {
+        console.error('Erreur lors de l’arrêt de la segmentation', err);
+      },
+    });
+  }
+
+  // startStream(): void {
+  //   this.sessionService.startStream(this.sessionId).subscribe({
+  //     next: (res: any) => {
+  //       this.countdown = 5;
+  //       this.streamStarted = true;
+
+  //       const interval = setInterval(() => {
+  //         if (this.countdown > 0) {
+  //           this.countdownMessage = `Démarrage dans ${this.countdown} seconde(s)...`;
+  //           this.countdown--;
+  //         } else {
+  //           clearInterval(interval);
+  //           this.countdownMessage = '';
+  //         }
+  //       }, 1000);
+  //     },
+  //     error: (err) => {
+  //       console.error('Erreur lors du démarrage du flux', err);
+  //     },
+  //   });
+  // }
+
   startStream(): void {
+    console.log('startStream() appelée');
     this.sessionService.startStream(this.sessionId).subscribe({
       next: (res: any) => {
         this.countdown = 5;
@@ -181,6 +232,17 @@ export class DashboardComponent implements OnInit, OnDestroy {
           } else {
             clearInterval(interval);
             this.countdownMessage = '';
+
+            // Démarre la segmentation dès que le countdown est fini
+            this.startSegmentation();
+
+            // Charge les segments (ils seront tous invisibles au départ)
+            this.loadSegments(() => {
+              this.startGlobalTimer();
+
+              // Lancer les timers segmentés en fonction de elapsedTime
+              this.startTimersFromElapsed(this.elapsedTime);
+            });
           }
         }, 1000);
       },
@@ -254,7 +316,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
               'Erreur lors de la récupération de la durée de la vidéo :',
               error
             );
-            alert('Impossible de récupérer la durée de la vidéo.');
+            // alert('Impossible de récupérer la durée de la vidéo.');
           }
         } else {
           console.error(
@@ -325,13 +387,14 @@ export class DashboardComponent implements OnInit, OnDestroy {
   //     },
   //   });
   // }
-  loadSegments(): void {
+  loadSegments(callback?: () => void): void {
     this.sessionService.getSegmentsWithSession(this.sessionId).subscribe({
       next: (response) => {
         if (!response.segments || response.segments.length === 0) {
           console.warn('Aucun segment assigné à cet utilisateur.');
-          alert('Aucun segment ne vous est assigné dans cette session.');
+          // alert('Aucun segment ne vous est assigné dans cette session.');
           this.segments = [];
+          if (callback) callback();
           return;
         }
 
@@ -348,6 +411,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
               timeRemaining: duration,
               timer: null,
               isDisabled: false, // toujours false
+              isVisible: false,
               assigned_to: segment.assigned_to || 'Utilisateur inconnu',
               subtitles: segment.subtitles || [],
             };
@@ -355,10 +419,12 @@ export class DashboardComponent implements OnInit, OnDestroy {
         );
 
         console.log('Segments chargés avec timers :', this.segments);
+        if (callback) callback();
       },
       error: (error) => {
         console.error('Erreur lors du chargement des segments :', error);
         alert('Erreur lors du chargement des segments. Veuillez réessayer.');
+        if (callback) callback();
       },
     });
   }
@@ -413,7 +479,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.segments.forEach((segment) => {
       const delayBeforeStart =
         this.timeStringToSeconds(segment.start_time) * 1000;
-
+      console.log(
+        `Segment ${segment.segment_id} démarrera dans ${delayBeforeStart} ms`
+      );
       setTimeout(() => {
         console.log(`🟢 Timer lancé pour le segment ${segment.segment_id}`);
 
@@ -447,12 +515,42 @@ export class DashboardComponent implements OnInit, OnDestroy {
       }
 
       // Démarrage de l'interval
+      // this.signalUpdateInterval = setInterval(() => {
+      //   const elapsed = Math.floor(
+      //     (Date.now() - this.officialStartTime) / 1000
+      //   );
+      //   this.elapsedTime = elapsed;
+      //   this.updateSignalStatus();
+
+      //   // Arrêt automatique quand tous les segments sont terminés
+      //   const allSegmentsDone = this.segments.every(
+      //     (s) => s.timeRemaining <= 0
+      //   );
+      //   if (allSegmentsDone) {
+      //     console.log(
+      //       '🛑 Tous les segments sont terminés, arrêt du signal update.'
+      //     );
+      //     clearInterval(this.signalUpdateInterval);
+      //     this.signalUpdateInterval = null;
+      //   }
+      // }, 1000);
       this.signalUpdateInterval = setInterval(() => {
         const elapsed = Math.floor(
           (Date.now() - this.officialStartTime) / 1000
         );
         this.elapsedTime = elapsed;
+        console.log('Elapsed Time:', elapsed);
         this.updateSignalStatus();
+
+        // Rendre visible les segments dont le start_time est inférieur ou égal à elapsed + 5 secondes
+        this.segments.forEach((segment) => {
+          const start = this.timeStringToSeconds(segment.start_time);
+          if (!segment.isVisible && start <= elapsed + 5) {
+            segment.isVisible = true;
+            this.cdr.detectChanges();
+            console.log(`Segment ${segment.segment_id} is now visible`);
+          }
+        });
 
         // Arrêt automatique quand tous les segments sont terminés
         const allSegmentsDone = this.segments.every(
@@ -467,6 +565,24 @@ export class DashboardComponent implements OnInit, OnDestroy {
         }
       }, 1000);
     }, delay);
+  }
+
+  getSecondsToNextSegment(): number | null {
+    const username = (this.username || '').toLowerCase().trim();
+    const now = this.elapsedTime;
+
+    const nextSegment = this.segments.find((s) => {
+      const start = this.timeStringToSeconds(s.start_time);
+      const assignedTo = (s.assigned_to || '').toLowerCase().trim();
+      const timeBeforeStart = start - now;
+      return (
+        assignedTo === username && timeBeforeStart > 0 && timeBeforeStart <= 2
+      );
+    });
+
+    if (!nextSegment) return null;
+
+    return this.timeStringToSeconds(nextSegment.start_time) - now;
   }
 
   autoSaveSubtitle(segment: any): void {
@@ -875,6 +991,27 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.socketService.onElapsedTime().subscribe(({ elapsedTime }) => {
       this.elapsedTime = elapsedTime;
     });
+    this.socketService.onSegmentationStopped().subscribe(() => {
+      console.log('⛔ Segmentation stoppée depuis le serveur');
+      this.stopFrontendSegmentation();
+    });
+  }
+
+  stopFrontendSegmentation(): void {
+    if (this.signalUpdateInterval) {
+      clearInterval(this.signalUpdateInterval);
+      this.signalUpdateInterval = null;
+    }
+
+    // Désactiver tous les timers de segment
+    this.segments.forEach((segment) => {
+      if (segment.timer) {
+        clearInterval(segment.timer);
+        segment.timer = null;
+      }
+    });
+
+    console.log('⛔ Timers frontend arrêtés');
   }
 
   startTimersFromElapsed(elapsed: number): void {
@@ -884,12 +1021,19 @@ export class DashboardComponent implements OnInit, OnDestroy {
       const duration = segmentEnd - segmentStart;
 
       // Si le segment a déjà fini, on ne le lance pas
-      if (elapsed >= segmentEnd) return;
+      if (elapsed >= segmentEnd) {
+        console.log(
+          `Segment ${segment.segment_id} déjà terminé à elapsed=${elapsed}`
+        );
+        return; // segment fini
+      }
 
       const delay = Math.max((segmentStart - elapsed) * 1000, 0);
 
       segment.timeRemaining = segmentEnd - Math.max(elapsed, segmentStart);
-
+      console.log(
+        `Segment ${segment.segment_id} timer démarrera dans ${delay} ms`
+      );
       setTimeout(() => {
         console.log(`🚀 Timer lancé pour le segment ${segment.segment_id}`);
         segment.timer = setInterval(() => {
@@ -930,6 +1074,14 @@ export class DashboardComponent implements OnInit, OnDestroy {
       userId: this.userId,
       sessionId: this.sessionId,
     });
+
+    // Déconnexion backend (Redis + redistribution)
+    this.sessionService
+      .handleUserDisconnection(this.userId, this.sessionId)
+      .subscribe({
+        next: (res) => console.log('Déconnexion backend réussie :', res),
+        error: (err) => console.error('Erreur backend :', err),
+      });
   }
 
   // Déconnexion utilisateur
@@ -938,6 +1090,14 @@ export class DashboardComponent implements OnInit, OnDestroy {
       userId: this.userId,
       sessionId: this.sessionId,
     });
+    // ⚡ Déconnexion backend (Redis + segments)
+    this.sessionService
+      .handleUserDisconnection(this.userId, this.sessionId)
+      .subscribe({
+        next: (res) => console.log('Déconnexion backend réussie :', res),
+        error: (err) => console.error('Erreur backend :', err),
+      });
+
     this.authService.logout().subscribe({
       next: () => {
         // 🧹 Nettoyage du localStorage

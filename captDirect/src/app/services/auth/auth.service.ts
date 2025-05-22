@@ -13,12 +13,12 @@ interface AuthResponse {
   providedIn: 'root',
 })
 export class AuthService {
-  // private apiUrl = 'http://192.168.1.69:3000/api/auth'; // URL de l'API backend
-  // private apiUrlL = 'http://192.168.1.69:3000/api/user';
-  // private apiUrlSession = 'http://192.168.1.69:3000/api/session';
-  private apiUrl = 'http://localhost:3000/api/auth'; // URL de l'API backend
-  private apiUrlL = 'http://localhost:3000/api/user';
-  private apiUrlSession = 'http://localhost:3000/api/session';
+  private apiUrl = 'http://192.168.154.212:3000/api/auth'; // URL de l'API backend
+  private apiUrlL = 'http://192.168.154.212:3000/api/user';
+  private apiUrlSession = 'http://192.168.154.212:3000/api/session';
+  // private apiUrl = 'http://localhost:3000/api/auth'; // URL de l'API backend
+  // private apiUrlL = 'http://localhost:3000/api/user';
+  // private apiUrlSession = 'http://localhost:3000/api/session';
   constructor(private http: HttpClient, private router: Router) {}
 
   // Méthode pour récupérer la session de l'utilisateur

@@ -1,5 +1,6 @@
 const pool = require("../config/db");
 const Model = require("./Model");
+const SegmentStatus = require("../utils/SegmentStatus");
 
 class VideoSegmentModel extends Model {
   constructor() {
@@ -10,10 +11,13 @@ class VideoSegmentModel extends Model {
   async findAvailableSegment(session_id) {
     const query = `
     SELECT * FROM ${this.tableName}
-    WHERE session_id = $1 AND status = 'available'
+    WHERE session_id = $1 AND status = $2
     LIMIT 1
     `;
-    const result = await pool.query(query, [session_id]);
+    const result = await pool.query(query, [
+      session_id,
+      SegmentStatus.AVAILABLE,
+    ]);
     return result.rows[0];
   }
 
@@ -21,14 +25,20 @@ class VideoSegmentModel extends Model {
     console.log("Mise à jour du segment :", segment_id);
     const query = `
     UPDATE ${this.tableName}
-    SET status = 'assigned'
-    WHERE segment_id = $1
-    RETURNING *
-    `;
-    const result = await pool.query(query, [segment_id]);
-    console.log("Résultat de la mise à jour :", result.rows[0]);
+    SET status = $1
+    WHERE segment_id = $2
+    RETURNING *;
+  `;
+    const result = await pool.query(query, [
+      segment_id,
+      SegmentStatus.IN_PROGRESS,
+    ]);
+    console.log(
+      `Segment ${segment_id} marqué comme '${SegmentStatus.IN_PROGRESS}'`
+    );
     return result.rows[0];
   }
+
   async getSegmentsByStatus(session_id, status) {
     // On sélectionne tous les segments de la session
     // dont le statut est égal à status
