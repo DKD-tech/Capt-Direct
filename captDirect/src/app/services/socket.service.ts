@@ -180,4 +180,11 @@ export class SocketService {
   onElapsedTime(): Observable<{ elapsedTime: number }> {
     return this.socket.fromEvent<{ elapsedTime: number }>('elapsedTime');
   }
+  onSegmentAssigned(): Observable<any> {
+    return new Observable((observer) => {
+      this.socket.on('segment-assigned', (data: any) => {
+        observer.next(data);
+      });
+    });
+  }
 }

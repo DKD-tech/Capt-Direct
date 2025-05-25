@@ -33,28 +33,28 @@
       </div>
 
       <div class="status-header">
-        <span
+        <!-- <span
           class="signal-light"
           [ngClass]="{
             'signal-green': getCurrentSignal() === 'green',
             'signal-orange': getCurrentSignal() === 'orange',
             'signal-red': getCurrentSignal() === 'red'
           }"
-        ></span>
+        ></span> -->
 
-        <span class="status-text" *ngIf="getCurrentSignal() === 'green'">
+        <!-- <span class="status-text" *ngIf="getCurrentSignal() === 'green'">
           C'est à vous de sous-titrer</span
-        >
-        <span
+        > -->
+        <!-- <span
           class="status-text orange-text"
           *ngIf="getCurrentSignal() === 'orange'"
-        >
-          C'est bientot à vous dans
+        > -->
+        <!-- C'est bientot à vous dans
           {{ getSecondsToNextSegment() }} seconde(s)...</span
-        >
-        <span class="status-text red-text" *ngIf="getCurrentSignal() === 'red'">
+        > -->
+        <!-- <span class="status-text red-text" *ngIf="getCurrentSignal() === 'red'">
           En attente</span
-        >
+        > -->
 
         <div class="clock">
           <mat-icon>access_time</mat-icon>

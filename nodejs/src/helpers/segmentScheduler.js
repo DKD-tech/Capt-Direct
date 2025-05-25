@@ -46,6 +46,8 @@ async function generateSegment({
     return;
   }
 
+  const segmentStartUnix = Date.now() + step * 1000;
+
   const segment = await VideoSegmentModel.insert({
     session_id: sessionId,
     start_time: convertSecondsToTime(startTime),
@@ -73,7 +75,13 @@ async function generateSegment({
   // const socketId = await getAsync(`socket:${userToAssign.id}`);
   if (socketId) {
     const io = require("../config/socket");
-    io.to(socketId).emit("segment-assigned", segment);
+    // io.to(socketId).emit("segment-assigned", segment);
+    io.to(socketId).emit("segment-assigned", {
+      ...segment,
+      assigned_to: userToAssign.username,
+      start_unix: segmentStartUnix, // 💥 le vrai bonus pour la synchro front
+    });
+
     console.log(
       `[WebSocket] Segment envoyé à socket ${socketId} (user ${userToAssign.id})`
     );

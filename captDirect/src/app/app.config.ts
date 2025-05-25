@@ -5,6 +5,7 @@ import { routes } from './app.routes';
 import { provideClientHydration } from '@angular/platform-browser';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import { Socket } from 'ngx-socket-io';
+import { isPlatformBrowser } from '@angular/common';
 import {
   HTTP_INTERCEPTORS,
   provideHttpClient,
@@ -13,7 +14,12 @@ import {
 } from '@angular/common/http';
 import { AuthInterceptor } from './services/auth/auth.interceptor';
 
-const socket = new Socket({ url: 'http://192.168.154.212:3000', options: {} });
+const isBrowser = typeof window !== 'undefined';
+const socketUrl = isBrowser
+  ? `${window.location.protocol}//${window.location.hostname}:3000`
+  : 'http://localhost:3000'; // fallback côté serveur
+
+const socket = new Socket({ url: socketUrl, options: {} });
 // const socket = new Socket({ url: 'http://localhost:3000', options: {} });
 
 export const appConfig: ApplicationConfig = {
