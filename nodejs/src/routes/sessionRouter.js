@@ -64,6 +64,8 @@ const {  startStream } = require("../controllers/rtmp/streamController");
 
 const authMiddleware = require("../middlewares/authMiddleware");
 
+const { exportSrtController } = require("../controllers/stc/srtController");
+
 const sessionRouter = express.Router();
 
 sessionRouter.post("/create-session", createSessionController);
@@ -87,6 +89,7 @@ sessionRouter.get("/info/:sessionId", getSessionController);
 sessionRouter.post("/store-duration/:sessionId", storeVideoDurationController);
 sessionRouter.post("/get-duration/:sessionId", getVideoDuration);
 sessionRouter.post("/stream/:sessionId", startStreaming);
+sessionRouter.get("/:sessionId/export-srt",exportSrtController);
 
 sessionRouter.get("/connected-users/:session_id", async (req, res) => {
   const { session_id } = req.params;
@@ -126,5 +129,9 @@ sessionRouter.post("/segments/:segment_id/subtitles", async (req, res) => {
     return res.status(500).json({ message: "Erreur serveur." });
   }
 });
+
+
+// … dans vos routes
+
 
 module.exports = sessionRouter;

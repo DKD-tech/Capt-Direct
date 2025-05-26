@@ -296,22 +296,23 @@ async function createVideoSegmentController(req, res) {
     }
 
     // Générer les segments
-    const segmentDuration = 10; // Durée d'un segment en secondes
-    const numberOfSegments = Math.ceil(duration / segmentDuration);
-    const segments = [];
+    // Générer les segments avec chevauchement
+const segmentDuration = 10;        // fenêtre de 10 s
+const overlap         = 5;         // chevauchement de 5 s
+const step            = segmentDuration - overlap; // on avance de 5 s
+const segments        = [];
 
-    for (let i = 0; i < numberOfSegments; i++) {
-      const start_time = i * segmentDuration;
-      const end_time = Math.min((i + 1) * segmentDuration, duration);
+for (let start = 0; start < duration; start += step) {
+  const end = Math.min(start + segmentDuration, duration);
+  segments.push({
+    session_id,
+    start_time: convertSecondsToTime(start),
+    end_time:   convertSecondsToTime(end),
+    status:     "available",
+    created_at: new Date(),
+  });
+}
 
-      segments.push({
-        session_id,
-        start_time: convertSecondsToTime(start_time),
-        end_time: convertSecondsToTime(end_time),
-        status: "available",
-        created_at: new Date(),
-      });
-    }
 
     console.log("Segments générés :", segments);
 
