@@ -90,6 +90,12 @@ export class SessionService {
       })
     );
   }
+  // session.service.ts
+  exportSrt(sessionId: number): Observable<Blob> {
+  const url = `http://localhost:3000/api/sessions/${sessionId}/export-srt`;
+  return this.http.get(url, { responseType: 'blob' });
+}
+
 
   // startStreaming(sessionId: number): void {
   //   this.http.post(`/api/sessions/stream/${sessionId}`, {}).subscribe({
