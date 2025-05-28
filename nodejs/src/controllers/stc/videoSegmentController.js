@@ -818,8 +818,8 @@ async function startSegmentationController(req, res) {
 
     startSegmentScheduler({
       sessionId: session_id,
-      segmentDuration: 5,
-      step: 3,
+      segmentDuration: 10,
+      step: 5,
       users,
       io: req.app.get("io"),
       socketUsers,

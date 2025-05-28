@@ -126,6 +126,10 @@ export class SessionService {
     );
   }
 
+  exportSrt(sessionId: number): Observable<Blob> {
+    const url = `${this.ip_url}/api/sessions/${sessionId}/export-srt`;
+    return this.http.get(url, { responseType: 'blob' });
+  }
   // startStreaming(sessionId: number): void {
   //   this.http.post(`/api/sessions/stream/${sessionId}`, {}).subscribe({
   //     next: (response) => console.log("Streaming démarré :", response),

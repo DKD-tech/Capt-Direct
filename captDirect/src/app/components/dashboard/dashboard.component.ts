@@ -12,6 +12,7 @@ import { CommonModule } from '@angular/common';
 import { ViewChild, ElementRef, AfterViewInit } from '@angular/core';
 import { NgZone } from '@angular/core';
 import { ChangeDetectorRef } from '@angular/core';
+import { HttpErrorResponse } from '@angular/common/http';
 
 // import videojs from 'video.js';
 // import WaveSurfer from 'wavesurfer.js';
@@ -30,7 +31,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   displayedSubtitle = '';
   userId: number = 0; // Identifiant utilisateur récupéré dynamiquement
   videoUrl = ''; // URL de la vidéo récupérée dynamiquement
-  sessionId: number = 27; // ID de la session à afficher
+  sessionId: number = 35; // ID de la session à afficher
   segments: any[] = [];
   username: string = '';
   collaborators: number = 1; // Nombre de collaborateurs en ligne
@@ -846,140 +847,140 @@ export class DashboardComponent implements OnInit, OnDestroy {
     return hours * 3600 + minutes * 60 + seconds;
   }
   // Exporter les sous-titres au format SRT
-  exportToSRT(): string {
-    console.log('Segments avant génération du fichier SRT :', this.segments);
+  // exportToSRT(): string {
+  //   console.log('Segments avant génération du fichier SRT :', this.segments);
 
-    let subtitleIndex = 1;
-    const minFirstSegmentDuration = 10; // Forcer une durée de 10 secondes pour le premier segment
-    const minSubtitleDuration = 2; // Un sous-titre reste au moins 2 secondes
-    const maxCPS = 12; // 12 caractères/seconde pour une meilleure lisibilité
-    const maxVisibleLines = 3; // Max 3 lignes visibles en même temps
+  //   let subtitleIndex = 1;
+  //   const minFirstSegmentDuration = 10; // Forcer une durée de 10 secondes pour le premier segment
+  //   const minSubtitleDuration = 2; // Un sous-titre reste au moins 2 secondes
+  //   const maxCPS = 12; // 12 caractères/seconde pour une meilleure lisibilité
+  //   const maxVisibleLines = 3; // Max 3 lignes visibles en même temps
 
-    return this.segments
-      .filter((segment) => segment.subtitles.length > 0)
-      .map((segment, segmentIndex) => {
-        const fullText = segment.subtitles
-          .map((s: { text: string }) => s.text)
-          .join(' ');
+  //   return this.segments
+  //     .filter((segment) => segment.subtitles.length > 0)
+  //     .map((segment, segmentIndex) => {
+  //       const fullText = segment.subtitles
+  //         .map((s: { text: string }) => s.text)
+  //         .join(' ');
 
-        console.log(
-          `Sous-titres pour le segment ${segment.segment_id} :`,
-          fullText
-        );
+  //       console.log(
+  //         `Sous-titres pour le segment ${segment.segment_id} :`,
+  //         fullText
+  //       );
 
-        let startTime = this.timeStringToSeconds(segment.start_time);
-        let endTime = this.timeStringToSeconds(segment.end_time);
+  //       let startTime = this.timeStringToSeconds(segment.start_time);
+  //       let endTime = this.timeStringToSeconds(segment.end_time);
 
-        if (isNaN(startTime) || isNaN(endTime) || startTime === endTime) {
-          console.error(
-            `⚠️ Erreur : start_time (${startTime}) et end_time (${endTime}) invalides pour le segment ${segment.segment_id}`
-          );
-          endTime = startTime + 1;
-        }
+  //       if (isNaN(startTime) || isNaN(endTime) || startTime === endTime) {
+  //         console.error(
+  //           `⚠️ Erreur : start_time (${startTime}) et end_time (${endTime}) invalides pour le segment ${segment.segment_id}`
+  //         );
+  //         endTime = startTime + 1;
+  //       }
 
-        // Forcer le premier segment à durer au moins 10s
-        if (
-          segmentIndex === 0 &&
-          endTime - startTime < minFirstSegmentDuration
-        ) {
-          endTime = startTime + minFirstSegmentDuration;
-        }
+  //       // Forcer le premier segment à durer au moins 10s
+  //       if (
+  //         segmentIndex === 0 &&
+  //         endTime - startTime < minFirstSegmentDuration
+  //       ) {
+  //         endTime = startTime + minFirstSegmentDuration;
+  //       }
 
-        const sanitizedText = fullText.replace(/[\r\n]+/g, ' ').trim();
-        const words = sanitizedText.split(' ');
-        const maxLineLength = 40;
-        const lines: string[] = [];
-        let currentLine = '';
+  //       const sanitizedText = fullText.replace(/[\r\n]+/g, ' ').trim();
+  //       const words = sanitizedText.split(' ');
+  //       const maxLineLength = 40;
+  //       const lines: string[] = [];
+  //       let currentLine = '';
 
-        words.forEach((word: string) => {
-          if ((currentLine + word).length <= maxLineLength) {
-            currentLine += word + ' ';
-          } else {
-            lines.push(currentLine.trim());
-            currentLine = word + ' ';
-          }
-        });
+  //       words.forEach((word: string) => {
+  //         if ((currentLine + word).length <= maxLineLength) {
+  //           currentLine += word + ' ';
+  //         } else {
+  //           lines.push(currentLine.trim());
+  //           currentLine = word + ' ';
+  //         }
+  //       });
 
-        if (currentLine.trim() !== '') {
-          lines.push(currentLine.trim());
-        }
+  //       if (currentLine.trim() !== '') {
+  //         lines.push(currentLine.trim());
+  //       }
 
-        console.log(
-          `Sous-titres découpés pour le segment ${segment.segment_id} :`,
-          lines
-        );
+  //       console.log(
+  //         `Sous-titres découpés pour le segment ${segment.segment_id} :`,
+  //         lines
+  //       );
 
-        // Durée totale du segment
-        let segmentDuration = endTime - startTime;
-        let idealDuration = sanitizedText.length / maxCPS;
-        let adjustedDuration = Math.max(
-          minSubtitleDuration,
-          Math.min(segmentDuration, idealDuration)
-        );
+  //       // Durée totale du segment
+  //       let segmentDuration = endTime - startTime;
+  //       let idealDuration = sanitizedText.length / maxCPS;
+  //       let adjustedDuration = Math.max(
+  //         minSubtitleDuration,
+  //         Math.min(segmentDuration, idealDuration)
+  //       );
 
-        if (segmentIndex === 0 && adjustedDuration < minFirstSegmentDuration) {
-          adjustedDuration = minFirstSegmentDuration;
-        }
+  //       if (segmentIndex === 0 && adjustedDuration < minFirstSegmentDuration) {
+  //         adjustedDuration = minFirstSegmentDuration;
+  //       }
 
-        const lineDuration = Math.max(
-          minSubtitleDuration,
-          adjustedDuration / lines.length
-        );
-        let visibleLines: string[] = []; // Stocke les lignes affichées progressivement
+  //       const lineDuration = Math.max(
+  //         minSubtitleDuration,
+  //         adjustedDuration / lines.length
+  //       );
+  //       let visibleLines: string[] = []; // Stocke les lignes affichées progressivement
 
-        // Génération des sous-titres en affichage progressif
-        const srtBlocks = lines.map((line, i) => {
-          const blockStartTime = startTime + i * lineDuration;
-          const blockEndTime = Math.min(endTime, blockStartTime + lineDuration);
+  //       // Génération des sous-titres en affichage progressif
+  //       const srtBlocks = lines.map((line, i) => {
+  //         const blockStartTime = startTime + i * lineDuration;
+  //         const blockEndTime = Math.min(endTime, blockStartTime + lineDuration);
 
-          // Ajout progressif des lignes à l'affichage
-          visibleLines.push(line);
-          if (visibleLines.length > maxVisibleLines) {
-            visibleLines.shift(); // Supprime la plus ancienne ligne pour un effet de "défilement"
-          }
+  //         // Ajout progressif des lignes à l'affichage
+  //         visibleLines.push(line);
+  //         if (visibleLines.length > maxVisibleLines) {
+  //           visibleLines.shift(); // Supprime la plus ancienne ligne pour un effet de "défilement"
+  //         }
 
-          const formattedStartTime = this.formatTimeToSRT(blockStartTime);
-          const formattedEndTime = this.formatTimeToSRT(blockEndTime);
+  //         const formattedStartTime = this.formatTimeToSRT(blockStartTime);
+  //         const formattedEndTime = this.formatTimeToSRT(blockEndTime);
 
-          const blockText = visibleLines.join('\n'); // Afficher les lignes empilées
-          const srtBlock = `${subtitleIndex}\n${formattedStartTime} --> ${formattedEndTime}\n${blockText}`;
-          subtitleIndex++;
+  //         const blockText = visibleLines.join('\n'); // Afficher les lignes empilées
+  //         const srtBlock = `${subtitleIndex}\n${formattedStartTime} --> ${formattedEndTime}\n${blockText}`;
+  //         subtitleIndex++;
 
-          return srtBlock;
-        });
+  //         return srtBlock;
+  //       });
 
-        return srtBlocks.join('\n\n');
-      })
-      .join('\n\n');
-  }
+  //       return srtBlocks.join('\n\n');
+  //     })
+  //     .join('\n\n');
+  // }
 
   // Méthode pour déclencher le téléchargement
-  downloadSubtitles(): void {
-    const srtContent = this.exportToSRT();
-    const blob = new Blob([srtContent], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'subtitles.srt';
-    a.click();
-    URL.revokeObjectURL(url);
-  }
+  // downloadSubtitles(): void {
+  //   const srtContent = this.exportToSRT();
+  //   const blob = new Blob([srtContent], { type: 'text/plain' });
+  //   const url = URL.createObjectURL(blob);
+  //   const a = document.createElement('a');
+  //   a.href = url;
+  //   a.download = 'subtitles.srt';
+  //   a.click();
+  //   URL.revokeObjectURL(url);
+  // }
 
-  onAllSegmentsComplete(): void {
-    const finalSubtitles = this.exportToSRT();
-    console.log('✅ Sous-titres générés :', finalSubtitles);
+  // onAllSegmentsComplete(): void {
+  //   const finalSubtitles = this.exportToSRT();
+  //   console.log('✅ Sous-titres générés :', finalSubtitles);
 
-    if (!finalSubtitles.trim()) {
-      console.error('❌ Aucun sous-titre généré ! Vérifie la saisie.');
-      return;
-    }
+  //   if (!finalSubtitles.trim()) {
+  //     console.error('❌ Aucun sous-titre généré ! Vérifie la saisie.');
+  //     return;
+  //   }
 
-    // Sauvegarder le fichier .srt localement (stocké temporairement dans localStorage)
-    localStorage.setItem('srtFile', finalSubtitles);
+  //   // Sauvegarder le fichier .srt localement (stocké temporairement dans localStorage)
+  //   localStorage.setItem('srtFile', finalSubtitles);
 
-    // Redirection vers Streaming avec l'ID de session
-    this.router.navigate(['/streaming', this.sessionId]);
-  }
+  //   // Redirection vers Streaming avec l'ID de session
+  //   this.router.navigate(['/streaming', this.sessionId]);
+  // }
 
   connectToSocket(): void {
     console.log('Rejoint la session via Socket.IO :', {
@@ -1176,6 +1177,27 @@ export class DashboardComponent implements OnInit, OnDestroy {
         next: (res) => console.log('Déconnexion backend réussie :', res),
         error: (err) => console.error('Erreur backend :', err),
       });
+  }
+
+  onExportSrt(): void {
+    console.log('onExportSrt appelé, envoi de la requête export-srt');
+    this.sessionService.exportSrt(this.sessionId).subscribe({
+      next: (blob: Blob) => {
+        console.log('Réponse reçue, blob.size =', blob.size);
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `session-${this.sessionId}.srt`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+      },
+      error: (err: HttpErrorResponse) => {
+        console.error(' Erreur export SRT', err);
+        alert('Impossible d’exporter les sous-titres.');
+      },
+    });
   }
 
   // Déconnexion utilisateur

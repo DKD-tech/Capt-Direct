@@ -65,7 +65,7 @@ const {
 const { startStream } = require("../controllers/rtmp/streamController");
 
 const authMiddleware = require("../middlewares/authMiddleware");
-
+const { exportSrtController } = require("../controllers/stc/srtController");
 const sessionRouter = express.Router();
 
 sessionRouter.post("/create-session", createSessionController);
@@ -91,6 +91,7 @@ sessionRouter.get(
   authMiddleware,
   getSegmentsWithSubtitles
 );
+sessionRouter.get("/:sessionId/export-srt", exportSrtController);
 sessionRouter.get("/info/:sessionId", getSessionController);
 sessionRouter.post("/store-duration/:sessionId", storeVideoDurationController);
 sessionRouter.post("/get-duration/:sessionId", getVideoDuration);
