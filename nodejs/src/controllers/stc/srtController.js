@@ -1,7 +1,7 @@
 // backend/controllers/srtController.js
 const VideoSegmentModel = require('../../models/VideoSegmentModel');
 const SubtitleModel     = require('../../models/SubtitleModel');
-const { handleOverlapWithWordsFuzzy,correctText  } = require('../../utils/algo_textes');
+const { handleOverlapWithWordsFuzzy, correctText } = require('../../utils/algo_textes');
 
 /**
  * Convertit "HH:MM:SS.xxx" en secondes (float).
@@ -34,12 +34,7 @@ async function exportSrtController(req, res) {
   try {
     // Charger tous les segments de la session
     const segments = await VideoSegmentModel.findManyBy({ session_id: sessionId });
-    console.log('Segments chargés:', segments.length);
-
-    // Trier les segments par start_time pour garantir ordre chronologique
-    segments.sort((a, b) =>
-      timeStringToSeconds(a.start_time) - timeStringToSeconds(b.start_time)
-    );
+    segments.sort((a, b) => timeStringToSeconds(a.start_time) - timeStringToSeconds(b.start_time));
 
     // Charger les sous-titres pour chaque segment
     for (let i = 0; i < segments.length; i++) {
@@ -47,9 +42,6 @@ async function exportSrtController(req, res) {
       seg.subtitles = await SubtitleModel.findManyBy({ segment_id: seg.segment_id }) || [];
     }
 
-
-    
-    
     // Correction des chevauchements entre segments consécutifs
     for (let i = 1; i < segments.length; i++) {
       const prevSeg = segments[i - 1];
@@ -59,24 +51,32 @@ async function exportSrtController(req, res) {
       const currText = currSeg.subtitles.map(s => s.text).join(' ');
 
       const { adjustedText1, adjustedText2, overlap } = handleOverlapWithWordsFuzzy(prevText, currText);
-
       if (overlap) {
-        console.log(`Chevauchement corrigé entre segments ${prevSeg.segment_id} et ${currSeg.segment_id} : "${overlap}"`);
         prevSeg.subtitles = adjustedText1 ? [{ text: adjustedText1 }] : [];
         currSeg.subtitles = adjustedText2 ? [{ text: adjustedText2 }] : [];
       }
     }
-// ── NOUVEAU : correction orthographique de tous les mots ──
+
+    // ── CORRECTION ORTHOGRAPHIQUE ──
     for (const seg of segments) {
       const raw = seg.subtitles.map(s => s.text).join(' ');
       const corr = raw ? correctText(raw) : '';
-      console.log(`Texte corrigé (orthographe) pour segment ${seg.segment_id}: "${corr}"`);
       seg.subtitles = corr ? [{ text: corr }] : [];
     }
-    console.log('Segments avant génération du SRT :', segments);
+
+    // ── AJUSTEMENT DES TIMESTAMPS POUR FENÊTRES CONTIGUËS ──
+    let currentStart   = timeStringToSeconds(segments[0].start_time);
+    const windowDuration = timeStringToSeconds(segments[0].end_time) - currentStart;
+    segments.forEach(seg => {
+      const newStart = currentStart;
+      const newEnd   = newStart + windowDuration;
+      seg.start_time = formatTimeToSRT(newStart);
+      seg.end_time   = formatTimeToSRT(newEnd);
+      currentStart   = newEnd;
+    });
 
     // Variables de configuration
-    let subtitleIndex = 1;
+    let subtitleIndex       = 1;
     const minFirstSegmentDuration = 10;
     const minSubtitleDuration     = 2;
     const maxCPS                  = 12;
@@ -88,21 +88,11 @@ async function exportSrtController(req, res) {
       const fullText = (segment.subtitles || [])
         .map(s => s.text)
         .join(' ')
-        .replace(/[\r\n]+/g, ' ')
+        .replace(/[\n]+/g, ' ')
         .trim();
-
-      console.log(`Sous-titres pour le segment ${segment.segment_id} :`, fullText);
 
       let startTime = timeStringToSeconds(segment.start_time);
       let endTime   = timeStringToSeconds(segment.end_time);
-
-      if (isNaN(startTime) || isNaN(endTime) || endTime <= startTime) {
-        console.error(
-          `Erreur : start_time (${startTime}) et end_time (${endTime}) invalides pour segment ${segment.segment_id}`
-        );
-        endTime = startTime + 1;
-      }
-
       if (segmentIndex === 0 && (endTime - startTime) < minFirstSegmentDuration) {
         endTime = startTime + minFirstSegmentDuration;
       }
@@ -111,6 +101,7 @@ async function exportSrtController(req, res) {
         return `${subtitleIndex++}\n${formatTimeToSRT(startTime)} --> ${formatTimeToSRT(endTime)}\n`;
       }
 
+      // Découpage en lignes
       const words = fullText.split(' ');
       const lines = [];
       let currentLine = '';
@@ -124,42 +115,34 @@ async function exportSrtController(req, res) {
       });
       if (currentLine.trim() !== '') lines.push(currentLine.trim());
 
-      console.log(`Sous-titres découpés pour le segment ${segment.segment_id} :`, lines);
-
+      // Ajustement de la durée : on utilise toujours la totalité du segment
       const segmentDuration = endTime - startTime;
-      const idealDuration   = fullText.length / maxCPS;
       let adjustedDuration  = Math.max(
         minSubtitleDuration,
-        Math.min(segmentDuration, idealDuration)
+        segmentDuration
       );
       if (segmentIndex === 0 && adjustedDuration < minFirstSegmentDuration) {
         adjustedDuration = minFirstSegmentDuration;
       }
-      const lineDuration = Math.max(minSubtitleDuration, adjustedDuration / lines.length);
+      const lineDuration = adjustedDuration / lines.length;
 
+      // Construction des blocs visibles
       const visibleLines = [];
       return lines.map((line, i) => {
         const blockStart = startTime + i * lineDuration;
         const blockEnd   = Math.min(endTime, blockStart + lineDuration);
-
         visibleLines.push(line);
-        if (visibleLines.length > maxVisibleLines) {
-          visibleLines.shift();
-        }
-
+        if (visibleLines.length > maxVisibleLines) visibleLines.shift();
         const blockText = visibleLines.join('\n');
         const srtBlock =
           `${subtitleIndex++}\n` +
           `${formatTimeToSRT(blockStart)} --> ${formatTimeToSRT(blockEnd)}\n` +
           `${blockText}`;
-
         return srtBlock;
       }).join('\n\n');
     });
 
     const srtContent = srtBlocks.join('\n\n');
-    console.log('Longueur SRT généré :', srtContent.length);
-
     if (!srtContent.trim()) {
       return res.status(500).json({ message: 'Aucun SRT généré (vide).' });
     }

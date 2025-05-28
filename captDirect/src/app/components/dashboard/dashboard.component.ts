@@ -31,7 +31,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   displayedSubtitle = '';
   userId: number = 0; // Identifiant utilisateur récupéré dynamiquement
   videoUrl = ''; // URL de la vidéo récupérée dynamiquement
-  sessionId: number = 53; // ID de la session à afficher
+  sessionId: number = 55; // ID de la session à afficher
   segments: any[] = [];
   username: string = '';
   collaborators: number = 1; // Nombre de collaborateurs en ligne
