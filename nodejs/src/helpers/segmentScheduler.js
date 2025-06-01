@@ -1,18 +1,19 @@
+// segmentScheduler.js
+
 const VideoSegmentModel = require("../models/VideoSegmentModel");
-const SegmentUserModel = require("../models/SegmentUserModel");
-// const io = require("../config/socket"); // WebSocket centralisé
+const SegmentUserModel  = require("../models/SegmentUserModel");
 const {
   convertSecondsToTime,
   convertTimeToSeconds,
 } = require("../utils/timeUtils");
 const { getAsync } = require("../redis/index");
 const { getConnectedUsers } = require("../utils/socketUtils");
-// Accès différé à `io`
+
 // Pour éviter plusieurs setInterval() pour une même session
-const activeSchedulers = new Map();
-const roundRobinIndexes = new Map(); // sessionId → index de rotation
+const activeSchedulers   = new Map();
+const roundRobinIndexes  = new Map(); // sessionId → index de rotation
 const segmentAssignments = new Map(); // sessionId → { userId → count }
-// const io = require("../config/socket"); // WebSocket centralisé
+
 /**
  * Génère un segment glissant pour une session donnée.
  */
@@ -30,6 +31,7 @@ async function generateSegment({
     return;
   }
 
+  // 1) Récupérer le dernier segment pour calculer startTime/endTime
   const lastSegment = await VideoSegmentModel.getLastSegment(sessionId);
   const startTime = lastSegment
     ? convertTimeToSeconds(lastSegment.start_time) + step
@@ -38,6 +40,7 @@ async function generateSegment({
 
   console.log("DEBUG:", { startTime, endTime });
 
+  // 2) Sélectionner l’utilisateur selon round-robin
   const userToAssign = selectBalancedUser(sessionId, users);
   if (!userToAssign) {
     console.log(
@@ -46,44 +49,64 @@ async function generateSegment({
     return;
   }
 
-  const segmentStartUnix = Date.now() + step * 1000;
+  // 3) Calculer le timestamp absolu (ms) de début du segment
+  const startUnix = Date.now() + step * 1000;
 
+  // 4) Insérer le segment en status "in_progress"
   const segment = await VideoSegmentModel.insert({
     session_id: sessionId,
     start_time: convertSecondsToTime(startTime),
-    end_time: convertSecondsToTime(endTime),
-    status: "pending",
+    end_time:   convertSecondsToTime(endTime),
+    status:     "in_progress", // on marque directement en in_progress
     created_at: new Date(),
   });
 
+  // 5) Assigner cet utilisateur au segment
   await SegmentUserModel.insert({
-    segment_id: segment.segment_id,
-    user_id: userToAssign.id,
+    segment_id:  segment.segment_id,
+    user_id:     userToAssign.id,
     assigned_at: new Date(),
   });
-  console.log("Socket ID cible :", userToAssign.id);
-  // ✅ Vérification défensive avant utilisation
+
+  console.log("Socket ID cible :", userToAssign.socketId);
+
+  // 6) Vérification défensive de socketUsers
   if (!socketUsers || typeof socketUsers.get !== "function") {
     console.warn(
       `[Scheduler] socketUsers invalide ou non transmis pour user ${userToAssign.id}`
     );
-
-    return; // 🔴 Sortir pour éviter une exception
+    return;
   }
   const socketId = userToAssign.socketId;
 
-  // const socketId = await getAsync(`socket:${userToAssign.id}`);
   if (socketId) {
-    const io = require("../config/socket");
-    // io.to(socketId).emit("segment-assigned", segment);
+    // → IMPORT DYNAMIQUE corrigé :
+    const socketModule = await import("../config/socket.js");
+    // si votre config/socket.js faisait un "export default io"
+    // alors socketModule.default contient l’objet io
+    // si au contraire il faisait "export const io = new Server(...)"
+    // alors socketModule.io contient l’objet io
+    const io = socketModule.io || socketModule.default;
+
+    if (!io) {
+      console.error(
+        "[Scheduler] Impossible de récupérer `io` depuis config/socket.js"
+      );
+      return;
+    }
+
     io.to(socketId).emit("segment-assigned", {
-      ...segment,
+      segment_id:  segment.segment_id,
+      session_id:  segment.session_id,
+      start_time:  segment.start_time,
+      end_time:    segment.end_time,
+      status:      segment.status,      // “in_progress”
       assigned_to: userToAssign.username,
-      start_unix: segmentStartUnix, // 💥 le vrai bonus pour la synchro front
+      start_unix:  startUnix             // timestamp absolu (ms)
     });
 
     console.log(
-      `[WebSocket] Segment envoyé à socket ${socketId} (user ${userToAssign.id})`
+      `[WebSocket] "segment-assigned" émis à socket ${socketId} (user ${userToAssign.id})`
     );
   } else {
     console.warn(
@@ -93,139 +116,45 @@ async function generateSegment({
 }
 
 /**
- *
- * @param {*} sessionId
- * @param {*} users
- * @returns
+ * Sélectionne l’utilisateur suivant (round-robin pondéré).
  */
 function selectBalancedUser(sessionId, users) {
   if (!users || users.length === 0) return null;
-
-  // Initialiser la map pour cette session si absente
   if (!segmentAssignments.has(sessionId)) {
     segmentAssignments.set(sessionId, new Map());
   }
   const sessionMap = segmentAssignments.get(sessionId);
 
-  // Trier par count (pondération), puis appliquer une rotation douce
+  // 1) Trier par “count” (moindre d’abord)
   const sorted = [...users].sort((a, b) => {
     const countA = sessionMap.get(a.id) || 0;
     const countB = sessionMap.get(b.id) || 0;
     return countA - countB;
   });
 
-  // Round-robin équilibré entre ceux ayant le même count
+  // 2) Round-robin parmi ceux qui ont le même count minimal
   const currentIndex = roundRobinIndexes.get(sessionId) || 0;
+  const minCount = sessionMap.get(sorted[0].id) || 0;
   const filtered = sorted.filter(
-    (u) => (sessionMap.get(u.id) || 0) === (sessionMap.get(sorted[0].id) || 0)
+    (u) => (sessionMap.get(u.id) || 0) === minCount
   );
 
   const selectedUser = filtered[currentIndex % filtered.length];
 
-  // Mettre à jour l’index et le compteur
+  // 3) Incrémenter l’index et mettre à jour le count
   roundRobinIndexes.set(sessionId, (currentIndex + 1) % filtered.length);
-  sessionMap.set(selectedUser.id, (sessionMap.get(selectedUser.id) || 0) + 1);
+  sessionMap.set(
+    selectedUser.id,
+    (sessionMap.get(selectedUser.id) || 0) + 1
+  );
 
   return selectedUser;
-}
-
-/**
- * Sélectionne le meilleur utilisateur pour l'assignation.
- */
-function selectBestUser(users) {
-  return users.sort((a, b) => {
-    if (a.activeSegmentCount !== b.activeSegmentCount) {
-      return a.activeSegmentCount - b.activeSegmentCount;
-    }
-    return new Date(a.lastActiveAt) - new Date(b.lastActiveAt);
-  })[0];
 }
 
 /**
  * Lance le scheduler toutes les `step` secondes pour une session.
  * Protégé contre les doublons.
  */
-// function startSegmentScheduler({ sessionId, segmentDuration, step, users }) {
-//   if (activeSchedulers.has(sessionId)) {
-//     console.log(`[Scheduler] Déjà actif pour session ${sessionId}`);
-//     return;
-//   }
-
-//   console.log(`[Scheduler] Démarrage pour session ${sessionId}`);
-//   const intervalId = setInterval(async () => {
-//     const connectedUsers = await getConnectedUsers(sessionId);
-
-//     const enrichedUsers = connectedUsers.map((user) => ({
-//       id: user.user_id,
-//       username: user.username,
-//       activeSegmentCount: 0, // Tu peux l'améliorer ensuite
-//       lastActiveAt: new Date(), // Idem : à raffiner
-//     }));
-
-//     await generateSegment({
-//       sessionId,
-//       segmentDuration,
-//       step,
-//       users: enrichedUsers,
-//     });
-//   }, step * 1000);
-
-//   activeSchedulers.set(sessionId, intervalId);
-// }
-
-// function startSegmentScheduler({ sessionId, segmentDuration, step, io }) {
-//   if (activeSchedulers.has(sessionId)) {
-//     console.log(`[Scheduler] Déjà actif pour session ${sessionId}`);
-//     return;
-//   }
-
-//   console.log(`[Scheduler] Démarrage pour session ${sessionId}`);
-
-//   const intervalId = setInterval(async () => {
-//     const roomSockets = await io.in(`session:${sessionId}`).allSockets();
-//     const validUsers = [];
-
-//     for (const socketId of roomSockets) {
-//       const socket = io.sockets.sockets.get(socketId);
-//       const user_id = socket?.data?.user_id;
-//       const username = socket?.data?.username;
-
-//       if (!user_id || !username) continue;
-
-//       const redisSocketId = await getAsync(`socket:${user_id}`);
-
-//       // On valide que le socket encore dans Redis correspond bien à celui connecté
-//       if (redisSocketId === socketId) {
-//         validUsers.push({
-//           id: user_id,
-//           username,
-//         });
-//       }
-//     }
-
-//     console.log(
-//       `[Scheduler] Utilisateurs valides (connectés et synchronisés) :`,
-//       validUsers.map((u) => `${u.id}:${u.username}`)
-//     );
-
-//     if (validUsers.length === 0) {
-//       console.log(
-//         `[Scheduler] Aucun utilisateur valide dans session ${sessionId}, skip.`
-//       );
-//       return;
-//     }
-
-//     await generateSegment({
-//       sessionId,
-//       segmentDuration,
-//       step,
-//       users: validUsers,
-//     });
-//   }, step * 1000);
-
-//   activeSchedulers.set(sessionId, intervalId);
-// }
-
 async function startSegmentScheduler({
   sessionId,
   segmentDuration,
@@ -240,12 +169,12 @@ async function startSegmentScheduler({
   console.log(`[Scheduler] Démarrage pour session ${sessionId}`);
 
   const intervalId = setInterval(async () => {
-    // 🔥 Nouvelle logique : récupération directe des sockets connectées
+    // Récupérer la liste des sockets dans la room `session:${sessionId}`
     const sockets = await io.in(`session:${sessionId}`).fetchSockets();
     const validUsers = sockets
       .filter((sock) => sock.data.user_id && sock.data.username)
       .map((sock) => ({
-        id: sock.data.user_id,
+        id:       sock.data.user_id,
         username: sock.data.username.trim(),
         socketId: sock.id,
       }));
@@ -259,17 +188,19 @@ async function startSegmentScheduler({
       console.log(`[Scheduler] Aucun utilisateur valide, skip.`);
       return;
     }
+
     await generateSegment({
       sessionId,
       segmentDuration,
       step,
       users: validUsers,
-      socketUsers,
+      socketUsers
     });
   }, step * 1000);
 
   activeSchedulers.set(sessionId, intervalId);
 }
+
 /**
  * Arrête le scheduler en cours pour une session.
  */

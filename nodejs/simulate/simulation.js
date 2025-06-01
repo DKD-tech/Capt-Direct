@@ -136,8 +136,8 @@ const axios = require("axios");
 const fs = require("fs");
 const path = require("path");
 
-const SERVER_URL = "http://192.168.196.212:3000";
-const SESSION_ID = 35;
+const SERVER_URL = "http://192.168.1.69:3000";
+const SESSION_ID = 72;
 const MAX_SEGMENTS_PER_USER = 2;
 
 const USERS = [
@@ -154,7 +154,7 @@ const USERS = [
 ];
 
 const TEXTS = [
-  "Bonjour, je suis prêt.",
+  "Bonjour, je suis prêt à aller au Cameroun l'année prochaine .",
   "Je commence à taper.",
   "Voici ma contribution.",
   "Ceci est une phrase test.",

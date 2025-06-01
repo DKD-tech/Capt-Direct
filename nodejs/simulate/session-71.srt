@@ -1,0 +1,164 @@
+1
+00:00:00,000 --> 00:00:05,000
+Bonjour, je suis prêt à aller au
+
+2
+00:00:05,000 --> 00:00:10,000
+cameroun l'année prochaine .
+
+3
+00:00:10,000 --> 00:00:15,000
+Voici ma contribution.
+
+4
+00:00:15,000 --> 00:00:20,000
+Je participe à la session.
+
+5
+00:00:20,000 --> 00:00:25,000
+Le sous-titre s’enregistre.
+
+6
+00:00:25,000 --> 00:00:30,000
+Presque terminé.
+
+7
+00:00:30,000 --> 00:00:35,000
+Je commence à taper.
+
+8
+00:00:35,000 --> 00:00:40,000
+Un autre segment ici.
+
+9
+00:00:40,000 --> 00:00:45,000
+Dernier test utilisateur.
+
+10
+00:00:45,000 --> 00:00:50,000
+Ceci est une phrase test.
+
+11
+00:00:50,000 --> 00:00:55,000
+J'écris rapidement.
+
+12
+00:00:55,000 --> 00:01:00,000
+Je commence à taper.
+
+13
+00:01:00,000 --> 00:01:05,000
+Ceci est une phrase test.
+
+14
+00:01:05,000 --> 00:01:10,000
+Un autre segment ici.
+
+15
+00:01:10,000 --> 00:01:12,500
+Bonjour, je suis prêt à aller au
+
+16
+00:01:12,500 --> 00:01:15,000
+cameroun l'année prochaine .
+
+17
+00:01:15,000 --> 00:01:20,000
+Voici ma contribution.
+
+18
+00:01:20,000 --> 00:01:25,000
+Je participe à la session.
+
+19
+00:01:25,000 --> 00:01:30,000
+Le sous-titre s’enregistre.
+
+20
+00:01:30,000 --> 00:01:35,000
+Presque terminé.
+
+21
+00:01:35,000 --> 00:01:40,000
+Je commence à taper.
+
+22
+00:01:40,000 --> 00:01:45,000
+Un autre segment ici.
+
+23
+00:01:45,000 --> 00:01:50,000
+Dernier test utilisateur.
+
+24
+00:01:50,000 --> 00:01:55,000
+Ceci est une phrase test.
+
+25
+00:01:55,000 --> 00:02:00,000
+J'écris rapidement.
+
+26
+00:02:00,000 --> 00:02:05,000
+Je commence à taper.
+
+27
+00:02:05,000 --> 00:02:10,000
+Ceci est une phrase test.
+
+28
+00:02:10,000 --> 00:02:15,000
+Un autre segment ici.
+
+29
+00:02:15,000 --> 00:02:17,500
+Bonjour, je suis prêt à aller au
+
+30
+00:02:17,500 --> 00:02:20,000
+cameroun l'année prochaine .
+
+31
+00:02:20,000 --> 00:02:25,000
+Voici ma contribution.
+
+32
+00:02:25,000 --> 00:02:30,000
+Je participe à la session.
+
+33
+00:02:30,000 --> 00:02:35,000
+Le sous-titre s’enregistre.
+
+34
+00:02:35,000 --> 00:02:40,000
+Presque terminé.
+
+35
+00:02:40,000 --> 00:02:45,000
+Je commence à taper.
+
+36
+00:02:45,000 --> 00:02:50,000
+Un autre segment ici.
+
+37
+00:02:50,000 --> 00:02:55,000
+Dernier test utilisateur.
+
+38
+00:02:55,000 --> 00:03:00,000
+Ceci est une phrase test.
+
+39
+00:03:00,000 --> 00:03:05,000
+J'écris rapidement.
+
+40
+00:03:05,000 --> 00:03:10,000
+Je commence à taper.
+
+41
+00:03:10,000 --> 00:03:15,000
+Ceci est une phrase test.
+

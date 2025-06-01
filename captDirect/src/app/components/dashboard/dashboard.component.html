@@ -33,28 +33,25 @@
       </div>
 
       <div class="status-header">
-        <!-- <span
+         <span
           class="signal-light"
           [ngClass]="{
             'signal-green': getCurrentSignal() === 'green',
             'signal-orange': getCurrentSignal() === 'orange',
             'signal-red': getCurrentSignal() === 'red'
           }"
-        ></span> -->
+        ></span> 
 
-        <!-- <span class="status-text" *ngIf="getCurrentSignal() === 'green'">
-          C'est à vous de sous-titrer</span
-        > -->
-        <!-- <span
+        <span class="status-text" *ngIf="getCurrentSignal() === 'green'">
+          C'est à vous de sous-titrer</span> 
+        <span
           class="status-text orange-text"
           *ngIf="getCurrentSignal() === 'orange'"
-        > -->
-        <!-- C'est bientot à vous dans
-          {{ getSecondsToNextSegment() }} seconde(s)...</span
-        > -->
-        <!-- <span class="status-text red-text" *ngIf="getCurrentSignal() === 'red'">
+        >  C'est bientot à vous </span
+        > 
+        <span class="status-text red-text" *ngIf="getCurrentSignal() === 'red'">
           En attente</span
-        > -->
+        > 
 
         <div class="clock">
           <mat-icon>access_time</mat-icon>
@@ -130,7 +127,7 @@
           <!-- Zone de texte pour saisir un sous-titre -->
           <textarea
             [(ngModel)]="segment.subtitleText"
-            (focus)="onUserTyping(segment)"
+           
             rows="2"
             placeholder="Saisir un sous-titre"
           ></textarea>

@@ -1,21 +1,20 @@
 import { SubtitleService } from './../../services/sessions/subtitle.service';
 import { VideoService } from './../../services/sessions/video.service';
 import { AuthService } from './../../services/auth/auth.service';
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import {
+  Component,
+  OnDestroy,
+  OnInit,
+  NgZone,
+  ChangeDetectorRef,
+} from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import { SocketService } from '../../services/socket.service';
-// import { SubtitleService } from '../../services/sessions/subtitle.service';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { SessionService } from '../../services/sessions/session.service';
 import { CommonModule } from '@angular/common';
-import { ViewChild, ElementRef, AfterViewInit } from '@angular/core';
-import { NgZone } from '@angular/core';
-import { ChangeDetectorRef } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
-
-// import videojs from 'video.js';
-// import WaveSurfer from 'wavesurfer.js';
 
 @Component({
   selector: 'app-dashboard',
@@ -25,14 +24,15 @@ import { HttpErrorResponse } from '@angular/common/http';
   styleUrl: './dashboard.component.scss',
 })
 export class DashboardComponent implements OnInit, OnDestroy {
+  // --- Propriétés principales ---
   isAuthenticated: boolean = false;
   isLoading = true;
   subtitleText = '';
   displayedSubtitle = '';
   userId: number = 0; // Identifiant utilisateur récupéré dynamiquement
   videoUrl = ''; // URL de la vidéo récupérée dynamiquement
-  sessionId: number = 35; // ID de la session à afficher
-  segments: any[] = [];
+  sessionId: number = 90; // ID de la session à afficher
+  segments: any[] = []; // Array de segments (avec warningFlag, isVisible, timer, etc.)
   username: string = '';
   collaborators: number = 1; // Nombre de collaborateurs en ligne
   user: any;
@@ -40,56 +40,18 @@ export class DashboardComponent implements OnInit, OnDestroy {
   sessionName: string = '';
   sessionDescription: string = '';
   sessionStatus: string = '';
-  // Ajout d'une propriété pour stocker la durée de la vidéo
-  duration: number | null = null;
-  // duration: number;
-  hasStartedTyping = false; // ✅ Ajout : Variable pour vérifier si l'utilisateur a commencé à écrire
-  videoLoaded = false; // ✅ Ajout : Variable pour suivre le chargement de la vidéo
-  activeSegment: any = null; // Le segment actuellement en cours
-  nextSegment: any = null;
-  sessionStartTime: number = Date.now(); //
-  // officialStartTime = 0; //🕒 Temps de début de session (sera mis à jour dynamiquement)
-  // elapsedTime = 0;
-  streamStarted = false;
-  countdown = 5;
+  duration: number | null = null; // Durée de la vidéo (secondes)
+  hasStartedTyping = false; // SI l’utilisateur a déjà cliqué dans la zone de saisie
+  videoLoaded = false; // SI la vidéo est chargée
+  activeSegment: any = null; // Premier segment actuellement en cours pour cet utilisateur
+  activeSegments: any[] = []; // Tous les segments chevauchants actuellement en cours pour cet utilisateur
+  nextSegment: any = null; // Premier segment à venir (warning/orange)
+  officialStartTime = 0; // Timestamp (ms) du début de session (fourni par le back ou by default Date.now())
+  elapsedTime = 0; // Temps écoulé (secondes) depuis officialStartTime
+  streamStarted = false; // SI le flux a été démarré (countdown passé)
+  countdown = 5; // Compte à rebours avant démarrage
   countdownMessage = '';
-  // private signalUpdateInterval: any = null;
-
-  // // Méthode pour calculer la durée de la vidéo
-  // calculateVideoDuration(videoUrl: string): void {
-  //   const videoElement = document.createElement('video');
-  //   videoElement.src = videoUrl;
-
-  //   videoElement.onloadedmetadata = () => {
-  //     const duration = videoElement.duration;
-  //     console.log('Durée de la vidéo :', duration);
-  //     this.videoDuration = duration;
-
-  //     // Appel pour enregistrer la durée dans Redis via le backend
-  //     this.saveVideoDurationToRedis(duration);
-  //   };
-
-  //   videoElement.onerror = () => {
-  //     console.error(
-  //       'Erreur lors du chargement de la vidéo pour calculer la durée'
-  //     );
-  //   };
-  // }
-
-  // saveVideoDurationToRedis(duration: number): void {
-  //   // Envoie la durée au backend pour la stocker dans Redis
-  //   this.sessionService.saveVideoDuration(this.sessionId, duration).subscribe({
-  //     next: () => {
-  //       console.log('Durée de la vidéo sauvegardée dans Redis avec succès.');
-  //     },
-  //     error: (error) => {
-  //       console.error(
-  //         'Erreur lors de la sauvegarde de la durée de la vidéo dans Redis :',
-  //         error
-  //       );
-  //     },
-  //   });
-  // }
+  signalUpdateInterval: any = null; // ID du setInterval pour la boucle globale
 
   constructor(
     private socketService: SocketService,
@@ -99,55 +61,22 @@ export class DashboardComponent implements OnInit, OnDestroy {
     private videoService: VideoService,
     private ngZone: NgZone,
     private cdr: ChangeDetectorRef,
-    private cdRef: ChangeDetectorRef,
     private SubtitleService: SubtitleService
   ) {}
 
   ngOnInit() {
+    // 1) Charger l’utilisateur puis joindre la session WebSocket
     this.loadUserSession();
+    // 2) Charger détails de session (pour récupérer videoUrl et durée)
     this.loadSessionDetails();
-    // this.connectToSocket();
+    // 3) Refaire aussi un chargement simplifié pour afficher infos (nom, desc, status)
     this.loadSessionInfo();
-    // this.loadSegments();
-    // this.authService.getUserSession().subscribe((user) => {
-    //   this.user = user;
-    //   this.username = (user.username || '').trim();
-    //   this.userId = Number(user.user_id);
 
-    //   // Rejoindre la session via Socket.IO
-    //   // this.socketService.joinSession(
-    //   //   this.sessionId,
-    //   //   this.username,
-    //   //   this.userId
-    //   // );
-    //   // ✅ Affiche ce log pour vérifier les valeurs nettoyées
-    //   console.log('📦 Session utilisateur chargée et nettoyée :', {
-    //     userId: this.userId,
-    //     username: this.username,
-    //     sessionId: this.sessionId,
-    //   });
-    //   // Écouter les mises à jour des utilisateurs connectés
-    //   // ✅ Ajoute ici seulement : stocker localStorage
-    //   localStorage.setItem('userId', this.userId.toString());
-    //   localStorage.setItem('username', this.username);
-    //   localStorage.setItem('sessionId', this.sessionId.toString());
-    //   this.socketService.joinSession(
-    //     this.sessionId,
-    //     this.username,
-    //     this.userId
-    //   );
-    // });
+    // 4) Une fois que l’utilisateur est authentifié, on rejoint le canal Socket et on branche les events
     this.authService.getUserSession().subscribe({
       next: async (user) => {
-        this.username = (user.username || '').trim();
+        this.username = (user.username || '').toLowerCase().trim();
         this.userId = Number(user.user_id);
-
-        console.log(
-          '📦 Appel joinSession avec :',
-          this.sessionId,
-          this.username,
-          this.userId
-        );
 
         localStorage.setItem('userId', this.userId.toString());
         localStorage.setItem('username', this.username);
@@ -160,7 +89,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
           this.userId
         );
 
-        // ⚠️ Connecter aux événements socket après avoir fait joinSession
         this.connectToSocket();
       },
       error: (err) => {
@@ -169,118 +97,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
     });
   }
 
-  // startStream(): void {
-  //   console.log('startStream() appelée');
-  //   this.sessionService.startStream(this.sessionId).subscribe({
-  //     next: (res: any) => {
-  //       this.countdown = 5;
-  //       this.streamStarted = true;
-
-  //       const interval = setInterval(() => {
-  //         if (this.countdown > 0) {
-  //           this.countdownMessage = `Démarrage dans ${this.countdown} seconde(s)...`;
-  //           this.countdown--;
-  //         } else {
-  //           clearInterval(interval);
-  //           this.countdownMessage = '';
-
-  //           // Démarre la segmentation dès que le countdown est fini
-  //           this.startSegmentation();
-
-  //           // Charge les segments (ils seront tous invisibles au départ)
-  //           this.loadSegments(() => {
-  //             this.startGlobalTimer();
-
-  //             // Lancer les timers segmentés en fonction de elapsedTime
-  //             // this.startTimersFromElapsed(this.elapsedTime);
-  //           });
-  //         }
-  //       }, 1000);
-  //     },
-  //     error: (err) => {
-  //       console.error('Erreur lors du démarrage du flux', err);
-  //     },
-  //   });
-  // }
-
-  startStream() {
-    this.sessionService.startStream(this.sessionId).subscribe(() => {
-      this.countdown = 5;
-      this.streamStarted = true;
-
-      const interval = setInterval(() => {
-        if (this.countdown > 0) {
-          this.countdownMessage = `Démarrage dans ${this.countdown} seconde(s)...`;
-          this.countdown--;
-        } else {
-          clearInterval(interval);
-          this.countdownMessage = '';
-          this.startSegmentation();
-        }
-      }, 1000);
-    });
-  }
-  startSegmentation(): void {
-    console.log(
-      'Déclenchement de startSegmentation avec sessionId:',
-      this.sessionId
-    );
-    this.sessionService.startSegmentation(this.sessionId).subscribe({
-      next: (res: any) => {
-        console.log('Segmentation démarrée:', res);
-        // Ici tu peux afficher un message ou mettre à jour l’UI pour indiquer que la segmentation est active
-      },
-      error: (err: any) => {
-        console.error('Erreur lors du démarrage de la segmentation', err);
-      },
-    });
-  }
-
-  stopSegmentation(): void {
-    this.sessionService.stopSegmentation(this.sessionId).subscribe({
-      next: (res: any) => {
-        console.log('Segmentation arrêtée:', res);
-        // Mise à jour UI ou message de confirmation
-      },
-      error: (err: any) => {
-        console.error('Erreur lors de l’arrêt de la segmentation', err);
-      },
-    });
-  }
-
-  // startStream(): void {
-  //   this.sessionService.startStream(this.sessionId).subscribe({
-  //     next: (res: any) => {
-  //       this.countdown = 5;
-  //       this.streamStarted = true;
-
-  //       const interval = setInterval(() => {
-  //         if (this.countdown > 0) {
-  //           this.countdownMessage = `Démarrage dans ${this.countdown} seconde(s)...`;
-  //           this.countdown--;
-  //         } else {
-  //           clearInterval(interval);
-  //           this.countdownMessage = '';
-  //         }
-  //       }, 1000);
-  //     },
-  //     error: (err) => {
-  //       console.error('Erreur lors du démarrage du flux', err);
-  //     },
-  //   });
-  // }
-
-  onUserTyping(segment: any) {
-    if (!this.hasStartedTyping) {
-      this.hasStartedTyping = true;
-      console.log(
-        '🖱️ L’utilisateur a cliqué sur la zone de texte, démarrage des timers.'
-      );
-      //this.startTimers(); // ✅ Démarrer immédiatement le minuteur
-    }
-  }
-
-  // Chargement des informations utilisateur
+  // ------------------------------------------------------------
+  // 1) Chargement de la session utilisateur
+  // ------------------------------------------------------------
   loadUserSession(): void {
     this.authService.getUserSession().subscribe(
       (response) => {
@@ -301,6 +120,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
     );
   }
 
+  // ------------------------------------------------------------
+  // 2) Chargement des détails de session (pour videoUrl et durée)
+  // ------------------------------------------------------------
   loadSessionDetails(): void {
     this.sessionService.getSessionById(this.sessionId).subscribe({
       next: async (response: any) => {
@@ -309,15 +131,13 @@ export class DashboardComponent implements OnInit, OnDestroy {
           console.log('Vidéo URL récupérée:', this.videoUrl);
 
           try {
-            // Calculer la durée de la vidéo
             this.duration = await this.videoService.getVideoDuration(
               this.videoUrl
             );
             console.log('Durée de la vidéo récupérée :', this.duration);
 
-            // Envoyer la durée au backend pour la stocker dans Redis
             this.sessionService
-              .storeVideoDuration(this.sessionId, this.duration)
+              .storeVideoDuration(this.sessionId, this.duration!)
               .subscribe({
                 next: () => {
                   console.log('Durée de la vidéo stockée dans Redis.');
@@ -334,7 +154,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
               'Erreur lors de la récupération de la durée de la vidéo :',
               error
             );
-            // alert('Impossible de récupérer la durée de la vidéo.');
           }
         } else {
           console.error(
@@ -348,21 +167,17 @@ export class DashboardComponent implements OnInit, OnDestroy {
     });
   }
 
+  // ------------------------------------------------------------
+  // 3) Chargement simplifié des infos de session (nom, desc, status)
+  // ------------------------------------------------------------
   loadSessionInfo(): void {
     this.sessionService.getSessionById(this.sessionId).subscribe({
       next: (response) => {
-        // Récupération des détails de la session
         console.log('Détails de la session récupérés :', response);
-        this.videoUrl = `/videos/${response.video_url}`; // Chargez l'URL de la vidéo
-        this.sessionName = response.session_name; // Nom de la session
-        this.sessionDescription = response.description; // Description de la session
-        this.sessionStatus = response.status; // Statut de la session
-        // Récupérer la durée de la vidéo
-        // this.videoService.getVideoDuration(this.videoUrl).then(
-        //   (duration) => {
-        //     console.log(`Durée de la vidéo : ${duration} secondes`);
-        //   },
-        console.log('Informations de session chargées:', response);
+        this.videoUrl = `/videos/${response.video_url}`;
+        this.sessionName = response.session_name;
+        this.sessionDescription = response.description;
+        this.sessionStatus = response.status;
       },
       error: (error) => {
         console.error(
@@ -374,783 +189,572 @@ export class DashboardComponent implements OnInit, OnDestroy {
     });
   }
 
-  // Charger les segments associés à la session
-  // loadSegments(): void {
-  //   this.sessionService.getSegmentsWithSession(this.sessionId).subscribe({
-  //     next: (response) => {
-  //       this.segments = response.segments; // Adaptez si la structure diffère
-  //       console.log('Segments chargés pour la session :', this.segments);
-  //     },
-  //     error: (error) => {
-  //       console.error('Erreur lors du chargement des segments :', error);
-  //       alert('Impossible de charger les segments pour cette session.');
-  //     },
-  //   });
-  // }
-
-  // loadSegments(): void {
-  //   this.sessionService.getSegmentsWithSession(this.sessionId).subscribe({
-  //     next: (response) => {
-  //       this.segments = response.segments.map((segment: any) => ({
-  //         ...segment,
-  //         subtitleText: '', // Initialisation locale pour la saisie
-  //       }));
-  //       console.log('Segments chargés :', this.segments);
-
-  //       // Démarrer les timers pour chaque segment
-  //     this.startTimers();
-  //     },
-  //     error: (error) => {
-  //       console.error('Erreur lors du chargement des segments :', error);
-  //     },
-  //   });
-  // }
+  // ------------------------------------------------------------
+  // 4) Chargement initial des segments depuis le service REST
+  //    → Ajoute warningFlag, isVisible, timer à chaque segment
+  // ------------------------------------------------------------
   loadSegments(callback?: () => void): void {
     this.sessionService.getSegmentsWithSession(this.sessionId).subscribe({
       next: (response) => {
         if (!response.segments || response.segments.length === 0) {
-          console.warn('Aucun segment assigné à cet utilisateur.');
-          // alert('Aucun segment ne vous est assigné dans cette session.');
+          console.warn('⚠️ Aucun segment assigné à cet utilisateur.');
           this.segments = [];
           if (callback) callback();
           return;
         }
 
-        //  this.segments = this.mergeSort(response.segments)
-        //   .filter(
-        //     (segment: any) =>
-        //       (segment.assigned_to || '').toLowerCase().trim() ===
-        //       this.username.toLowerCase()
-        //   )
+        // 1) Tri par start_time
+        const sorted = this.mergeSort(response.segments);
 
-        this.segments = this.mergeSort(response.segments).map(
-          (segment: any) => {
-            const duration = this.calculateDurationInSeconds(
-              segment.start_time,
-              segment.end_time
-            );
+        // 2) Normalisation : assigned_to = lowercase & trim, calcul timeRemaining,
+        //    initialisation warningFlag = false, isVisible = false, timer = null
+        this.segments = sorted.map((segment: any) => {
+          const duration = this.calculateDurationInSeconds(
+            segment.start_time,
+            segment.end_time
+          );
+          const parsedStart = this.timeStringToSeconds(segment.start_time);
+          const parsedEnd = this.timeStringToSeconds(segment.end_time);
+          console.log(
+            `[loadSegments] segment_id=${segment.segment_id}, start_time="${segment.start_time}" → ${parsedStart}s, end_time="${segment.end_time}" → ${parsedEnd}s`
+          );
+          return {
+            ...segment,
+            subtitleText: '',
+            timeRemaining: duration,
+            timer: null,
+            isVisible: false,
+            warningFlag: false,
+            assigned_to: (segment.assigned_to || 'Utilisateur inconnu')
+              .toLowerCase()
+              .trim(),
+            subtitles: segment.subtitles || [],
+            // NB: À ce stade, pas de start_unix car on recevra le segment en WebSocket
+          };
+        });
 
-            return {
-              ...segment,
-              subtitleText: '',
-              timeRemaining: duration,
-              timer: null,
-              isDisabled: false, // toujours false
-              isVisible: false,
-              assigned_to: segment.assigned_to || 'Utilisateur inconnu',
-              subtitles: segment.subtitles || [],
-            };
-          }
-        );
-
-        console.log('Segments chargés avec timers :', this.segments);
+        console.log('✔ Segments chargés avec timers :', this.segments);
         if (callback) callback();
       },
       error: (error) => {
-        console.error('Erreur lors du chargement des segments :', error);
+        console.error('❌ Erreur lors du chargement des segments :', error);
         alert('Erreur lors du chargement des segments. Veuillez réessayer.');
         if (callback) callback();
       },
     });
   }
 
-  calculateDurationInSeconds(startTime: string, endTime: string): number {
-    const [startHours, startMinutes, startSeconds] = startTime
-      .split(':')
-      .map(Number);
-    const [endHours, endMinutes, endSeconds] = endTime.split(':').map(Number);
+  // ------------------------------------------------------------
+  // 5) Démarrage du flux (startStream appelle startSegmentation après countdown)
+  // ------------------------------------------------------------
+  startStream() {
+    this.sessionService.startStream(this.sessionId).subscribe(() => {
+      this.countdown = 5;
+      this.streamStarted = true;
 
-    // Convertir les heures, minutes et secondes en secondes totales
-    const startTotalSeconds =
-      startHours * 3600 + startMinutes * 60 + startSeconds;
-    const endTotalSeconds = endHours * 3600 + endMinutes * 60 + endSeconds;
-
-    // Retourner la différence en secondes
-    return endTotalSeconds - startTotalSeconds;
+      const interval = setInterval(() => {
+        if (this.countdown > 0) {
+          this.countdownMessage = `Démarrage dans ${this.countdown} seconde(s)...`;
+          this.countdown--;
+        } else {
+          clearInterval(interval);
+          this.countdownMessage = '';
+          this.startSegmentation();
+        }
+      }, 1000);
+    });
   }
 
-  // startTimers(): void {
-  //   const globalStartTime = Date.now(); // Référence commune
-  //   console.log(
-  //     '🕒 Démarrage global des timers à',
-  //     new Date(globalStartTime).toISOString()
-  //   );
-
-  //   this.segments.forEach((segment, index) => {
-  //     const startDelay = this.timeStringToSeconds(segment.start_time) * 1000; // delay en ms
-  //     const duration = this.calculateDurationInSeconds(
-  //       segment.start_time,
-  //       segment.end_time
-  //     );
-
-  //     // Timer de début basé sur le moment global
-  //     setTimeout(() => {
-  //       console.log(`🚀 Démarrage du segment ${segment.segment_id}`);
-  //       segment.timeRemaining = duration;
-
-  //       segment.timer = setInterval(() => {
-  //         if (segment.timeRemaining > 0) {
-  //           segment.timeRemaining--;
-  //         } else {
-  //           clearInterval(segment.timer);
-  //           this.autoSaveSubtitle(segment); // Sauvegarde automatique
-  //           console.log(`✅ Fin du segment ${segment.segment_id}`);
-  //         }
-  //       }, 1000);
-  //     }, startDelay);
-  //   });
-  // }
-
-  //   startTimers(): void {
-  //   const globalStart = Date.now();
-
-  //   this.segments.forEach((segment, index) => {
-  //     const delayBeforeStart = this.timeStringToSeconds(segment.start_time) * 1000;
-
-  //     setTimeout(() => {
-  //       console.log(`🟢 Timer lancé pour le segment ${segment.segment_id}`);
-
-  //       segment.timer = setInterval(() => {
-  //         if (segment.timeRemaining > 0) {
-  //           segment.timeRemaining--;
-  //         } else {
-  //           clearInterval(segment.timer);
-  //           this.autoSaveSubtitle(segment);
-  //         }
-  //       }, 1000);
-  //     }, delayBeforeStart);
-  //   });
-  // }
-
-  // startTimers(): void {
-  //   this.segments.forEach((segment) => {
-  //     const delayBeforeStart =
-  //       this.timeStringToSeconds(segment.start_time) * 1000;
-  //     console.log(
-  //       `Segment ${segment.segment_id} démarrera dans ${delayBeforeStart} ms`
-  //     );
-  //     setTimeout(() => {
-  //       console.log(`🟢 Timer lancé pour le segment ${segment.segment_id}`);
-
-  //       segment.timer = setInterval(() => {
-  //         if (segment.timeRemaining > 0) {
-  //           segment.timeRemaining--;
-  //           this.cdr.detectChanges();
-  //         } else {
-  //           clearInterval(segment.timer);
-  //           this.autoSaveSubtitle(segment);
-  //           this.cdr.detectChanges();
-  //         }
-  //       }, 1000);
-  //     }, delayBeforeStart);
-  //   });
-  // }
-
-  // startGlobalTimer(): void {
-  //   const now = Date.now();
-  //   const delay = Math.max(0, this.officialStartTime - now);
-
-  //   console.log(`⏱️ Délai avant démarrage global: ${delay}ms`);
-
-  //   setTimeout(() => {
-  //     console.log(`⏱️ Flux officiellement lancé !`);
-  //     this.startTimers();
-
-  //     // Nettoyage si un ancien interval est déjà là
-  //     if (this.signalUpdateInterval) {
-  //       clearInterval(this.signalUpdateInterval);
-  //     }
-
-  //     // Démarrage de l'interval
-  //     // this.signalUpdateInterval = setInterval(() => {
-  //     //   const elapsed = Math.floor(
-  //     //     (Date.now() - this.officialStartTime) / 1000
-  //     //   );
-  //     //   this.elapsedTime = elapsed;
-  //     //   this.updateSignalStatus();
-
-  //     //   // Arrêt automatique quand tous les segments sont terminés
-  //     //   const allSegmentsDone = this.segments.every(
-  //     //     (s) => s.timeRemaining <= 0
-  //     //   );
-  //     //   if (allSegmentsDone) {
-  //     //     console.log(
-  //     //       '🛑 Tous les segments sont terminés, arrêt du signal update.'
-  //     //     );
-  //     //     clearInterval(this.signalUpdateInterval);
-  //     //     this.signalUpdateInterval = null;
-  //     //   }
-  //     // }, 1000);
-  //     this.signalUpdateInterval = setInterval(() => {
-  //       const elapsed = Math.floor(
-  //         (Date.now() - this.officialStartTime) / 1000
-  //       );
-  //       this.elapsedTime = elapsed;
-  //       console.log('Elapsed Time:', elapsed);
-  //       this.updateSignalStatus();
-
-  //       // Rendre visible les segments dont le start_time est inférieur ou égal à elapsed + 5 secondes
-  //       this.segments.forEach((segment) => {
-  //         const start = this.timeStringToSeconds(segment.start_time);
-  //         if (!segment.isVisible && start <= elapsed + 5) {
-  //           segment.isVisible = true;
-  //           this.cdr.detectChanges();
-  //           console.log(`Segment ${segment.segment_id} is now visible`);
-  //         }
-  //       });
-
-  //       // Arrêt automatique quand tous les segments sont terminés
-  //       const allSegmentsDone = this.segments.every(
-  //         (s) => s.timeRemaining <= 0
-  //       );
-  //       if (allSegmentsDone) {
-  //         console.log(
-  //           '🛑 Tous les segments sont terminés, arrêt du signal update.'
-  //         );
-  //         clearInterval(this.signalUpdateInterval);
-  //         this.signalUpdateInterval = null;
-  //       }
-  //     }, 1000);
-  //   }, delay);
-  // }
-
-  // getSecondsToNextSegment(): number | null {
-  //   const username = (this.username || '').toLowerCase().trim();
-  //   const now = this.elapsedTime;
-
-  //   const nextSegment = this.segments.find((s) => {
-  //     const start = this.timeStringToSeconds(s.start_time);
-  //     const assignedTo = (s.assigned_to || '').toLowerCase().trim();
-  //     const timeBeforeStart = start - now;
-  //     return (
-  //       assignedTo === username && timeBeforeStart > 0 && timeBeforeStart <= 2
-  //     );
-  //   });
-
-  //   if (!nextSegment) return null;
-
-  //   return this.timeStringToSeconds(nextSegment.start_time) - now;
-  // }
-
-  autoSaveSubtitle(segment: any): void {
+  // ------------------------------------------------------------
+  // 6) Demande au back-end de démarrer la segmentation
+  //    → officialStartTime est mis à Date.now()
+  //    → puis on appelle startGlobalTimer()
+  // ------------------------------------------------------------
+  startSegmentation(): void {
     console.log(
-      `Texte saisi pour le segment ${segment.segment_id} :`,
-      segment.subtitleText
+      'Déclenchement startSegmentation, sessionId =',
+      this.sessionId
     );
+    this.sessionService.startSegmentation(this.sessionId).subscribe({
+      next: (res: any) => {
+        console.log('Segmentation démarrée (backend confirme) :', res);
 
-    if (segment.subtitleText.trim() !== '') {
-      this.sessionService
-        .addSubtitle(segment.segment_id, segment.subtitleText, this.userId)
-        .subscribe({
-          next: (response) => {
-            console.log(
-              `Réponse du backend pour le segment ${segment.segment_id} :`,
-              response
-            );
+        // 1) Initialisation de l’horodatage
+        this.officialStartTime = Date.now();
+        console.log(
+          '📡 officialStartTime =',
+          new Date(this.officialStartTime)
+        );
 
-            // Ajoute ici un log pour vérifier si `response.subtitle` est correct
-            if (response && response.subtitle) {
-              console.log(
-                'Sous-titre sauvegardé avec succès :',
-                response.subtitle
-              );
+        // 2) Démarrage de la boucle globale (pas de loadSegments ici)
+        this.startGlobalTimer();
+      },
+      error: (err: any) => {
+        console.error('Erreur startSegmentation :', err);
+      },
+    });
+  }
 
-              // Mets à jour `segment.subtitles`
-              segment.subtitles.push({
-                text: response.subtitle.text,
-                created_by: this.userId,
-                created_at: response.subtitle.created_at,
-              });
+  stopSegmentation(): void {
+    this.sessionService.stopSegmentation(this.sessionId).subscribe({
+      next: (res: any) => {
+        console.log('Segmentation arrêtée :', res);
+      },
+      error: (err: any) => {
+        console.error('Erreur stopSegmentation :', err);
+      },
+    });
+  }
 
-              console.log(
-                `Sous-titres actuels pour le segment ${segment.segment_id} :`,
-                segment.subtitles
-              );
+  // ------------------------------------------------------------
+  // 7) Boucle principale : mise à jour des timers / warning / isVisible puis updateSignalStatus
+  // ------------------------------------------------------------
+  startGlobalTimer(): void {
+    if (!this.officialStartTime) {
+      console.error(
+        '⛔ officialStartTime non défini, impossible de démarrer le timer global.'
+      );
+      return;
+    }
+    if (this.signalUpdateInterval) {
+      clearInterval(this.signalUpdateInterval);
+      this.signalUpdateInterval = null;
+    }
+
+    this.signalUpdateInterval = setInterval(() => {
+      // 1) Calcul du temps écoulé (secondes)
+      const nowMs = Date.now();
+      this.elapsedTime = Math.floor((nowMs - this.officialStartTime) / 1000);
+
+      // 2) Pour chaque segment assigné à cet utilisateur, on détermine :
+      //    a) démarrage du timer interne si Date.now() ≥ segment.start_unix
+      //    b) warningFlag si à moins de 5s du démarrage
+      this.segments.forEach((segment) => {
+        // Ne traiter que si segment.assigned_to = this.username
+        if (
+          (segment.assigned_to || '').toLowerCase().trim() !== this.username
+        ) {
+          return;
+        }
+
+        // a) Démarrer le timer interne (vert) dès que Date.now() ≥ start_unix
+        if (Date.now() >= segment.start_unix && !segment.timer) {
+          segment.isVisible = true;
+          segment.timer = setInterval(() => {
+            if (segment.timeRemaining > 0) {
+              segment.timeRemaining--;
+              this.cdr.detectChanges();
             } else {
-              console.error(
-                `Problème dans la réponse du backend pour le segment ${segment.segment_id}.`
-              );
+              clearInterval(segment.timer);
+              this.autoSaveSubtitle(segment);
             }
+          }, 1000);
+          console.log(
+            `🚦 Timer interne démarré pour segment ${segment.segment_id}, timeRemaining = ${segment.timeRemaining}`
+          );
+        }
 
-            // Réinitialise la zone de texte
-            segment.subtitleText = '';
-          },
-          error: (error) => {
-            console.error(
-              `Erreur lors de la sauvegarde pour le segment ${segment.segment_id} :`,
-              error
-            );
-          },
-        });
-    } else {
+        // b) Déclencher warningFlag (orange) si à moins de 5s avant start_unix
+        const timeBeforeMs = segment.start_unix - Date.now();
+        if (
+          timeBeforeMs <= 5000 &&
+          timeBeforeMs > 0 &&
+          !segment.warningFlag
+        ) {
+          segment.warningFlag = true;
+          console.log(
+            `⚠️ Warning pour segment ${segment.segment_id} (début dans ${Math.ceil(
+              timeBeforeMs / 1000
+            )}s)`
+          );
+        }
+      });
+
+      // 3) Mettre à jour activeSegments et nextSegment (vert / orange / rouge)
+      this.updateSignalStatus();
+
+      // 4) Debug : afficher elapsedTime et listes
+      console.log(`▶ elapsedTime = ${this.elapsedTime}`);
       console.log(
-        `Aucun texte à sauvegarder pour le segment ${segment.segment_id}.`
+        '   activeSegments =',
+        this.activeSegments.map((s) => s.segment_id)
+      );
+      console.log(
+        '   nextSegment    =',
+        this.nextSegment ? this.nextSegment.segment_id : 'aucun'
+      );
+    }, 1000);
+  }
+
+  // ------------------------------------------------------------
+  // 8) Détermine activeSegments et nextSegment en fonction de elapsedTime
+  // ------------------------------------------------------------
+  updateSignalStatus(): void {
+  const usernameNorm = (this.username || '').toLowerCase().trim();
+  const nowMs = Date.now(); // on utilise désormais directement Date.now()
+
+  // 1) Pour chaque segment, on vérifie s'il doit passer en orange (warning) ou en vert (actif)
+  this.segments.forEach((segment) => {
+    const assignedTo = (segment.assigned_to || '').toLowerCase().trim();
+    if (assignedTo !== usernameNorm) return;
+
+    const startUnix = segment.start_unix; // timestamp absolu (ms)
+    const endUnix   = segment.end_unix;   // timestamp absolu (ms)
+
+    // a) S’il reste ≤ 5000 ms avant le début ET que l’on n’a pas encore mis warningFlag
+    const deltaMs = startUnix - nowMs; // combien de millisecondes avant le début
+    if (deltaMs <= 5000 && deltaMs > 0 && !segment.warningFlag) {
+      segment.warningFlag = true;
+      console.log(
+        `⚠️ Warning pour segment ${segment.segment_id} (début dans ${Math.ceil(deltaMs/1000)} s)`
       );
     }
+
+    // b) S’il est déjà temps de démarrer le segment (vert) : nowMs ≥ startUnix et nowMs < endUnix,
+    //    et le timer interne n’est pas encore lancé
+    if (nowMs >= startUnix && nowMs < endUnix && !segment.timer) {
+      segment.isVisible = true;
+      // on calcule timeRemaining en secondes depuis start_unix jusqu'à end_unix
+      const totalDurationSec = Math.ceil((endUnix - startUnix) / 1000);
+      segment.timeRemaining = totalDurationSec;
+
+      segment.timer = setInterval(() => {
+        if (segment.timeRemaining > 0) {
+          segment.timeRemaining--;
+          this.cdr.detectChanges();
+        } else {
+          clearInterval(segment.timer!);
+          this.autoSaveSubtitle(segment);
+        }
+      }, 1000);
+      console.log(
+        `🚦 Timer interne démarré pour segment ${segment.segment_id}, durée = ${totalDurationSec} s`
+      );
+    }
+  });
+
+  // 2) On recalcule la liste des segments ACTIFS (verts) à partir de nowMs
+  this.activeSegments = this.segments.filter((s) => {
+    const assignedTo = (s.assigned_to || '').toLowerCase().trim();
+    return (
+      assignedTo === usernameNorm &&
+      nowMs >= s.start_unix &&
+      nowMs <  s.end_unix
+    );
+  });
+  this.activeSegment =
+    this.activeSegments.length > 0 ? this.activeSegments[0] : null;
+
+  // 3) Si aucun segment n’est ACTIF, on cherche d’abord un segment déjà en warningFlag (orange),
+  //    sinon on prend celui dont start_unix – nowMs ∈ (0, 5000]
+  if (this.activeSegments.length === 0) {
+    this.nextSegment = this.segments.find((s) => {
+      const assignedTo = (s.assigned_to || '').toLowerCase().trim();
+      return (
+        assignedTo === usernameNorm &&
+        s.warningFlag && 
+        nowMs < s.start_unix
+      );
+    });
+    if (!this.nextSegment) {
+      this.nextSegment = this.segments.find((s) => {
+        const assignedTo = (s.assigned_to || '').toLowerCase().trim();
+        const delta = s.start_unix - nowMs;
+        return (
+          assignedTo === usernameNorm &&
+          delta > 0 &&
+          delta <= 5000
+        );
+      });
+    }
+  } else {
+    this.nextSegment = null;
   }
 
+  console.log(
+    `[updateSignalStatus] nowMs=${nowMs}, active=[${this.activeSegments.map(
+      (s) => s.segment_id
+    )}], next=${
+      this.nextSegment ? this.nextSegment.segment_id : 'aucun'
+    }]`
+  );
+}
+
+  // ------------------------------------------------------------
+  // 9) Retourne la couleur du signal pour l’UI : vert / orange / rouge
+  // ------------------------------------------------------------
+  getCurrentSignal(): 'green' | 'orange' | 'red' {
+  if (this.activeSegments.length > 0) return 'green';
+  if (this.nextSegment)            return 'orange';
+  return 'red';
+}
+
+
+  // ------------------------------------------------------------
+  // 10) Temps restant (secondes) avant le prochain segment
+  // ------------------------------------------------------------
+  getSecondsToNextSegment(): number | null {
+    if (!this.nextSegment) return null;
+    const startSec = this.timeStringToSeconds(this.nextSegment.start_time);
+    const remaining = startSec - this.elapsedTime;
+    return remaining > 0 ? remaining : 0;
+  }
+
+  // ------------------------------------------------------------
+  // 11) WebSocket events : mises à jour des segments en live
+  // ------------------------------------------------------------
+  connectToSocket(): void {
+    console.log(
+      '🔌 connectToSocket() → joinSession via Socket.IO :',
+      this.sessionId,
+      this.userId,
+      this.username
+    );
+
+    // 11.1) Quand un utilisateur rejoint
+    this.socketService.onUserJoined().subscribe((user) => {
+      this.collaborators += 1;
+      console.log(`${user.userName} a rejoint la session.`);
+    });
+
+    // 11.2) Quand un utilisateur quitte
+    this.socketService.onUserLeft().subscribe((user) => {
+      this.collaborators -= 1;
+      console.log(`${user.userName} a quitté la session.`);
+    });
+
+    // 11.3) Mise à jour liste d’utilisateurs
+    this.socketService.onUsersUpdated().subscribe((users: string[]) => {
+      this.users = users;
+      console.log('Utilisateurs connectés :', users);
+    });
+
+    // 11.4) Quand le backend renvoie la liste complète après redistribution
+    this.socketService.onSegmentsRedistributed().subscribe((segments: any[]) => {
+      console.log('📩 onSegmentsRedistributed :', segments);
+      this.segments = [];
+
+      const sorted = this.mergeSort(segments);
+      this.segments = sorted.map((seg: any) => {
+        const dur = this.calculateDurationInSeconds(
+          seg.start_time,
+          seg.end_time
+        );
+        return {
+          ...seg,
+          subtitleText: '',
+          timeRemaining: dur,
+          timer: null,
+          isVisible: false,
+          warningFlag: false,
+          assigned_to: (seg.assigned_to || '').toLowerCase().trim(),
+          subtitles: seg.subtitles || [],
+          // Note : pas de start_unix ici car on l’envoie depuis le backend au moment de création
+        };
+      });
+      console.log('Segments mis à jour après redistribution :', this.segments);
+
+      // Forcer un update immédiat
+      this.updateSignalStatus();
+    });
+
+    // 11.5) Quand un segment est assigné individuellement
+    this.socketService.onSegmentAssigned().subscribe((segment: any) => {
+      console.log(
+        '[SOCKET] "segment-assigned" reçu →',
+        segment,
+        'start_unix =',
+        segment.start_unix
+      );
+
+      // 1) Ignorer si déjà présent
+      if (this.segments.some((s) => s.segment_id === segment.segment_id)) {
+        console.warn(`Segment ${segment.segment_id} déjà présent, ignore.`);
+        return;
+      }
+
+      // 2) Calculer timeRemaining (secondes)
+      const durInSec = this.calculateDurationInSeconds(
+  segment.start_time,
+  segment.end_time
+);
+const durInMs = durInSec * 1000;
+      // 3) Construire newSegment en incluant “start_unix” et “status”
+      const newSegment = {
+  segment_id:    segment.segment_id,
+  session_id:    segment.session_id,
+  start_time:    segment.start_time,
+  end_time:      segment.end_time,
+  status:        segment.status,            // “in_progress”
+  assigned_to:   (segment.assigned_to || '').toLowerCase().trim(),
+  start_unix:    segment.start_unix,        // timestamp absolu (ms)
+  end_unix:      segment.start_unix + durInMs, // <-- AJOUTÉ
+  subtitleText:  '',
+  timeRemaining: durInSec,
+  timer:         null,
+  isVisible:     false,
+  warningFlag:   false,
+  subtitles:     segment.subtitles || []
+};
+      // 4) Ajouter dans this.segments
+      this.segments.push(newSegment);
+      console.log(
+        `   ↪ newSegment ajouté → id=${newSegment.segment_id}, start_unix=${newSegment.start_unix}`
+      );
+
+      // 5) Forcer updateSignalStatus immédiat (facultatif)
+      this.ngZone.run(() => {
+        this.updateSignalStatus();
+        console.log(
+          `   ← après updateSignalStatus post-WS (elapsed=${this.elapsedTime}): active=[${this.activeSegments.map(
+            (s) => s.segment_id
+          )}], next=${
+            this.nextSegment ? this.nextSegment.segment_id : 'aucun'
+          }`
+        );
+      });
+    });
+
+    // 11.6) Quand le backend envoie « stream-started »
+    this.socketService.onStreamStarted().subscribe(({ startTime }) => {
+      console.log('📡 onStreamStarted :', new Date(startTime));
+      this.officialStartTime = startTime;
+      this.streamStarted = true;
+      // Recharger d’abord les segments puis démarrer le timer global
+      this.loadSegments(() => {
+        this.startGlobalTimer();
+      });
+    });
+
+    // 11.7) Quand la segmentation est stoppée côté serveur
+    // 11.7) Quand la segmentation est stoppée côté serveur
+this.socketService.onSegmentationStopped().subscribe(() => {
+  console.log('⛔ Segmentation stoppée depuis le serveur');
+
+  // a) Arrêter uniquement la boucle globale (création de nouveaux segments)
+  if (this.signalUpdateInterval) {
+    clearInterval(this.signalUpdateInterval);
+    this.signalUpdateInterval = null;
+  }
+
+  // --- NE PAS ARRÊTER les timers internes des segments déjà démarrés ---
+  // On ne touche plus ici à segment.timer pour laisser chaque segment
+  // finir son timeRemaining et s’auto‐enregistrer normalement.
+
+  // Si vous souhaitez quand même forcer un rafraîchissement de l’UI :
+  this.cdr.detectChanges();
+});
+  }
+
+  // ------------------------------------------------------------
+  // 12) Sauvegarde automatique du sous-titre lorsqu'un segment se termine
+  // ------------------------------------------------------------
+  autoSaveSubtitle(segment: any): void {
+    if (!segment.subtitleText.trim()) {
+      console.log(
+        `Pas de texte pour le segment ${segment.segment_id}, on n’enregistre pas.`
+      );
+      return;
+    }
+    console.log(
+      `📝 Auto‐save segment ${segment.segment_id} :`,
+      segment.subtitleText
+    );
+    this.sessionService
+      .addSubtitle(segment.segment_id, segment.subtitleText, this.userId)
+      .subscribe({
+        next: (response) => {
+          console.log(
+            `Réponse backend segment ${segment.segment_id} :`,
+            response
+          );
+          if (response?.subtitle) {
+            segment.subtitles.push({
+              text: response.subtitle.text,
+              created_by: this.userId,
+              created_at: response.subtitle.created_at,
+            });
+          }
+          segment.subtitleText = '';
+        },
+        error: (error) => {
+          console.error(
+            `Erreur auto‐save segment ${segment.segment_id} :`,
+            error
+          );
+        },
+      });
+  }
+
+  // ------------------------------------------------------------
+  // 13) Utilitaires : calcul durations et parsing HH:MM:SS → secondes
+  // ------------------------------------------------------------
+  calculateDurationInSeconds(startTime: string, endTime: string): number {
+    const [h1, m1, s1] = startTime.split(':').map(Number);
+    const [h2, m2, s2] = endTime.split(':').map(Number);
+    return h2 * 3600 + m2 * 60 + s2 - (h1 * 3600 + m1 * 60 + s1);
+  }
+
+  timeStringToSeconds(timeString: string): number {
+    const parts = timeString.split(':').map(Number);
+    if (parts.length < 3) return 0;
+    const [h, m, s] = parts;
+    return (h || 0) * 3600 + (m || 0) * 60 + (s || 0);
+  }
+
+  // ------------------------------------------------------------
+  // 14) Méthode pour générer la largeur de la barre de progression
+  //     (évolution du temps restant dans le segment)
+  // ------------------------------------------------------------
   calculateWaveWidth(
     timeRemaining: number,
     endTime: string,
     startTime: string
   ): string {
     const totalDuration = this.calculateDurationInSeconds(startTime, endTime);
+    // Pourcentage déjà écoulé = (totalDuration - timeRemaining) / totalDuration * 100
     const percentage = ((totalDuration - timeRemaining) / totalDuration) * 100;
-    return `${percentage}%`; // Renvoie la largeur en pourcentage
+    return `${percentage}%`;
   }
 
+  // ------------------------------------------------------------
+  // 15) MergeSort pour trier les segments par start_time
+  // ------------------------------------------------------------
   mergeSort(array: any[]): any[] {
-    if (array.length <= 1) {
-      return array; // Rien à trier si la liste contient un seul élément
-    }
-
-    const middle = Math.floor(array.length / 2); // Division au milieu
-    const left = this.mergeSort(array.slice(0, middle)); // Récursion pour la moitié gauche
-    const right = this.mergeSort(array.slice(middle)); // Récursion pour la moitié droite
-
-    return this.merge(left, right); // Fusion des deux moitiés triées
+    if (array.length <= 1) return array;
+    const mid = Math.floor(array.length / 2);
+    const left = this.mergeSort(array.slice(0, mid));
+    const right = this.mergeSort(array.slice(mid));
+    return this.merge(left, right);
   }
 
-  merge(left: any[], right: any[]): any[] {
-    const result = [];
+  private merge(left: any[], right: any[]): any[] {
+    const result: any[] = [];
     let i = 0,
       j = 0;
-
     while (i < left.length && j < right.length) {
-      // Convertir start_time en secondes pour comparer
-      const leftStartTime = this.convertTimeToSeconds(left[i].start_time);
-      const rightStartTime = this.convertTimeToSeconds(right[j].start_time);
-
-      if (leftStartTime <= rightStartTime) {
+      const a = this.timeStringToSeconds(left[i].start_time);
+      const b = this.timeStringToSeconds(right[j].start_time);
+      if (a <= b) {
         result.push(left[i++]);
       } else {
         result.push(right[j++]);
       }
     }
-
-    // Ajouter les éléments restants
     return result.concat(left.slice(i)).concat(right.slice(j));
   }
 
-  convertTimeToSeconds(time: string): number {
-    const [hours, minutes, seconds] = time.split(':').map(Number);
-    return hours * 3600 + minutes * 60 + seconds;
-  }
-
-  //getCurrentVideoTime(): number {
-  //if (this._videoReady && this.videoRef?.nativeElement) {
-  //  return this.videoRef.nativeElement.currentTime;
-  // } else {
-  //  console.warn('⏳ Vidéo pas encore prête');
-  //  return 0;
-  // }
-  //}
-
-  //isWaiting(segment: any): boolean {
-  //const now = this.getCurrentVideoTime();
-  // const start = this.timeStringToSeconds(segment.start_time);
-  // return now < start - 5;
-  //}
-
-  //(segment: any): boolean {
-  // const now = this.getCurrentVideoTime();
-  //  const start = this.timeStringToSeconds(segment.start_time);
-  //  return start - now <= 5 && now < start;
-  // }
-
-  //isCurrentTurn(segment: any): boolean {
-  // const now = this.getCurrentVideoTime();
-  // const start = this.timeStringToSeconds(segment.start_time);
-  // const end = this.timeStringToSeconds(segment.end_time);
-  // return now >= start && now <= end;
-  //}
-
-  // // Normaliser le texte des sous-titres (supprime espaces inutiles, etc.)
-  // normalizeSubtitle(text: string): string {
-  //   // Supprime les espaces multiples et normalise le texte
-  //   return text
-  //     .trim()
-  //     .replace(/\s+/g, ' ') // Réduit les espaces multiples à un seul espace
-  //     .replace(/[^\p{L}\p{N}\s\p{P}]/gu, ''); // Autorise lettres, chiffres, espaces et ponctuation
-  // }
-
-  // // Ajuster les sous-titres à la durée du segment
-  // adjustSubtitleToSegment(segment: any): string {
-  //   const words = segment.subtitleText.split(' ');
-  //   const maxWords = Math.floor(segment.timeRemaining / 2); // Exemple : 2 mots par seconde
-
-  //   // Ajuste la longueur du texte sans retourner un résultat vide
-  //   const adjustedText = words.slice(0, maxWords).join(' ');
-
-  //   // Si aucun mot n'est sélectionné, retournez le texte original avec "..."
-  //   return adjustedText.trim() === ''
-  //     ? segment.subtitleText + '...'
-  //     : adjustedText;
-  // }
-
-  // Compiler les sous-titres en une sortie finale (exemple pour SRT)
-  compileFinalSubtitles(): string {
-    console.log(
-      'Compilation des sous-titres finaux. Segments :',
-      this.segments
-    );
-
-    return this.segments
-      .filter((segment) => segment.subtitles.length > 0)
-      .map((segment) => {
-        const combinedText = segment.subtitles
-          .map((s: { text: any }) => s.text)
-          .join(' ');
-        console.log(
-          `Segment ${segment.segment_id} : Texte combiné :`,
-          combinedText
-        );
-
-        return `${segment.start_time} --> ${segment.end_time}\n${combinedText}`;
-      })
-      .join('\n\n');
-  }
-
-  formatTimeToSRT(time: number): string {
-    if (isNaN(time)) {
-      console.error(
-        'Erreur : timestamp invalide détecté dans formatTimeToSRT:',
-        time
-      );
-      return '00:00:00,000'; // Retourne un timestamp par défaut au lieu de NaN
-    }
-
-    const hours = Math.floor(time / 3600);
-    const minutes = Math.floor((time % 3600) / 60);
-    const seconds = Math.floor(time % 60);
-    const milliseconds = Math.floor((time % 1) * 1000);
-
-    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(
-      2,
-      '0'
-    )}:${String(seconds).padStart(2, '0')},${String(milliseconds).padStart(
-      3,
-      '0'
-    )}`;
-  }
-  timeStringToSeconds(timeString: string): number {
-    const parts = timeString.split(':'); // Séparer HH, MM, SS
-    if (parts.length < 3) {
-      console.error('Format de temps invalide :', timeString);
-      return 0;
-    }
-
-    const hours = parseInt(parts[0], 10) || 0;
-    const minutes = parseInt(parts[1], 10) || 0;
-    const seconds = parseFloat(parts[2]) || 0; // Accepte les millisecondes
-
-    return hours * 3600 + minutes * 60 + seconds;
-  }
-  // Exporter les sous-titres au format SRT
-  // exportToSRT(): string {
-  //   console.log('Segments avant génération du fichier SRT :', this.segments);
-
-  //   let subtitleIndex = 1;
-  //   const minFirstSegmentDuration = 10; // Forcer une durée de 10 secondes pour le premier segment
-  //   const minSubtitleDuration = 2; // Un sous-titre reste au moins 2 secondes
-  //   const maxCPS = 12; // 12 caractères/seconde pour une meilleure lisibilité
-  //   const maxVisibleLines = 3; // Max 3 lignes visibles en même temps
-
-  //   return this.segments
-  //     .filter((segment) => segment.subtitles.length > 0)
-  //     .map((segment, segmentIndex) => {
-  //       const fullText = segment.subtitles
-  //         .map((s: { text: string }) => s.text)
-  //         .join(' ');
-
-  //       console.log(
-  //         `Sous-titres pour le segment ${segment.segment_id} :`,
-  //         fullText
-  //       );
-
-  //       let startTime = this.timeStringToSeconds(segment.start_time);
-  //       let endTime = this.timeStringToSeconds(segment.end_time);
-
-  //       if (isNaN(startTime) || isNaN(endTime) || startTime === endTime) {
-  //         console.error(
-  //           `⚠️ Erreur : start_time (${startTime}) et end_time (${endTime}) invalides pour le segment ${segment.segment_id}`
-  //         );
-  //         endTime = startTime + 1;
-  //       }
-
-  //       // Forcer le premier segment à durer au moins 10s
-  //       if (
-  //         segmentIndex === 0 &&
-  //         endTime - startTime < minFirstSegmentDuration
-  //       ) {
-  //         endTime = startTime + minFirstSegmentDuration;
-  //       }
-
-  //       const sanitizedText = fullText.replace(/[\r\n]+/g, ' ').trim();
-  //       const words = sanitizedText.split(' ');
-  //       const maxLineLength = 40;
-  //       const lines: string[] = [];
-  //       let currentLine = '';
-
-  //       words.forEach((word: string) => {
-  //         if ((currentLine + word).length <= maxLineLength) {
-  //           currentLine += word + ' ';
-  //         } else {
-  //           lines.push(currentLine.trim());
-  //           currentLine = word + ' ';
-  //         }
-  //       });
-
-  //       if (currentLine.trim() !== '') {
-  //         lines.push(currentLine.trim());
-  //       }
-
-  //       console.log(
-  //         `Sous-titres découpés pour le segment ${segment.segment_id} :`,
-  //         lines
-  //       );
-
-  //       // Durée totale du segment
-  //       let segmentDuration = endTime - startTime;
-  //       let idealDuration = sanitizedText.length / maxCPS;
-  //       let adjustedDuration = Math.max(
-  //         minSubtitleDuration,
-  //         Math.min(segmentDuration, idealDuration)
-  //       );
-
-  //       if (segmentIndex === 0 && adjustedDuration < minFirstSegmentDuration) {
-  //         adjustedDuration = minFirstSegmentDuration;
-  //       }
-
-  //       const lineDuration = Math.max(
-  //         minSubtitleDuration,
-  //         adjustedDuration / lines.length
-  //       );
-  //       let visibleLines: string[] = []; // Stocke les lignes affichées progressivement
-
-  //       // Génération des sous-titres en affichage progressif
-  //       const srtBlocks = lines.map((line, i) => {
-  //         const blockStartTime = startTime + i * lineDuration;
-  //         const blockEndTime = Math.min(endTime, blockStartTime + lineDuration);
-
-  //         // Ajout progressif des lignes à l'affichage
-  //         visibleLines.push(line);
-  //         if (visibleLines.length > maxVisibleLines) {
-  //           visibleLines.shift(); // Supprime la plus ancienne ligne pour un effet de "défilement"
-  //         }
-
-  //         const formattedStartTime = this.formatTimeToSRT(blockStartTime);
-  //         const formattedEndTime = this.formatTimeToSRT(blockEndTime);
-
-  //         const blockText = visibleLines.join('\n'); // Afficher les lignes empilées
-  //         const srtBlock = `${subtitleIndex}\n${formattedStartTime} --> ${formattedEndTime}\n${blockText}`;
-  //         subtitleIndex++;
-
-  //         return srtBlock;
-  //       });
-
-  //       return srtBlocks.join('\n\n');
-  //     })
-  //     .join('\n\n');
-  // }
-
-  // Méthode pour déclencher le téléchargement
-  // downloadSubtitles(): void {
-  //   const srtContent = this.exportToSRT();
-  //   const blob = new Blob([srtContent], { type: 'text/plain' });
-  //   const url = URL.createObjectURL(blob);
-  //   const a = document.createElement('a');
-  //   a.href = url;
-  //   a.download = 'subtitles.srt';
-  //   a.click();
-  //   URL.revokeObjectURL(url);
-  // }
-
-  // onAllSegmentsComplete(): void {
-  //   const finalSubtitles = this.exportToSRT();
-  //   console.log('✅ Sous-titres générés :', finalSubtitles);
-
-  //   if (!finalSubtitles.trim()) {
-  //     console.error('❌ Aucun sous-titre généré ! Vérifie la saisie.');
-  //     return;
-  //   }
-
-  //   // Sauvegarder le fichier .srt localement (stocké temporairement dans localStorage)
-  //   localStorage.setItem('srtFile', finalSubtitles);
-
-  //   // Redirection vers Streaming avec l'ID de session
-  //   this.router.navigate(['/streaming', this.sessionId]);
-  // }
-
-  connectToSocket(): void {
-    console.log('Rejoint la session via Socket.IO :', {
-      session_id: this.sessionId,
-      user_id: this.userId,
-      username: this.user?.username,
-    });
-
-    // Écouter les événements du serveur
-    this.socketService.onUserJoined().subscribe((user) => {
-      this.collaborators += 1;
-      console.log(`${user.userName} a rejoint la session.`);
-    });
-
-    this.socketService.onUserLeft().subscribe((user) => {
-      this.collaborators -= 1;
-      console.log(`${user.userName} a quitté la session.`);
-    });
-
-    // Abonnement aux mises à jour des utilisateurs connectés
-    this.socketService.onUsersUpdated().subscribe((users: string[]) => {
-      this.users = users; // Met à jour la liste des utilisateurs
-      console.log('Liste mise à jour des utilisateurs connectés :', this.users);
-    });
-
-    // Abonnement aux mises à jour des segments redistribués
-    this.socketService
-      .onSegmentsRedistributed()
-      .subscribe((segments: any[]) => {
-        this.segments = segments; // Met à jour la liste des segments
-        console.log('Segments redistribués reçus :', this.segments);
-      });
-    // Abonnement aux mises à jour des utilisateurs
-    this.socketService.getUsers().subscribe((users) => {
-      this.users = users;
-      console.log('Utilisateurs connectés à la session :', this.users);
-    });
-
-    // Abonnement aux mises à jour des segments redistribués
-    this.socketService.onSegmentsUpdated().subscribe((data) => {
-      console.log('Mise à jour des segments reçue :', data);
-      if (data.segments) {
-        this.segments = data.segments; // Met à jour les segments affichés
-      }
-    });
-
-    // this.socketService.onStreamStarted().subscribe(({ startTime }) => {
-    //   this.officialStartTime = startTime;
-    //   console.log('📡 Flux démarré à', new Date(startTime));
-
-    //   this.streamStarted = true;
-    //   this.startGlobalTimer();
-    // });
-
-    // this.socketService.onElapsedTime().subscribe(({ elapsedTime }) => {
-    //   this.elapsedTime = elapsedTime;
-    // });
-    this.socketService.onSegmentAssigned().subscribe((segment: any) => {
-      console.log('🆕 Segment assigné reçu :', segment);
-
-      // 🔐 Évite les doublons de segments déjà présents
-      if (this.segments.some((s) => s.segment_id === segment.segment_id)) {
-        console.warn(`⚠️ Segment ${segment.segment_id} déjà présent, ignoré.`);
-        return;
-      }
-      // Calcule le délai avant démarrage
-      const now = Date.now();
-      const delay = Math.max(segment.start_unix - now, 0);
-
-      // Calcule la durée
-      const duration = this.calculateDurationInSeconds(
-        segment.start_time,
-        segment.end_time
-      );
-
-      const newSegment = {
-        ...segment,
-        subtitleText: '',
-        timeRemaining: duration,
-        timer: null,
-        isDisabled: false,
-        isVisible: false,
-        subtitles: segment.subtitles || [],
-      };
-
-      this.segments.push(newSegment);
-
-      // Lancer un timer à `start_unix`
-      setTimeout(() => {
-        console.log(`🚀 Timer démarré pour segment ${segment.segment_id}`);
-
-        newSegment.isVisible = true;
-
-        newSegment.timer = setInterval(() => {
-          if (newSegment.timeRemaining > 0) {
-            newSegment.timeRemaining--;
-            this.cdr.detectChanges();
-          } else {
-            clearInterval(newSegment.timer);
-            this.autoSaveSubtitle(newSegment);
-          }
-        }, 1000);
-      }, delay);
-    });
-
-    this.socketService.onSegmentationStopped().subscribe(() => {
-      console.log('⛔ Segmentation stoppée depuis le serveur');
-      // this.stopFrontendSegmentation();
-    });
-  }
-
-  // stopFrontendSegmentation(): void {
-  //   if (this.signalUpdateInterval) {
-  //     clearInterval(this.signalUpdateInterval);
-  //     this.signalUpdateInterval = null;
-  //   }
-
-  //   // Désactiver tous les timers de segment
-  //   this.segments.forEach((segment) => {
-  //     if (segment.timer) {
-  //       clearInterval(segment.timer);
-  //       segment.timer = null;
-  //     }
-  //   });
-
-  //   console.log('⛔ Timers frontend arrêtés');
-  // }
-
-  // startTimersFromElapsed(elapsed: number): void {
-  //   this.segments.forEach((segment) => {
-  //     const segmentStart = this.timeStringToSeconds(segment.start_time);
-  //     const segmentEnd = this.timeStringToSeconds(segment.end_time);
-  //     const duration = segmentEnd - segmentStart;
-
-  //     // Si le segment a déjà fini, on ne le lance pas
-  //     if (elapsed >= segmentEnd) {
-  //       console.log(
-  //         `Segment ${segment.segment_id} déjà terminé à elapsed=${elapsed}`
-  //       );
-  //       return; // segment fini
-  //     }
-
-  //     const delay = Math.max((segmentStart - elapsed) * 1000, 0);
-
-  //     segment.timeRemaining = segmentEnd - Math.max(elapsed, segmentStart);
-  //     console.log(
-  //       `Segment ${segment.segment_id} timer démarrera dans ${delay} ms`
-  //     );
-  //     setTimeout(() => {
-  //       console.log(`🚀 Timer lancé pour le segment ${segment.segment_id}`);
-  //       segment.timer = setInterval(() => {
-  //         if (segment.timeRemaining > 0) {
-  //           segment.timeRemaining--;
-  //         } else {
-  //           clearInterval(segment.timer);
-  //           this.autoSaveSubtitle(segment);
-  //         }
-  //       }, 1000);
-  //     }, delay);
-  //   });
-  // }
-
-  // Gérer une erreur de chargement vidéo
+  // ------------------------------------------------------------
+  // 16) Gestion d’erreurs dans le player vidéo
+  // ------------------------------------------------------------
   onVideoError(): void {
     console.error('La vidéo ne peut pas être chargée :', this.videoUrl);
-    alert(
-      'Impossible de charger la vidéo. Vérifiez son chemin ou sa disponibilité.'
-    );
+    alert('Impossible de charger la vidéo.');
   }
-  // Envoyer un sous-titre via le socket
+
+  // ------------------------------------------------------------
+  // 17) Envoi instantané de la sous-titre en cours via WebSocket
+  // ------------------------------------------------------------
   onSubtitleChange() {
     const timestamp = Date.now();
     this.socketService.sendSubtitle({
@@ -1160,30 +764,13 @@ export class DashboardComponent implements OnInit, OnDestroy {
     });
   }
 
-  ngOnDestroy() {
-    // if (this.signalUpdateInterval) {
-    //   clearInterval(this.signalUpdateInterval);
-    //   this.signalUpdateInterval = null;
-    // }
-    this.socketService.leaveVideoSession({
-      userId: this.userId,
-      sessionId: this.sessionId,
-    });
-
-    // Déconnexion backend (Redis + redistribution)
-    this.sessionService
-      .handleUserDisconnection(this.userId, this.sessionId)
-      .subscribe({
-        next: (res) => console.log('Déconnexion backend réussie :', res),
-        error: (err) => console.error('Erreur backend :', err),
-      });
-  }
-
+  // ------------------------------------------------------------
+  // 18) Exporter les sous-titres au format SRT
+  // ------------------------------------------------------------
   onExportSrt(): void {
-    console.log('onExportSrt appelé, envoi de la requête export-srt');
+    console.log('onExportSrt appelé');
     this.sessionService.exportSrt(this.sessionId).subscribe({
       next: (blob: Blob) => {
-        console.log('Réponse reçue, blob.size =', blob.size);
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
@@ -1194,107 +781,63 @@ export class DashboardComponent implements OnInit, OnDestroy {
         window.URL.revokeObjectURL(url);
       },
       error: (err: HttpErrorResponse) => {
-        console.error(' Erreur export SRT', err);
+        console.error('Erreur export SRT :', err);
         alert('Impossible d’exporter les sous-titres.');
       },
     });
   }
 
-  // Déconnexion utilisateur
+  // ------------------------------------------------------------
+  // 19) Déconnexion / déloggage
+  // ------------------------------------------------------------
   onLogout() {
     this.socketService.leaveVideoSession({
       userId: this.userId,
       sessionId: this.sessionId,
     });
-    // ⚡ Déconnexion backend (Redis + segments)
     this.sessionService
       .handleUserDisconnection(this.userId, this.sessionId)
-      .subscribe({
-        next: (res) => console.log('Déconnexion backend réussie :', res),
-        error: (err) => console.error('Erreur backend :', err),
-      });
-
+      .subscribe();
     this.authService.logout().subscribe({
       next: () => {
-        // 🧹 Nettoyage du localStorage
         localStorage.removeItem('userId');
         localStorage.removeItem('username');
         localStorage.removeItem('sessionId');
         this.router.navigate(['/login-page']);
       },
       error: (error) => {
-        console.error('Erreur lors de la déconnexion:', error);
+        console.error('Erreur déconnexion :', error);
       },
     });
   }
 
-  // updateSignalStatus(): void {
-  //   const username = (this.username || '').toLowerCase().trim();
-  //   const now = this.elapsedTime; // Temps écoulé depuis le début de la session
+  // ------------------------------------------------------------
+  // 20) Cleanup au destroy
+  // ------------------------------------------------------------
+  ngOnDestroy() {
+    if (this.signalUpdateInterval) {
+      clearInterval(this.signalUpdateInterval);
+      this.signalUpdateInterval = null;
+    }
+    this.socketService.leaveVideoSession({
+      userId: this.userId,
+      sessionId: this.sessionId,
+    });
+    this.sessionService
+      .handleUserDisconnection(this.userId, this.sessionId)
+      .subscribe();
+  }
 
-  //   //  Détection du segment actif (utilisateur doit sous-titrer maintenant)
-  //   this.activeSegment = this.segments.find((s) => {
-  //     const assignedTo = (s.assigned_to || '').toLowerCase().trim();
-  //     const start = this.timeStringToSeconds(s.start_time);
-  //     const end = this.timeStringToSeconds(s.end_time);
-  //     return assignedTo === username && now >= start && now <= end;
-  //   });
-
-  //   //  Détection du prochain segment imminent (dans moins de 6 secondes)
-  //   this.nextSegment = this.segments.find((s) => {
-  //     const assignedTo = (s.assigned_to || '').toLowerCase().trim();
-  //     const start = this.timeStringToSeconds(s.start_time);
-  //     const timeBeforeStart = start - now;
-
-  //     return (
-  //       assignedTo === username &&
-  // //       !isNaN(timeBeforeStart) &&
-  //       timeBeforeStart > 0 &&
-  //       timeBeforeStart <= 6
-  //     );
-  //   });
-
-  //   // 🔄 Forcer l’actualisation de l’affichage (si nécessaire)
-  //   this.cdRef.detectChanges();
-  // }
-
-  // Signaux
-
-  // getCurrentSignal(): 'green' | 'orange' | 'red' {
-  //   const username = (this.username || '').toLowerCase().trim(); // Nom utilisateur standardisé
-  //   const now = this.elapsedTime; // Temps actuel dans la session
-
-  //   // Cas 1 : l'utilisateur est en train de sous-titrer (signal vert)
-  //   const isActive = this.segments.some((s) => {
-  //     const start = this.timeStringToSeconds(s.start_time);
-  //     const end = this.timeStringToSeconds(s.end_time);
-  //     return (
-  //       s.assigned_to?.toLowerCase().trim() === username &&
-  //       now >= start &&
-  //       now <= end
-  //     );
-  //   });
-
-  //   if (isActive) return 'green';
-
-  //   //  Cas 2 : l'utilisateur commence bientôt (signal orange)
-  //   const isSoon = this.segments.some((s) => {
-  //     const start = this.timeStringToSeconds(s.start_time);
-  //     const timeBeforeStart = start - now;
-  //     return (
-  //       s.assigned_to?.toLowerCase().trim() === username &&
-  //       timeBeforeStart > 0 &&
-  //       timeBeforeStart <= 5
-  //     );
-  //   });
-
-  //   if (isSoon) return 'orange';
-
-  //   //  Cas 3 : aucun segment actif ou imminent (signal rouge)
-  //   return 'red';
-  // }
-
-  getNextSegment(): any {
-    return this.nextSegment;
+  // ------------------------------------------------------------
+  // 21) Event quand l’utilisateur commence à taper (UI)
+  // ------------------------------------------------------------
+  onUserTyping(segment: any) {
+    if (!this.hasStartedTyping) {
+      this.hasStartedTyping = true;
+      console.log(
+        '🖱️ L’utilisateur a cliqué sur la zone de texte, démarrage des timers.'
+      );
+      // Optionnel : démarrer d’autres timers si besoin
+    }
   }
 }

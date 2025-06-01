@@ -2,41 +2,49 @@ const axios = require;
 const SubtitleModel = require("../models/SubtitleModel"); // Ajuste le chemin si nécessaire
 const VideoSegmentModel = require("../models/VideoSegmentModel"); // Pour accéder aux segments voisins
 const { verifierTexte } = require("../utils/correction");
-const levenshtein = require("fast-levenshtein");
+const levenshtein = require('fast-levenshtein');
 
-const fs = require("fs");
-const path = require("path");
+const fs = require('fs');
+const path = require('path');
 
-const dictionnairePath = path.join(__dirname, "../../data/dictionnaire.txt"); // adapte le chemin selon ton arborescence
+const dictionnairePath = path.join(__dirname, '../../data/dictionnaire.txt'); // adapte le chemin selon ton arborescence
 
 const dictionnaire = new Set(
-  fs
-    .readFileSync(dictionnairePath, "utf-8")
-    .split("\n")
-    .map((mot) => mot.trim().toLowerCase())
+  fs.readFileSync(dictionnairePath, 'utf-8')
+    .split('\n')
+    .map(mot => mot.trim().toLowerCase())
     .filter(Boolean)
 );
 
 console.log(`Dictionnaire chargé avec ${dictionnaire.size} mots`);
 
 // Normalisation minimale (supprime ponctuation en bord, met en minuscules)
+// Normalisation minimale : minuscules, retrait ponctuation de bord
 function normalizeWord(w) {
-  return (
-    w
-      .trim()
-      .toLowerCase()
-      // enlève seulement la ponctuation, conserve toutes les lettres (y compris é, à, û…)
-      .replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, "")
-  );
+  return w
+    .trim()
+    .toLowerCase()
+    .replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, '');
 }
 
-const rawDict = fs
-  .readFileSync(dictionnairePath, "utf-8")
-  .split("\n")
-  .map((m) => m.trim())
-  .filter(Boolean);
+// Recherche de la plus longue suite de mots (border) entre fin de words1 et début de words2
+function longestWordBorder(words1, words2) {
+  const maxLen = Math.min(words1.length, words2.length);
+  for (let L = maxLen; L > 0; L--) {
+    const suffix = words1.slice(-L).join(' ');
+    const prefix = words2.slice(0, L).join(' ');
+    if (suffix === prefix) {
+      return suffix.split(' ');
+    }
+  }
+  return [];
+}
+
+const rawDict = fs.readFileSync(dictionnairePath, 'utf-8')
+  .split('\n').map(m=>m.trim()).filter(Boolean);
 const dict = new Set(rawDict);
-const dictNorm = new Set(rawDict.map((w) => normalizeWord(w)));
+const dictNorm = new Set(rawDict.map(w => normalizeWord(w)));
+
 
 function correctWord(rawWord) {
   const containsAccent = /[^\u0000-\u007F]/.test(rawWord);
@@ -53,7 +61,7 @@ function correctWord(rawWord) {
   }
 
   // On cherche parmi dictNorm un mot à distance 1 et de longueur proche
-  let best = rawWord;
+  let best     = rawWord;
   let bestDist = Infinity;
 
   for (const cand of dictNorm) {
@@ -61,7 +69,7 @@ function correctWord(rawWord) {
     const d = levenshtein.get(norm, cand);
     if (d < bestDist) {
       bestDist = d;
-      best = cand;
+      best     = cand;
       if (d === 1) break;
     }
   }
@@ -69,7 +77,7 @@ function correctWord(rawWord) {
   if (bestDist === 1) {
     // On retourne la forme **brute** du dictionnaire (avec accent éventuel)
     // On recherche dans rawDict l’entrée qui correspond
-    const rawCand = rawDict.find((w) => normalizeWord(w) === best);
+    const rawCand = rawDict.find(w => normalizeWord(w) === best);
     console.log(`Correction orthographique : "${rawWord}" → "${rawCand}"`);
     return rawCand;
   }
@@ -81,8 +89,8 @@ function correctWord(rawWord) {
 function correctText(text) {
   return text
     .split(/\s+/)
-    .map((w) => correctWord(w))
-    .join(" ");
+    .map(w => correctWord(w))
+    .join(' ');
 }
 
 // function handleOverlap(text1, text2) {
@@ -218,22 +226,17 @@ async function adjustTextWithNeighbors(currentSegment, text) {
 
   return text;
 }
-async function adjustTextWithNeighborsCustom(
-  currentText,
-  previousTexts = [],
-  nextTexts = []
-) {
+async function adjustTextWithNeighborsCustom(currentText, previousTexts = [], nextTexts = []) {
   let text = currentText;
-  console.log("Adjustement avec voisins:");
-  console.log("Texte courant:", currentText);
-  console.log("Textes précédents:", previousTexts);
-  console.log("Textes suivants:", nextTexts);
+  console.log('Adjustement avec voisins:');
+  console.log('Texte courant:', currentText);
+  console.log('Textes précédents:', previousTexts);
+  console.log('Textes suivants:', nextTexts);
 
   let overlapDetected = false;
 
   for (const prevText of previousTexts) {
-    const { adjustedText1, adjustedText2, overlap } =
-      handleOverlapWithWordsFuzzy(prevText, text);
+    const { adjustedText1, adjustedText2, overlap } = handleOverlapWithWordsFuzzy(prevText, text);
     if (overlap) {
       console.log(`Chevauchement détecté avec précédent: "${overlap}"`);
       overlapDetected = true;
@@ -242,8 +245,7 @@ async function adjustTextWithNeighborsCustom(
   }
 
   for (const nextText of nextTexts) {
-    const { adjustedText1, adjustedText2, overlap } =
-      handleOverlapWithWordsFuzzy(text, nextText);
+    const { adjustedText1, adjustedText2, overlap } = handleOverlapWithWordsFuzzy(text, nextText);
     if (overlap) {
       console.log(`Chevauchement détecté avec suivant: "${overlap}"`);
       overlapDetected = true;
@@ -252,71 +254,40 @@ async function adjustTextWithNeighborsCustom(
   }
 
   if (!overlapDetected) {
-    console.log("Aucun chevauchement détecté avec les voisins.");
+    console.log('Aucun chevauchement détecté avec les voisins.');
   }
 
   return text;
 }
 
-function handleOverlapWithWords(text1, text2) {
-  const words1 = text1.split(" "); // Découpe text1 en mots
-  const words2 = text2.split(" "); // Découpe text2 en mots
 
-  let overlap = "";
 
-  // Parcours pour détecter les mots identiques entre la fin de text1 et le début de text2
-  for (let i = 1; i <= Math.min(words1.length, words2.length); i++) {
-    const lastWords1 = words1.slice(-i).join(" "); // Fin de text1
-    const firstWords2 = words2.slice(0, i).join(" "); // Début de text2
-
-    if (lastWords1 === firstWords2) {
-      overlap = lastWords1; // Chevauchement détecté
-    }
-  }
-
-  if (overlap) {
-    console.log(`Chevauchement détecté : "${overlap}"`);
-    const adjustedText1 = text1.slice(0, -overlap.length).trim();
-    const adjustedText2 = text2.slice(overlap.length).trim();
-
-    return { adjustedText1, adjustedText2, overlap };
-  }
-
-  return { adjustedText1: text1, adjustedText2: text2, overlap: null };
-}
 function normalizeText(str) {
-  return str
-    .trim()
-    .toLowerCase()
-    .replace(/[.,!?;:]/g, "");
+  return str.trim().toLowerCase().replace(/[.,!?;:]/g, '');
 }
 
 function handleOverlapWithWords(text1, text2) {
-  const words1 = normalizeText(text1).split(" ");
-  const words2 = normalizeText(text2).split(" ");
+  const rawWords1 = text1.trim().split(/\s+/);
+  const rawWords2 = text2.trim().split(/\s+/);
+  const normWords1 = rawWords1.map(normalizeWord);
+  const normWords2 = rawWords2.map(normalizeWord);
 
-  let overlap = "";
-
-  for (let i = Math.min(words1.length, words2.length); i > 0; i--) {
-    const lastWords1 = words1.slice(-i).join(" ");
-    const firstWords2 = words2.slice(0, i).join(" ");
-
-    if (lastWords1 === firstWords2) {
-      overlap = lastWords1;
-      break; // On arrête dès qu'on trouve le plus grand chevauchement
-    }
+  const overlapWords = longestWordBorder(normWords1, normWords2);
+  if (!overlapWords.length) {
+    return { adjustedText1: text1, adjustedText2: text2, overlap: null };
   }
 
-  if (overlap) {
-    console.log(`Chevauchement détecté : "${overlap}"`);
-    // Retirer la longueur du chevauchement à partir des textes originaux non normalisés
-    const adjustedText1 = text1.slice(0, text1.length - overlap.length).trim();
-    const adjustedText2 = text2.slice(overlap.length).trim();
+  const overlap = overlapWords.join(' ');
+  const adjustedText1 = rawWords1
+    .slice(0, rawWords1.length - overlapWords.length)
+    .join(' ')
+    .trim();
+  const adjustedText2 = rawWords2
+    .slice(overlapWords.length)
+    .join(' ')
+    .trim();
 
-    return { adjustedText1, adjustedText2, overlap };
-  }
-
-  return { adjustedText1: text1, adjustedText2: text2, overlap: null };
+  return { adjustedText1, adjustedText2, overlap };
 }
 
 function motCorrect(mot) {
@@ -324,7 +295,7 @@ function motCorrect(mot) {
 }
 
 function normalizeWord(w) {
-  return w.toLowerCase().replace(/[.,!?;:'"]/g, "");
+  return w.toLowerCase().replace(/[.,!?;:'"]/g, '');
 }
 
 function similarWords(w1, w2) {
@@ -332,6 +303,7 @@ function similarWords(w1, w2) {
   console.log(`Distance entre "${w1}" et "${w2}" = ${dist}`);
   return dist <= 2;
 }
+
 
 // Choisir le mot correct entre deux mots similaires
 function choisirMotCorrect(mot1, mot2) {
@@ -341,94 +313,68 @@ function choisirMotCorrect(mot1, mot2) {
   const mot2Correct = dictionnaire.has(m2);
 
   if (mot1Correct && !mot2Correct) {
-    console.log(
-      `choisirMotCorrect : "${mot1}" est correct, "${mot2}" ne l'est pas.`
-    );
+    console.log(`choisirMotCorrect : "${mot1}" est correct, "${mot2}" ne l'est pas.`);
     return mot1;
   }
   if (!mot1Correct && mot2Correct) {
-    console.log(
-      `choisirMotCorrect : "${mot2}" est correct, "${mot1}" ne l'est pas.`
-    );
+    console.log(`choisirMotCorrect : "${mot2}" est correct, "${mot1}" ne l'est pas.`);
     return mot2;
   }
 
   // Si les deux sont corrects ou incorrects, on choisit celui le plus proche en longueur (ou autre critère)
   const chosen = mot1.length <= mot2.length ? mot1 : mot2;
-  console.log(
-    `choisirMotCorrect : indécis, choisi "${chosen}" entre "${mot1}" et "${mot2}".`
-  );
+  console.log(`choisirMotCorrect : indécis, choisi "${chosen}" entre "${mot1}" et "${mot2}".`);
   return chosen;
 }
 
 // Fonction fuzzy de détection et correction de chevauchement
 function handleOverlapWithWordsFuzzy(text1, text2) {
-  // 1) On split brut, on garde rawWords1/rawWords2
   const rawWords1 = text1.trim().split(/\s+/);
   const rawWords2 = text2.trim().split(/\s+/);
+  const normWords1 = rawWords1.map(normalizeWord);
+  const normWords2 = rawWords2.map(normalizeWord);
 
-  // On garde aussi les versions normalisées pour la comparaison fuzzy
-  const words1 = rawWords1.map((w) => normalizeWord(w));
-  const words2 = rawWords2.map((w) => normalizeWord(w));
-
-  // 2) Détection de la plus longue séquence chevauchante fuzzy
   let overlapLength = 0;
-  let overlapWords1 = [];
-  let overlapWords2 = [];
-  for (let i = Math.min(words1.length, words2.length); i > 0; i--) {
-    const last1 = words1.slice(-i);
-    const first2 = words2.slice(0, i);
+  for (let i = Math.min(normWords1.length, normWords2.length); i > 0; i--) {
     let allSim = true;
     for (let j = 0; j < i; j++) {
-      if (!similarWords(last1[j], first2[j])) {
+      const w1 = normWords1[normWords1.length - i + j];
+      const w2 = normWords2[j];
+      const dist = levenshtein.get(w1, w2);
+      // tolérance : 1 pour mots courts, 20% pour les autres
+      const threshold = Math.max(1, Math.floor(w1.length * 0.2));
+      if (dist > threshold) {
         allSim = false;
         break;
       }
     }
-    if (allSim) {
-      overlapLength = i;
-      overlapWords1 = rawWords1.slice(-i); // on garde les bruts
-      overlapWords2 = rawWords2.slice(0, i);
-      break;
-    }
+    if (allSim) { overlapLength = i; break; }
   }
 
   if (overlapLength === 0) {
     return { adjustedText1: text1, adjustedText2: text2, overlap: null };
   }
 
-  // 3) Correction mot à mot, en conservant l’accent
-  const correctedWords = [];
-  for (let k = 0; k < overlapLength; k++) {
-    const mot1 = overlapWords1[k];
-    const mot2 = overlapWords2[k];
-    // On passe mot1 et mot2 bruts à choisirMotCorrect
-    const motCorrect = choisirMotCorrect(mot1, mot2);
-    console.log(
-      `choisirMotCorrect appelé avec "${mot1}" et "${mot2}" => "${motCorrect}"`
-    );
-    correctedWords.push(motCorrect);
-  }
-  const correctedOverlap = correctedWords.join(" ");
+  const overlapWords = rawWords1.slice(-overlapLength);
+  const overlap = overlapWords.join(' ');
 
-  // 4) Reconstruit le segment précédent
-  const adjustedWords1 = rawWords1
+  // Reconstruction des segments
+  const adjustedText1 = rawWords1
     .slice(0, rawWords1.length - overlapLength)
-    .concat(correctedWords);
+    .concat(overlapWords)
+    .join(' ')
+    .trim();
+  const adjustedText2 = rawWords2
+    .slice(overlapLength)
+    .join(' ')
+    .trim();
 
-  // 5) Reconstruit le segment courant (on supprime le chevauchement)
-  const adjustedWords2 = rawWords2.slice(overlapLength);
-
-  return {
-    adjustedText1: adjustedWords1.join(" ").trim(),
-    adjustedText2: adjustedWords2.join(" ").trim(),
-    overlap: correctedOverlap,
-  };
+  return { adjustedText1, adjustedText2, overlap };
 }
 
 // Helpers à intégrer dans le même fichier :
 function normalizeWord(w) {
-  return w.toLowerCase().replace(/^[^a-z0-9]+|[^a-z0-9]+$/gi, "");
+  return w.toLowerCase().replace(/^[^a-z0-9]+|[^a-z0-9]+$/gi, '');
 }
 
 function similarWords(w1, w2) {
@@ -444,6 +390,8 @@ function similarWords(w1, w2) {
   // Pour les autres, tolérer 1 seule modification (insert, delete ou sub)
   return dist <= 1;
 }
+
+
 
 module.exports = {
   adjustTextWithNeighbors,
