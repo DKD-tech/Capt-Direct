@@ -168,6 +168,28 @@ async function startSegmentScheduler({
   }
   console.log(`[Scheduler] Démarrage pour session ${sessionId}`);
 
+  // 1) Génération immédiate du premier segment (au temps T0)
+  //    pour que le client reçoive la notification « C'est bientôt à vous » dès
+  //    que possible, sans attendre `step` secondes.
+   const sockets0 = await io.in(`session:${sessionId}`).fetchSockets();
+   const validUsers0 = sockets0
+   .filter((sock) => sock.data.user_id && sock.data.username)
+   .map((sock) => ({
+     id: sock.data.user_id,
+     username: sock.data.username.trim(),
+     socketId: sock.id,
+   }));
+     if (validUsers0.length > 0) {
+     await generateSegment({
+      sessionId,
+     segmentDuration,
+     step,
+     users: validUsers0,
+     socketUsers,
+   });
+ }
+
+
   const intervalId = setInterval(async () => {
     // Récupérer la liste des sockets dans la room `session:${sessionId}`
     const sockets = await io.in(`session:${sessionId}`).fetchSockets();

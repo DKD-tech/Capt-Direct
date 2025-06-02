@@ -157,8 +157,9 @@ async function exportSrtController(req, res) {
     let lastEnd = null;             // timestamp de fin du dernier bloc
     const MIN_DURATION = 1.0;       // durée min (1 s) par bloc
     const MAX_DURATION = 6.0;       // durée max (6 s) par bloc
-    const MAX_LINE_LENGTH = 35
+    const MAX_LINE_LENGTH = 35;
     const srtBlocks = [];
+    const MAX_CPS = 20;
 
     for (let i = 0; i < segments.length; i++) {
       const seg = segments[i];

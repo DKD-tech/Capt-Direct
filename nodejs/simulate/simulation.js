@@ -137,7 +137,7 @@ const fs = require("fs");
 const path = require("path");
 
 const SERVER_URL = "http://192.168.1.69:3000";
-const SESSION_ID = 72;
+const SESSION_ID = 94;
 const MAX_SEGMENTS_PER_USER = 2;
 
 const USERS = [
