@@ -27,53 +27,54 @@
           Stopper la session
         </button>
 
+        <!-- Message de debug pour le compte à rebours -->
         <div *ngIf="countdownMessage" class="countdown-message">
           {{ countdownMessage }}
         </div>
       </div>
 
       <div class="status-header">
-         <span
+        <span
           class="signal-light"
           [ngClass]="{
             'signal-green': getCurrentSignal() === 'green',
             'signal-orange': getCurrentSignal() === 'orange',
             'signal-red': getCurrentSignal() === 'red'
           }"
-        ></span> 
+        ></span>
 
+        <!-- Si c'est votre tour -->
         <span class="status-text" *ngIf="getCurrentSignal() === 'green'">
-          C'est à vous de sous-titrer</span> 
+          C'est à vous de sous-titrer
+        </span>
+
+        <!-- Si c'est bientôt à vous, on affiche le compte à rebours -->
         <span
           class="status-text orange-text"
-          *ngIf="getCurrentSignal() === 'orange'"
-        >  C'est bientot à vous </span
-        > 
-        <span class="status-text red-text" *ngIf="getCurrentSignal() === 'red'">
-          En attente</span
-        > 
+          *ngIf="getCurrentSignal() === 'orange' && nextSegment"
+        >
+          Préparez-vous ! C'est à vous dans
+          {{ ((nextSegment.start_unix - now) / 1000) | number : '1.0-0' }}
+          seconde(s)
+        </span>
+
+        <!-- Si aucun segment actif ou bientôt, alerte "En attente" -->
+        <span
+          class="status-text red-text"
+          *ngIf="
+            getCurrentSignal() === 'red' ||
+            (!activeSegment && !nextSegment)
+          "
+        >
+          En attente
+        </span>
 
         <div class="clock">
           <mat-icon>access_time</mat-icon>
           <span id="clock">12:12 à 12:22</span>
         </div>
       </div>
-      <!-- Affichage des informations de la session -->
-      <!-- <div class="session-info">
-        <p><strong>Nom de la session :</strong> {{ sessionName }}</p>
-        <p><strong>Description :</strong> {{ sessionDescription }}</p>
-        <p><strong>Statut :</strong> {{ sessionStatus }}</p>
-        <p *ngIf="duration !== null">
-          <strong>Durée de la vidéo :</strong>
-          {{ duration | number : "1.0-2" }} secondes
-        </p>
-      </div> -->
-      <!-- <div class="collaborators-count">
-        <span>Vous êtes {{ collaborators }} collaborateurs en ligne</span>
-        <ul>
-          <li *ngFor="let user of users">{{ user }}</li>
-        </ul>
-      </div> -->
+      <!-- (… autres sections commentées si inutiles …) -->
     </div>
 
     <section class="segments">
@@ -81,73 +82,49 @@
       <div *ngIf="segments.length === 0" class="no-segments">
         Aucun segment ne vous est assigné pour cette session.
       </div>
-      <ul>
-        <li *ngFor="let segment of segments" [hidden]="!segment.isVisible">
-          <!-- <p>
-            Segment {{ segment.segment_id }} - Début : {{ segment.start_time }},
-            Fin : {{ segment.end_time }}, Statut : {{ segment.status }}
-          </p> -->
 
-          <p>
-            <!-- Nom de l'utilisateur assigné -->
-            <strong>Utilisateur assigné :</strong>
-            {{ segment.assigned_to || "Non spécifié" }}
-          </p>
-          <div class="audio-wave-container">
-            <div
-              class="audio-wave"
-              [style.width]="
-                calculateWaveWidth(
-                  segment.timeRemaining,
-                  segment.end_time,
-                  segment.start_time
-                )
-              "
-              [style.backgroundColor]="
-                segment.timeRemaining > 0 ? '#4caf50' : '#f44336'
-              "
-            ></div>
-          </div>
+      <!-- Affichage du segment actif (timer/progression) -->
+      <div *ngIf="activeSegment" class="segment-actif-ui">
+        <div class="audio-wave-container">
+          <div
+            class="audio-wave"
+            [style.width]="
+              calculateWaveWidth(
+                activeSegment.timeRemaining,
+                activeSegment.end_time,
+                activeSegment.start_time
+              )
+            "
+            [style.backgroundColor]="
+              activeSegment.timeRemaining > 0 ? '#4caf50' : '#f44336'
+            "
+          ></div>
+        </div>
+        <p>
+          <strong>Temps restant :</strong>
+          {{ activeSegment.timeRemaining | number : '1.0-0' }} secondes
+        </p>
+        <p>
+          <strong>Segment en cours :</strong>
+          {{ activeSegment.start_time }} → {{ activeSegment.end_time }}
+        </p>
+      </div>
 
-          <!-- Barre de progression
-          <div class="progress-container">
-            <div
-              class="progress-bar"
-              [style.width.%]="
-                100 - (segment.timeRemaining / segment.duration) * 100
-              "
-            ></div>
-          </div> -->
+      <!-- (Vous avez supprimé le <ng-template #attenteOuPrepa> ici) -->
 
-          <p>
-            Temps restant :
-            {{ segment.timeRemaining | number : "1.0-0" }} secondes
-          </p>
+      <!-- Sous-titres déjà enregistrés sur le segment actif -->
+      <div
+        *ngIf="activeSegment && activeSegment.subtitles.length > 0"
+        class="sous-titres-existants"
+      >
+        <h4>Sous-titres enregistrés pour ce segment :</h4>
+        <ul>
+          <li *ngFor="let subtitle of activeSegment.subtitles">
+            {{ subtitle.text }} (par : {{ subtitle.created_by }})
+          </li>
+        </ul>
+      </div>
 
-          <!-- Zone de texte pour saisir un sous-titre -->
-          <textarea
-            [(ngModel)]="segment.subtitleText"
-           
-            rows="2"
-            placeholder="Saisir un sous-titre"
-          ></textarea>
-
-          <!-- <button
-            (click)="addSubtitleToSegment(segment)"
-            [disabled]="segment.isDisabled || segment.timeRemaining <= 0"
-          >
-            Enregistrer
-          </button> -->
-
-          <!-- Afficher les sous-titres existants -->
-
-          <ul>
-            <li *ngFor="let subtitle of segment.subtitles">
-              {{ subtitle.text }} (Créé par : {{ subtitle.created_by }})
-            </li>
-          </ul>
-        </li>
-      </ul>
       <button (click)="onExportSrt()">Exporter les sous-titres</button>
     </section>
 
@@ -158,6 +135,9 @@
       </p>
     </section>
 
+    <!-- ============================================= -->
+    <!-- NOUVELLE ZONE DE SAISIE TOUJOURS VISIBLE EN BAS -->
+    <!-- ============================================= -->
     <div class="transcription-info">
       <div class="audio-wave">
         <mat-icon class="audio-icon">graphic_eq</mat-icon>
@@ -167,11 +147,27 @@
           <div class="section green"></div>
         </div>
       </div>
+
       <textarea
-        [(ngModel)]="subtitleText"
-        (keyup)="onSubtitleChange()"
-        placeholder="Saisir le texte"
+        [ngModel]="activeSegment?.subtitleText || ''"
+        (ngModelChange)="
+          activeSegment && (activeSegment.subtitleText = $event) && onSubtitleChange()
+        "
+        rows="2"
+        placeholder="Saisir un sous-titre"
       ></textarea>
+      <button
+        (click)="onEnregistrerSousTitre()"
+        [disabled]="!activeSegment || !activeSegment.subtitleText?.trim()"
+      >
+        Enregistrer le sous-titre
+      </button>
+
+      <!--
+        Si vous souhaitez vous appuyer uniquement sur l’auto‐save à la fin du
+        segment, vous pouvez commenter complètement ce bouton :
+        <button ...>Enregistrer le sous-titre</button>
+      -->
     </div>
   </main>
 </div>

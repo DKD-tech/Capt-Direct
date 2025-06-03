@@ -789,19 +789,20 @@ async function saveSubtitlesToDB(req, res) {
 // }
 async function startSegmentationController(req, res) {
   const session_id = req.params.sessionId;
+  const { officialStartTime } = req.body; // <--- ajoute cette ligne
 
   if (!session_id) {
     return res.status(400).json({ message: "session_id manquant" });
   }
 
   try {
-    const io = req.app.get("io"); // ✅ d'abord récupérer io
+    const io = req.app.get("io");
 
     if (!io) {
       return res.status(500).json({ message: "Socket.io non initialisé" });
     }
 
-    const connectedUsers = await getConnectedUsers(io, session_id); // ✅ maintenant utiliser io
+    const connectedUsers = await getConnectedUsers(io, session_id);
 
     if (!connectedUsers || connectedUsers.length === 0) {
       return res
@@ -823,6 +824,7 @@ async function startSegmentationController(req, res) {
       users,
       io: req.app.get("io"),
       socketUsers,
+      officialStartTime     // <--- ajoute ce paramètre ici
     });
 
     return res

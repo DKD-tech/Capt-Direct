@@ -170,6 +170,60 @@ class VideoSegmentModel extends Model {
     const result = await pool.query(query, [session_id]);
     return result.rows[0];
   }
+
+  // Exemple pour getUpcomingAvailableSegment
+/**
+ * Récupère le prochain segment “pending” (déjà réservé) pour CE user,
+ * dont start_time > afterSeconds.
+ */
+// Dans ton modèle : éviter le toTime/toSeconds, on compare directement en SQL
+async getUpcomingPendingSegmentByUser(session_id, user_id, afterSeconds) {
+  const query = `
+    SELECT s.*
+    FROM video_segments s
+    JOIN segment_users su
+      ON su.segment_id = s.segment_id
+      AND su.user_id = $2
+    WHERE s.session_id = $1
+      AND s.status    = 'pending'
+      AND EXTRACT(
+      EPOCH 
+      FROM (s.start_time::time)
+    ) >= ($3 - 1)
+    ORDER BY s.start_time ASC
+    LIMIT 1
+  `;
+  const result = await pool.query(query, [session_id, user_id, afterSeconds]);
+  return result.rows[0] || null;
 }
 
+async getUpcomingAssignedSegmentForUser(session_id, user_id, afterSeconds) {
+  const pad = (n) => n.toString().padStart(2, '0');
+  const toTime = (secs) => {
+    const h = Math.floor(secs / 3600);
+    const m = Math.floor((secs % 3600) / 60);
+    const s = secs % 60;
+    return `${pad(h)}:${pad(m)}:${pad(s)}`;
+  };
+  const afterTime = toTime(afterSeconds);
+
+  const query = `
+    SELECT s.*
+    FROM ${this.tableName} s
+    JOIN segment_users su
+      ON su.segment_id = s.segment_id
+    WHERE s.session_id = $1
+      AND su.user_id = $2
+      AND s.status = 'in_progress'
+      AND s.start_time > $3
+    ORDER BY s.start_time ASC
+    LIMIT 1
+  `;
+  const result = await pool.query(query, [session_id, user_id, afterTime]);
+  return result.rows[0] || null;
+}
+
+
+
+}
 module.exports = new VideoSegmentModel();

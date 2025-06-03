@@ -30,12 +30,13 @@ export class SessionService {
   }
 
   // Nouvelle méthode pour démarrer la segmentation
-  startSegmentation(sessionId: number): Observable<any> {
-    const url = `${this.baseUrl}/start-segmentation/${sessionId}`;
-    return this.http
-      .post(url, {})
-      .pipe(tap((res) => console.log('Segmentation démarrée:', res)));
-  }
+  startSegmentation(sessionId: number, officialStartTime: number): Observable<any> {
+  const url = `${this.baseUrl}/start-segmentation/${sessionId}`;
+  // On envoie officialStartTime dans le body
+  return this.http
+    .post(url, { officialStartTime })
+    .pipe(tap((res) => console.log('Segmentation démarrée:', res)));
+}
 
   // Nouvelle méthode pour arrêter la segmentation
   stopSegmentation(sessionId: number): Observable<any> {

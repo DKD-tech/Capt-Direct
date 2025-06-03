@@ -1,122 +1,18 @@
-// segmentScheduler.js
-
 const VideoSegmentModel = require("../models/VideoSegmentModel");
 const SegmentUserModel  = require("../models/SegmentUserModel");
 const {
   convertSecondsToTime,
   convertTimeToSeconds,
 } = require("../utils/timeUtils");
-const { getAsync } = require("../redis/index");
-const { getConnectedUsers } = require("../utils/socketUtils");
 
-// Pour éviter plusieurs setInterval() pour une même session
+// On garde les maps pour gérer le round-robin et éviter les duplications de setInterval
 const activeSchedulers   = new Map();
 const roundRobinIndexes  = new Map(); // sessionId → index de rotation
-const segmentAssignments = new Map(); // sessionId → { userId → count }
+const segmentAssignments = new Map(); // sessionId → Map<userId, count>
+
 
 /**
- * Génère un segment glissant pour une session donnée.
- */
-async function generateSegment({
-  sessionId,
-  segmentDuration,
-  step,
-  users,
-  socketUsers = new Map(),
-}) {
-  if (!users || users.length === 0) {
-    console.log(
-      `[Scheduler] Aucun utilisateur connecté pour la session ${sessionId}`
-    );
-    return;
-  }
-
-  // 1) Récupérer le dernier segment pour calculer startTime/endTime
-  const lastSegment = await VideoSegmentModel.getLastSegment(sessionId);
-  const startTime = lastSegment
-    ? convertTimeToSeconds(lastSegment.start_time) + step
-    : 0;
-  const endTime = startTime + segmentDuration;
-
-  console.log("DEBUG:", { startTime, endTime });
-
-  // 2) Sélectionner l’utilisateur selon round-robin
-  const userToAssign = selectBalancedUser(sessionId, users);
-  if (!userToAssign) {
-    console.log(
-      `[Scheduler] Aucun utilisateur éligible trouvé pour session ${sessionId}`
-    );
-    return;
-  }
-
-  // 3) Calculer le timestamp absolu (ms) de début du segment
-  const startUnix = Date.now() + step * 1000;
-
-  // 4) Insérer le segment en status "in_progress"
-  const segment = await VideoSegmentModel.insert({
-    session_id: sessionId,
-    start_time: convertSecondsToTime(startTime),
-    end_time:   convertSecondsToTime(endTime),
-    status:     "in_progress", // on marque directement en in_progress
-    created_at: new Date(),
-  });
-
-  // 5) Assigner cet utilisateur au segment
-  await SegmentUserModel.insert({
-    segment_id:  segment.segment_id,
-    user_id:     userToAssign.id,
-    assigned_at: new Date(),
-  });
-
-  console.log("Socket ID cible :", userToAssign.socketId);
-
-  // 6) Vérification défensive de socketUsers
-  if (!socketUsers || typeof socketUsers.get !== "function") {
-    console.warn(
-      `[Scheduler] socketUsers invalide ou non transmis pour user ${userToAssign.id}`
-    );
-    return;
-  }
-  const socketId = userToAssign.socketId;
-
-  if (socketId) {
-    // → IMPORT DYNAMIQUE corrigé :
-    const socketModule = await import("../config/socket.js");
-    // si votre config/socket.js faisait un "export default io"
-    // alors socketModule.default contient l’objet io
-    // si au contraire il faisait "export const io = new Server(...)"
-    // alors socketModule.io contient l’objet io
-    const io = socketModule.io || socketModule.default;
-
-    if (!io) {
-      console.error(
-        "[Scheduler] Impossible de récupérer `io` depuis config/socket.js"
-      );
-      return;
-    }
-
-    io.to(socketId).emit("segment-assigned", {
-      segment_id:  segment.segment_id,
-      session_id:  segment.session_id,
-      start_time:  segment.start_time,
-      end_time:    segment.end_time,
-      status:      segment.status,      // “in_progress”
-      assigned_to: userToAssign.username,
-      start_unix:  startUnix             // timestamp absolu (ms)
-    });
-
-    console.log(
-      `[WebSocket] "segment-assigned" émis à socket ${socketId} (user ${userToAssign.id})`
-    );
-  } else {
-    console.warn(
-      `[WebSocket] Aucun socketId trouvé pour user ${userToAssign.id}`
-    );
-  }
-}
-
-/**
- * Sélectionne l’utilisateur suivant (round-robin pondéré).
+ * Extrait round-robin : choisi le user qui a eu le moins de segments jusqu'ici.
  */
 function selectBalancedUser(sessionId, users) {
   if (!users || users.length === 0) return null;
@@ -125,23 +21,21 @@ function selectBalancedUser(sessionId, users) {
   }
   const sessionMap = segmentAssignments.get(sessionId);
 
-  // 1) Trier par “count” (moindre d’abord)
+  // 1) Tri par “count” (le moins servi d'abord)
   const sorted = [...users].sort((a, b) => {
     const countA = sessionMap.get(a.id) || 0;
     const countB = sessionMap.get(b.id) || 0;
     return countA - countB;
   });
 
-  // 2) Round-robin parmi ceux qui ont le même count minimal
+  // 2) Round-robin parmi ceux au même compte minimal
   const currentIndex = roundRobinIndexes.get(sessionId) || 0;
   const minCount = sessionMap.get(sorted[0].id) || 0;
-  const filtered = sorted.filter(
-    (u) => (sessionMap.get(u.id) || 0) === minCount
-  );
+  const filtered = sorted.filter(u => (sessionMap.get(u.id) || 0) === minCount);
 
   const selectedUser = filtered[currentIndex % filtered.length];
 
-  // 3) Incrémenter l’index et mettre à jour le count
+  // 3) Incrémenter l’index et mettre à jour son “count”
   roundRobinIndexes.set(sessionId, (currentIndex + 1) % filtered.length);
   sessionMap.set(
     selectedUser.id,
@@ -151,16 +45,13 @@ function selectBalancedUser(sessionId, users) {
   return selectedUser;
 }
 
-/**
- * Lance le scheduler toutes les `step` secondes pour une session.
- * Protégé contre les doublons.
- */
+
 async function startSegmentScheduler({
   sessionId,
-  segmentDuration,
-  step,
+  segmentDuration,   
+  step,             
   io,
-  socketUsers,
+  officialStartTime, 
 }) {
   if (activeSchedulers.has(sessionId)) {
     console.log(`[Scheduler] Déjà actif pour session ${sessionId}`);
@@ -168,63 +59,203 @@ async function startSegmentScheduler({
   }
   console.log(`[Scheduler] Démarrage pour session ${sessionId}`);
 
-  // 1) Génération immédiate du premier segment (au temps T0)
-  //    pour que le client reçoive la notification « C'est bientôt à vous » dès
-  //    que possible, sans attendre `step` secondes.
-   const sockets0 = await io.in(`session:${sessionId}`).fetchSockets();
-   const validUsers0 = sockets0
-   .filter((sock) => sock.data.user_id && sock.data.username)
-   .map((sock) => ({
-     id: sock.data.user_id,
-     username: sock.data.username.trim(),
-     socketId: sock.id,
-   }));
-     if (validUsers0.length > 0) {
-     await generateSegment({
-      sessionId,
-     segmentDuration,
-     step,
-     users: validUsers0,
-     socketUsers,
-   });
- }
+  // Préavis = step secondes
+  const anticipation = step;
 
+  // 1) INITIALISATION : récupérer tous les utilisateurs connectés
+  const sockets0 = await io.in(`session:${sessionId}`).fetchSockets();
+  const validUsers0 = sockets0
+    .filter(sock => sock.data.user_id && sock.data.username)
+    .map(sock => ({
+      id:       sock.data.user_id,
+      username: sock.data.username.trim(),
+      socketId: sock.id,
+    }));
 
+  if (validUsers0.length === 0) {
+    console.warn(`[Scheduler] Aucuns utilisateurs pour session ${sessionId}.`);
+    return;
+  }
+
+  // 1.b) Premier segment → débute à 0s, status="in_progress", assignation immédiate
+  const firstUser = selectBalancedUser(sessionId, validUsers0);
+  if (!firstUser) {
+    console.warn(`[Scheduler] Aucun utilisateur éligible pour le 1er segment.`);
+    return;
+  }
+
+  const firstSegment = await VideoSegmentModel.insert({
+    session_id: sessionId,
+    start_time: convertSecondsToTime(0),               // "00:00:00"
+    end_time:   convertSecondsToTime(segmentDuration), // "00:00:10" si segmentDuration=10
+    status:     "in_progress",
+    created_at: new Date(),
+  });
+
+  // Assignation immédiate dans segment_users
+  await SegmentUserModel.insert({
+    segment_id:  firstSegment.segment_id,
+    user_id:     firstUser.id,
+    assigned_at: new Date(),
+  });
+
+  // Envoi du socket "segment-assigned" pour le premier user
+  {
+    const socketId = firstUser.socketId;
+    if (socketId) {
+      const socketModule = await import("../config/socket.js");
+      const ioSocket = socketModule.io || socketModule.default;
+      ioSocket.to(socketId).emit("segment-assigned", {
+        segment_id:  firstSegment.segment_id,
+        session_id:  firstSegment.session_id,
+        start_time:  firstSegment.start_time,
+        end_time:    firstSegment.end_time,
+        status:      "in_progress",
+        assigned_to: firstUser.username,
+        start_unix:  Number(officialStartTime),
+      });
+      console.log(`[WebSocket] Premier segment assigné à ${firstUser.username}`);
+    } else {
+      console.warn(`[Scheduler] Premier user (${firstUser.id}) sans socketId.`);
+    }
+  }
+
+  // 1.c) Pour les autres utilisateurs, créer un segment "pending" dès maintenant
+  const others = validUsers0.filter(u => u.id !== firstUser.id);
+  for (let idx = 0; idx < others.length; idx++) {
+    const u = others[idx];
+    const plannedStart = (idx + 1) * step; // ex. 5, 10, 15, …
+
+    const pendingSeg = await VideoSegmentModel.insert({
+      session_id: sessionId,
+      start_time: convertSecondsToTime(plannedStart),
+      end_time:   convertSecondsToTime(plannedStart + segmentDuration),
+      status:     "pending",
+      created_at: new Date(),
+    });
+
+    // Réserver dans segment_users sans assigned_at (NULL)
+    await SegmentUserModel.insert({
+      segment_id:  pendingSeg.segment_id,
+      user_id:     u.id,
+      assigned_at: null,
+    });
+
+    console.log(
+      `[Scheduler] Segment “pending” #${pendingSeg.segment_id} pour ${u.username} (start_time=${pendingSeg.start_time}).`
+    );
+  }
+
+  // 2) BOUCLE DE TICK (toutes les step secondes)
   const intervalId = setInterval(async () => {
-    // Récupérer la liste des sockets dans la room `session:${sessionId}`
+    const now = Date.now();
+    const elapsedSinceStart = Math.floor((now - Number(officialStartTime)) / 1000);
+
+    // 2.a) Mettre à jour la liste des utilisateurs connectés
     const sockets = await io.in(`session:${sessionId}`).fetchSockets();
     const validUsers = sockets
-      .filter((sock) => sock.data.user_id && sock.data.username)
-      .map((sock) => ({
+      .filter(sock => sock.data.user_id && sock.data.username)
+      .map(sock => ({
         id:       sock.data.user_id,
         username: sock.data.username.trim(),
         socketId: sock.id,
       }));
 
-    console.log(
-      `[Scheduler] Utilisateurs valides :`,
-      validUsers.map((u) => `${u.id}:${u.username}`)
-    );
+    // 2.b) Pour chaque utilisateur, vérifier/assigner
+    for (const user of validUsers) {
+      // 2.b.1) S’il a déjà un segment “in_progress” planifié dans le futur, on skip
+      const hasAssigned = await VideoSegmentModel.getUpcomingAssignedSegmentForUser(
+        sessionId,
+        user.id,
+        elapsedSinceStart
+      );
+      if (hasAssigned) {
+        continue;
+      }
 
-    if (validUsers.length === 0) {
-      console.log(`[Scheduler] Aucun utilisateur valide, skip.`);
-      return;
+      // 2.b.2) Chercher s’il existe un segment “pending” pour CE user
+      const pendingSegment = await VideoSegmentModel.getUpcomingPendingSegmentByUser(
+        sessionId,
+        user.id,
+        elapsedSinceStart
+      );
+
+      if (pendingSegment) {
+        // Combien de secondes avant le début
+        const startIn = convertTimeToSeconds(pendingSegment.start_time) - elapsedSinceStart;
+        if (startIn <= anticipation) {
+          // 2.b.2.a) Basculer ce “pending” en “in_progress”
+          await VideoSegmentModel.updateSegmentStatus(
+            pendingSegment.segment_id,
+            "in_progress"
+          );
+          // À la place d’un INSERT, on met juste à jour assigned_at du row existant
+         await SegmentUserModel.updateAssignedAt(pendingSegment.segment_id, user.id);
+
+          // **Ici** on ré-insère dans segment_users avec assigned_at = NOW()
+          await SegmentUserModel.insert({
+            segment_id:  pendingSegment.segment_id,
+            user_id:     user.id,
+            assigned_at: new Date(),
+          });
+
+          // Émettre le WS “segment-assigned”
+          const socketId = user.socketId;
+          if (socketId) {
+            const socketModule = await import("../config/socket.js");
+            const ioSocket = socketModule.io || socketModule.default;
+            ioSocket.to(socketId).emit("segment-assigned", {
+              segment_id:  pendingSegment.segment_id,
+              session_id:  pendingSegment.session_id,
+              start_time:  pendingSegment.start_time,
+              end_time:    pendingSegment.end_time,
+              status:      "in_progress",
+              assigned_to: user.username,
+              start_unix:  Number(officialStartTime)
+                          + convertTimeToSeconds(pendingSegment.start_time) * 1000,
+            });
+            console.log(
+              `[WebSocket] “segment-assigned” → segment ${pendingSegment.segment_id} pour ${user.username}`
+            );
+          }
+        }
+      } else {
+        // 2.b.3) Si aucun “pending” pour ce user → créer UN NOUVEAU segment “pending”
+        const lastSeg = await VideoSegmentModel.getLastSegment(sessionId);
+        let nextStart;
+        if (lastSeg) {
+          // **CHEVAUCHEMENT** : on prend lastSeg.start_time + step (et non lastSeg.end_time)
+          const lastStartSec = convertTimeToSeconds(lastSeg.start_time);
+          nextStart = lastStartSec + step;
+        } else {
+          // Cas extrême : pas de lastSeg, on décale “now + anticipation”
+          nextStart = elapsedSinceStart + anticipation;
+        }
+
+        const newPending = await VideoSegmentModel.insert({
+          session_id: sessionId,
+          start_time: convertSecondsToTime(nextStart),
+          end_time:   convertSecondsToTime(nextStart + segmentDuration),
+          status:     "pending",
+          created_at: new Date(),
+        });
+        await SegmentUserModel.insert({
+          segment_id:  newPending.segment_id,
+          user_id:     user.id,
+          assigned_at: null,
+        });
+        console.log(
+          `[Scheduler] Créé nouveau “pending” #${newPending.segment_id} pour ${user.username} (start_time=${newPending.start_time}).`
+        );
+      }
     }
-
-    await generateSegment({
-      sessionId,
-      segmentDuration,
-      step,
-      users: validUsers,
-      socketUsers
-    });
   }, step * 1000);
 
   activeSchedulers.set(sessionId, intervalId);
 }
 
 /**
- * Arrête le scheduler en cours pour une session.
+ * Arrête le scheduler pour une session donnée.
  */
 function stopSegmentScheduler(sessionId) {
   const intervalId = activeSchedulers.get(sessionId);
@@ -236,7 +267,6 @@ function stopSegmentScheduler(sessionId) {
 }
 
 module.exports = {
-  generateSegment,
   startSegmentScheduler,
   stopSegmentScheduler,
 };

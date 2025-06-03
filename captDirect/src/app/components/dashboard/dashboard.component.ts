@@ -1,3 +1,5 @@
+
+
 import { SubtitleService } from './../../services/sessions/subtitle.service';
 import { VideoService } from './../../services/sessions/video.service';
 import { AuthService } from './../../services/auth/auth.service';
@@ -31,7 +33,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   displayedSubtitle = '';
   userId: number = 0; // Identifiant utilisateur récupéré dynamiquement
   videoUrl = ''; // URL de la vidéo récupérée dynamiquement
-  sessionId: number = 96; // ID de la session à afficher
+  sessionId: number = 27; // ID de la session à afficher
   segments: any[] = []; // Array de segments (avec warningFlag, isVisible, timer, etc.)
   username: string = '';
   collaborators: number = 1; // Nombre de collaborateurs en ligne
@@ -51,7 +53,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
   streamStarted = false; // SI le flux a été démarré (countdown passé)
   countdown = 5; // Compte à rebours avant démarrage
   countdownMessage = '';
-  signalUpdateInterval: any = null; // ID du setInterval pour la boucle globale
+  signalUpdateInterval: any = null;
+  now: number = Date.now();
+
+   // ID du setInterval pour la boucle globale
 
   constructor(
     private socketService: SocketService,
@@ -95,6 +100,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
         console.error('Erreur dans getUserSession:', err);
       },
     });
+    
   }
 
   // ------------------------------------------------------------
@@ -248,52 +254,79 @@ export class DashboardComponent implements OnInit, OnDestroy {
   // 5) Démarrage du flux (startStream appelle startSegmentation après countdown)
   // ------------------------------------------------------------
   startStream() {
-    this.sessionService.startStream(this.sessionId).subscribe(() => {
-      this.countdown = 5;
-      this.streamStarted = true;
+    console.log('[DEBUG] startStream() déclenché'); // 1 : on voit le clic
+    this.sessionService.startStream(this.sessionId).subscribe({
+      next: () => {
+        console.log('[DEBUG] réponse du back pour startStream(), on entre dans le subscribe');
 
-      const interval = setInterval(() => {
-        if (this.countdown > 0) {
-          this.countdownMessage = `Démarrage dans ${this.countdown} seconde(s)...`;
-          this.countdown--;
-        } else {
-          clearInterval(interval);
-          this.countdownMessage = '';
-          this.startSegmentation();
-        }
-      }, 1000);
+        // On initialise le décompte à 5 secondes
+        this.countdown = 5;
+        this.streamStarted = true;
+
+        // Affiche dès maintenant « Démarrage dans 5 seconde(s)… »
+        this.countdownMessage = `Démarrage dans ${this.countdown} seconde(s)…`;
+        console.log('[DEBUG] countdownMessage initial =', this.countdownMessage);
+
+        // Rappel de startSegmentation en calculant officialStartTime
+        const officialStartTime = Date.now() + this.countdown * 1000;
+
+        // Lancement d’un setInterval chacune des 1000 ms
+        const interval = setInterval(() => {
+          if (this.countdown > 0) {
+            this.countdown--;
+            this.countdownMessage = `Démarrage dans ${this.countdown} seconde(s)…`;
+            console.log('[DEBUG] countdownMessage mise à jour =', this.countdownMessage);
+
+            // (si nécessaire, forcer la détection de changement)
+            this.cdr.markForCheck();
+          } else {
+            clearInterval(interval);
+            this.countdownMessage = '';
+            console.log('[DEBUG] countdown terminé, on efface countdownMessage');
+            this.cdr.markForCheck();
+
+            // Maintenant que le compte à rebours est fini, on lance la segmentation
+            this.startSegmentation(officialStartTime);
+          }
+        }, 1000);
+      },
+      error: (err) => {
+        console.error('[DEBUG] Erreur dans startStream() :', err);
+      }
     });
   }
+
 
   // ------------------------------------------------------------
   // 6) Demande au back-end de démarrer la segmentation
   //    → officialStartTime est mis à Date.now()
   //    → puis on appelle startGlobalTimer()
   // ------------------------------------------------------------
-  startSegmentation(): void {
-    console.log(
-      'Déclenchement startSegmentation, sessionId =',
-      this.sessionId
-    );
-    this.sessionService.startSegmentation(this.sessionId).subscribe({
-      next: (res: any) => {
-        console.log('Segmentation démarrée (backend confirme) :', res);
+  startSegmentation(officialStartTime?: number): void {
+  console.log(
+    'Déclenchement startSegmentation, sessionId =',
+    this.sessionId
+  );
 
-        // 1) Initialisation de l’horodatage
-        this.officialStartTime = Date.now();
-        console.log(
-          '📡 officialStartTime =',
-          new Date(this.officialStartTime)
-        );
+  // Si on reçoit une valeur, on la prend, sinon Date.now()
+  this.officialStartTime = officialStartTime ?? Date.now();
+  console.log(
+    '📡 officialStartTime =',
+    new Date(this.officialStartTime)
+  );
 
-        // 2) Démarrage de la boucle globale (pas de loadSegments ici)
-        this.startGlobalTimer();
-      },
-      error: (err: any) => {
-        console.error('Erreur startSegmentation :', err);
-      },
-    });
-  }
+  // On envoie côté back
+  this.sessionService.startSegmentation(this.sessionId, this.officialStartTime).subscribe({
+    next: (res: any) => {
+      console.log('Segmentation démarrée (backend confirme) :', res);
+      this.startGlobalTimer();
+    },
+    error: (err: any) => {
+      console.error('Erreur startSegmentation :', err);
+    },
+  });
+}
+
 
   stopSegmentation(): void {
     this.sessionService.stopSegmentation(this.sessionId).subscribe({
@@ -322,6 +355,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     }
 
     this.signalUpdateInterval = setInterval(() => {
+       this.now = Date.now();
       // 1) Calcul du temps écoulé (secondes)
       const nowMs = Date.now();
       this.elapsedTime = Math.floor((nowMs - this.officialStartTime) / 1000);
@@ -840,4 +874,29 @@ this.socketService.onSegmentationStopped().subscribe(() => {
       // Optionnel : démarrer d’autres timers si besoin
     }
   }
+
+  onEnregistrerSousTitre() {
+  // Sécurité : évite de sauvegarder si pas de segment actif ou zone vide
+  if (!this.activeSegment || !this.subtitleText.trim()) return;
+
+  // Tu peux garder ou non l'auto-save, ici bouton manuel
+  this.sessionService
+    .addSubtitle(this.activeSegment.segment_id, this.subtitleText, this.userId)
+    .subscribe({
+      next: (response) => {
+        if (response?.subtitle) {
+          this.activeSegment.subtitles.push({
+            text: response.subtitle.text,
+            created_by: this.userId,
+            created_at: response.subtitle.created_at,
+          });
+        }
+        this.subtitleText = '';
+      },
+      error: (error) => {
+        console.error(`Erreur d'enregistrement du sous-titre :`, error);
+      },
+    });
+}
+
 }

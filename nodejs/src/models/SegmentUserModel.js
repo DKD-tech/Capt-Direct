@@ -121,6 +121,17 @@ class SegmentUserModel extends Model {
     const result = await pool.query(query, [user_id, segment_id]);
     return result.rows.length > 0; // Renvoie true si l'utilisateur est assigné
   }
+
+   async updateAssignedAt(segmentId, userId) {
+    const query = `
+      UPDATE ${this.tableName}
+         SET assigned_at = NOW()
+       WHERE segment_id = $1
+         AND user_id    = $2
+    `;
+    await pool.query(query, [segmentId, userId]);
+  }
+
 }
 
 module.exports = new SegmentUserModel();
