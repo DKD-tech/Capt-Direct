@@ -29,14 +29,14 @@ export class SessionService {
     this.baseUrl = `${this.ip_url}/api/sessions`;
   }
 
-  // Nouvelle méthode pour démarrer la segmentation
-  startSegmentation(sessionId: number, officialStartTime: number): Observable<any> {
+ // avant : startSegmentation(sessionId: number, officialStartTime: number)
+startSegmentation(sessionId: number, officialStartTime: number, starterId: number): Observable<any> {
   const url = `${this.baseUrl}/start-segmentation/${sessionId}`;
-  // On envoie officialStartTime dans le body
   return this.http
-    .post(url, { officialStartTime })
+    .post(url, { officialStartTime, starterId })
     .pipe(tap((res) => console.log('Segmentation démarrée:', res)));
 }
+
 
   // Nouvelle méthode pour arrêter la segmentation
   stopSegmentation(sessionId: number): Observable<any> {

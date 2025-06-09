@@ -1,5 +1,5 @@
 
-
+import { interval, Subscription } from 'rxjs';
 import { SubtitleService } from './../../services/sessions/subtitle.service';
 import { VideoService } from './../../services/sessions/video.service';
 import { AuthService } from './../../services/auth/auth.service';
@@ -33,7 +33,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   displayedSubtitle = '';
   userId: number = 0; // Identifiant utilisateur récupéré dynamiquement
   videoUrl = ''; // URL de la vidéo récupérée dynamiquement
-  sessionId: number = 27; // ID de la session à afficher
+  sessionId: number = 84; // ID de la session à afficher
   segments: any[] = []; // Array de segments (avec warningFlag, isVisible, timer, etc.)
   username: string = '';
   collaborators: number = 1; // Nombre de collaborateurs en ligne
@@ -55,6 +55,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
   countdownMessage = '';
   signalUpdateInterval: any = null;
   now: number = Date.now();
+  nowSub!: Subscription;
+  warningThresholdSec: number = 5;
+ 
 
    // ID du setInterval pour la boucle globale
 
@@ -100,7 +103,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
         console.error('Erreur dans getUserSession:', err);
       },
     });
-    
+    this.nowSub = interval(1000).subscribe(() => {
+      this.now = Date.now();
+    });
   }
 
   // ------------------------------------------------------------
@@ -302,218 +307,205 @@ export class DashboardComponent implements OnInit, OnDestroy {
   //    → officialStartTime est mis à Date.now()
   //    → puis on appelle startGlobalTimer()
   // ------------------------------------------------------------
-  startSegmentation(officialStartTime?: number): void {
-  console.log(
-    'Déclenchement startSegmentation, sessionId =',
-    this.sessionId
-  );
-
-  // Si on reçoit une valeur, on la prend, sinon Date.now()
+  // dashboard.component.ts
+startSegmentation(officialStartTime?: number): void {
   this.officialStartTime = officialStartTime ?? Date.now();
-  console.log(
-    '📡 officialStartTime =',
-    new Date(this.officialStartTime)
-  );
-
-  // On envoie côté back
-  this.sessionService.startSegmentation(this.sessionId, this.officialStartTime).subscribe({
-    next: (res: any) => {
-      console.log('Segmentation démarrée (backend confirme) :', res);
-      this.startGlobalTimer();
-    },
-    error: (err: any) => {
-      console.error('Erreur startSegmentation :', err);
-    },
-  });
+  // On passe maintenant this.userId comme starterId
+  this.sessionService
+    .startSegmentation(
+      this.sessionId,
+      this.officialStartTime,
+      this.userId
+    )
+    .subscribe({
+      next: (res: any) => {
+        console.log('Segmentation démarrée (backend confirme) :', res);
+        this.startGlobalTimer();
+      },
+      error: (err: any) => {
+        console.error('Erreur startSegmentation :', err);
+      },
+    });
 }
 
 
   stopSegmentation(): void {
-    this.sessionService.stopSegmentation(this.sessionId).subscribe({
-      next: (res: any) => {
-        console.log('Segmentation arrêtée :', res);
-      },
-      error: (err: any) => {
-        console.error('Erreur stopSegmentation :', err);
-      },
-    });
-  }
+  this.sessionService.stopSegmentation(this.sessionId).subscribe({
+    next: (res: any) => {
+      console.log('Segmentation arrêtée :', res);
+      // 1) Arrêter la boucle globale
+      if (this.signalUpdateInterval) {
+        clearInterval(this.signalUpdateInterval);
+        this.signalUpdateInterval = null;
+      }
+      // 2) Réinitialiser l’état orange sur chaque segment
+      this.segments.forEach(seg => {
+        seg.warningFlag = false;
+      });
+      // 3) Supprimer la prochaine attribution
+      this.nextSegment = null;
+      // 4) Forcer Angular à rafraîchir la vue
+      this.cdr.markForCheck();
+    },
+    error: (err: any) => {
+      console.error('Erreur stopSegmentation :', err);
+    },
+  });
+}
+
 
   // ------------------------------------------------------------
   // 7) Boucle principale : mise à jour des timers / warning / isVisible puis updateSignalStatus
   // ------------------------------------------------------------
   startGlobalTimer(): void {
-    if (!this.officialStartTime) {
-      console.error(
-        '⛔ officialStartTime non défini, impossible de démarrer le timer global.'
-      );
-      return;
-    }
-    if (this.signalUpdateInterval) {
-      clearInterval(this.signalUpdateInterval);
-      this.signalUpdateInterval = null;
-    }
-
-    this.signalUpdateInterval = setInterval(() => {
-       this.now = Date.now();
-      // 1) Calcul du temps écoulé (secondes)
-      const nowMs = Date.now();
-      this.elapsedTime = Math.floor((nowMs - this.officialStartTime) / 1000);
-
-      // 2) Pour chaque segment assigné à cet utilisateur, on détermine :
-      //    a) démarrage du timer interne si Date.now() ≥ segment.start_unix
-      //    b) warningFlag si à moins de 5s du démarrage
-      this.segments.forEach((segment) => {
-        // Ne traiter que si segment.assigned_to = this.username
-        if (
-          (segment.assigned_to || '').toLowerCase().trim() !== this.username
-        ) {
-          return;
-        }
-
-        // a) Démarrer le timer interne (vert) dès que Date.now() ≥ start_unix
-        if (Date.now() >= segment.start_unix && !segment.timer) {
-          segment.isVisible = true;
-          segment.timer = setInterval(() => {
-            if (segment.timeRemaining > 0) {
-              segment.timeRemaining--;
-              this.cdr.detectChanges();
-            } else {
-              clearInterval(segment.timer);
-              this.autoSaveSubtitle(segment);
-            }
-          }, 1000);
-          console.log(
-            `🚦 Timer interne démarré pour segment ${segment.segment_id}, timeRemaining = ${segment.timeRemaining}`
-          );
-        }
-
-        // b) Déclencher warningFlag (orange) si à moins de 5s avant start_unix
-        const timeBeforeMs = segment.start_unix - Date.now();
-        if (
-          timeBeforeMs <= 5000 &&
-          timeBeforeMs > 0 &&
-          !segment.warningFlag
-        ) {
-          segment.warningFlag = true;
-          console.log(
-            `⚠️ Warning pour segment ${segment.segment_id} (début dans ${Math.ceil(
-              timeBeforeMs / 1000
-            )}s)`
-          );
-        }
-      });
-
-      // 3) Mettre à jour activeSegments et nextSegment (vert / orange / rouge)
-      this.updateSignalStatus();
-
-      // 4) Debug : afficher elapsedTime et listes
-      console.log(`▶ elapsedTime = ${this.elapsedTime}`);
-      console.log(
-        '   activeSegments =',
-        this.activeSegments.map((s) => s.segment_id)
-      );
-      console.log(
-        '   nextSegment    =',
-        this.nextSegment ? this.nextSegment.segment_id : 'aucun'
-      );
-    }, 1000);
+  if (!this.officialStartTime) {
+    console.error('⛔ officialStartTime non défini.');
+    return;
   }
+  if (this.signalUpdateInterval) {
+    clearInterval(this.signalUpdateInterval);
+  }
+
+  this.signalUpdateInterval = setInterval(() => {
+    const nowMs = Date.now();
+
+    // 1) Timers internes (vert & warning)
+    this.segments.forEach(segment => {
+      if ((segment.assigned_to || '').toLowerCase().trim() !== this.username) return;
+
+      // passage en vert
+      if (
+        nowMs >= segment.start_unix &&
+        nowMs <  segment.end_unix &&
+        !segment.timer
+      ) {
+        segment.isVisible = true;
+        const totalDuration = Math.ceil((segment.end_unix - segment.start_unix) / 1000);
+        segment.timeRemaining = totalDuration;
+        segment.timer = setInterval(() => {
+          if (segment.timeRemaining! > 0) {
+            segment.timeRemaining!--;
+            this.cdr.detectChanges();
+          } else {
+            clearInterval(segment.timer!);
+            this.autoSaveSubtitle(segment);
+          }
+        }, 1000);
+      }
+
+      // warningFlag orange
+      const msBefore = segment.start_unix - nowMs;
+      if (msBefore <= 5000 && msBefore > 0 && !segment.warningFlag) {
+        segment.warningFlag = true;
+      }
+    });
+
+    // 2) Recalcul vert/orange/rouge
+    this.updateSignalStatus();
+
+    // 3) Forcer l’UI
+    this.cdr.markForCheck();
+  }, 1000);
+}
+
 
   // ------------------------------------------------------------
   // 8) Détermine activeSegments et nextSegment en fonction de elapsedTime
   // ------------------------------------------------------------
   updateSignalStatus(): void {
-  const usernameNorm = (this.username || '').toLowerCase().trim();
-  const nowMs = Date.now(); // on utilise désormais directement Date.now()
+    const usernameNorm = (this.username || '').toLowerCase().trim();
+    const nowMs = Date.now();
 
-  // 1) Pour chaque segment, on vérifie s'il doit passer en orange (warning) ou en vert (actif)
-  this.segments.forEach((segment) => {
-    const assignedTo = (segment.assigned_to || '').toLowerCase().trim();
-    if (assignedTo !== usernameNorm) return;
+    // seuil en millisecondes
+    const warningThresholdMs = this.warningThresholdSec * 1000;
 
-    const startUnix = segment.start_unix; // timestamp absolu (ms)
-    const endUnix   = segment.end_unix;   // timestamp absolu (ms)
+    // 1) Pour chaque segment assigné à cet utilisateur…
+    this.segments.forEach((segment) => {
+      const assignedTo = (segment.assigned_to || '').toLowerCase().trim();
+      if (assignedTo !== usernameNorm) return;
 
-    // a) S’il reste ≤ 5000 ms avant le début ET que l’on n’a pas encore mis warningFlag
-    const deltaMs = startUnix - nowMs; // combien de millisecondes avant le début
-    if (deltaMs <= 5000 && deltaMs > 0 && !segment.warningFlag) {
-      segment.warningFlag = true;
-      console.log(
-        `⚠️ Warning pour segment ${segment.segment_id} (début dans ${Math.ceil(deltaMs/1000)} s)`
-      );
-    }
+      const startUnix = segment.start_unix;
+      const endUnix   = segment.end_unix;
 
-    // b) S’il est déjà temps de démarrer le segment (vert) : nowMs ≥ startUnix et nowMs < endUnix,
-    //    et le timer interne n’est pas encore lancé
-    if (nowMs >= startUnix && nowMs < endUnix && !segment.timer) {
-      segment.isVisible = true;
-      // on calcule timeRemaining en secondes depuis start_unix jusqu'à end_unix
-      const totalDurationSec = Math.ceil((endUnix - startUnix) / 1000);
-      segment.timeRemaining = totalDurationSec;
+      // a) warning : si on est dans la fenêtre d’anticipation
+      const deltaMs = startUnix - nowMs;
+      if (deltaMs <= warningThresholdMs && deltaMs > 0 && !segment.warningFlag) {
+        segment.warningFlag = true;
+        console.log(
+          `⚠️ Warning pour segment ${segment.segment_id} (début dans ${Math.ceil(deltaMs/1000)} s)`
+        );
+      }
 
-      segment.timer = setInterval(() => {
-        if (segment.timeRemaining > 0) {
-          segment.timeRemaining--;
-          this.cdr.detectChanges();
-        } else {
-          clearInterval(segment.timer!);
-          this.autoSaveSubtitle(segment);
-        }
-      }, 1000);
-      console.log(
-        `🚦 Timer interne démarré pour segment ${segment.segment_id}, durée = ${totalDurationSec} s`
-      );
-    }
-  });
+      // b) passage en vert (in_progress) : lancer le timer interne
+      if (nowMs >= startUnix && nowMs < endUnix && !segment.timer) {
+        segment.isVisible = true;
+        const totalDurationSec = Math.ceil((endUnix - startUnix) / 1000);
+        segment.timeRemaining = totalDurationSec;
 
-  // 2) On recalcule la liste des segments ACTIFS (verts) à partir de nowMs
-  this.activeSegments = this.segments.filter((s) => {
-    const assignedTo = (s.assigned_to || '').toLowerCase().trim();
-    return (
-      assignedTo === usernameNorm &&
-      nowMs >= s.start_unix &&
-      nowMs <  s.end_unix
-    );
-  });
-  this.activeSegment =
-    this.activeSegments.length > 0 ? this.activeSegments[0] : null;
+        segment.timer = setInterval(() => {
+          if (segment.timeRemaining! > 0) {
+            segment.timeRemaining!--;
+            this.cdr.detectChanges();
+          } else {
+            clearInterval(segment.timer!);
+            this.autoSaveSubtitle(segment);
+          }
+        }, 1000);
 
-  // 3) Si aucun segment n’est ACTIF, on cherche d’abord un segment déjà en warningFlag (orange),
-  //    sinon on prend celui dont start_unix – nowMs ∈ (0, 5000]
-  if (this.activeSegments.length === 0) {
-    this.nextSegment = this.segments.find((s) => {
+        console.log(
+          `🚦 Timer interne démarré pour segment ${segment.segment_id}, durée = ${totalDurationSec} s`
+        );
+      }
+    });
+
+    // 2) Recalcul des segments ACTIFS (verts)
+    this.activeSegments = this.segments.filter((s) => {
       const assignedTo = (s.assigned_to || '').toLowerCase().trim();
       return (
         assignedTo === usernameNorm &&
-        s.warningFlag && 
-        nowMs < s.start_unix
+        nowMs >= s.start_unix &&
+        nowMs < s.end_unix
       );
     });
-    if (!this.nextSegment) {
+    this.activeSegment = this.activeSegments[0] || null;
+
+    // 3) Si aucun actif, trouver nextSegment (warning ou dans la fenêtre)
+    if (this.activeSegments.length === 0) {
+      // d’abord celui déjà en warning
       this.nextSegment = this.segments.find((s) => {
         const assignedTo = (s.assigned_to || '').toLowerCase().trim();
-        const delta = s.start_unix - nowMs;
         return (
           assignedTo === usernameNorm &&
-          delta > 0 &&
-          delta <= 5000
+          s.warningFlag &&
+          nowMs < s.start_unix
         );
       });
+      // sinon celui dans la fenêtre d’anticipation
+      if (!this.nextSegment) {
+        this.nextSegment = this.segments.find((s) => {
+          const assignedTo = (s.assigned_to || '').toLowerCase().trim();
+          const delta = s.start_unix - nowMs;
+          return (
+            assignedTo === usernameNorm &&
+            delta > 0 &&
+            delta <= warningThresholdMs
+          );
+        });
+      }
+    } else {
+      this.nextSegment = null;
     }
-  } else {
-    this.nextSegment = null;
+
+    console.log(
+      `[updateSignalStatus] nowMs=${nowMs}, active=[${this.activeSegments.map(
+        (s) => s.segment_id
+      )}], next=${
+        this.nextSegment ? this.nextSegment.segment_id : 'aucun'
+      }]`
+    );
   }
 
-  console.log(
-    `[updateSignalStatus] nowMs=${nowMs}, active=[${this.activeSegments.map(
-      (s) => s.segment_id
-    )}], next=${
-      this.nextSegment ? this.nextSegment.segment_id : 'aucun'
-    }]`
-  );
-}
-
+  
   // ------------------------------------------------------------
   // 9) Retourne la couleur du signal pour l’UI : vert / orange / rouge
   // ------------------------------------------------------------
@@ -527,13 +519,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
   // ------------------------------------------------------------
   // 10) Temps restant (secondes) avant le prochain segment
   // ------------------------------------------------------------
-  getSecondsToNextSegment(): number | null {
-    if (!this.nextSegment) return null;
-    const startSec = this.timeStringToSeconds(this.nextSegment.start_time);
-    const remaining = startSec - this.elapsedTime;
-    return remaining > 0 ? remaining : 0;
+  getSecondsToNextSegment(): number {
+    if (!this.nextSegment) return 0;
+    const ms = this.nextSegment.start_unix - this.now;
+    return Math.max(Math.ceil(ms / 1000), 0);
   }
-
   // ------------------------------------------------------------
   // 11) WebSocket events : mises à jour des segments en live
   // ------------------------------------------------------------
@@ -665,18 +655,18 @@ const durInMs = durInSec * 1000;
 this.socketService.onSegmentationStopped().subscribe(() => {
   console.log('⛔ Segmentation stoppée depuis le serveur');
 
-  // a) Arrêter uniquement la boucle globale (création de nouveaux segments)
+  // Arrêter la boucle globale
   if (this.signalUpdateInterval) {
     clearInterval(this.signalUpdateInterval);
     this.signalUpdateInterval = null;
   }
 
-  // --- NE PAS ARRÊTER les timers internes des segments déjà démarrés ---
-  // On ne touche plus ici à segment.timer pour laisser chaque segment
-  // finir son timeRemaining et s’auto‐enregistrer normalement.
+  // Réinitialiser les warningFlags et nextSegment
+  this.segments.forEach(seg => seg.warningFlag = false);
+  this.nextSegment = null;
 
-  // Si vous souhaitez quand même forcer un rafraîchissement de l’UI :
-  this.cdr.detectChanges();
+  // Forcer le refresh de l’UI
+  this.cdr.markForCheck();
 });
   }
 
@@ -860,6 +850,7 @@ this.socketService.onSegmentationStopped().subscribe(() => {
     this.sessionService
       .handleUserDisconnection(this.userId, this.sessionId)
       .subscribe();
+    this.nowSub.unsubscribe();
   }
 
   // ------------------------------------------------------------

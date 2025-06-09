@@ -788,11 +788,11 @@ async function saveSubtitlesToDB(req, res) {
 //   }
 // }
 async function startSegmentationController(req, res) {
-  const session_id = req.params.sessionId;
-  const { officialStartTime } = req.body; // <--- ajoute cette ligne
+  const session_id       = req.params.sessionId;
+  const { officialStartTime, starterId } = req.body;
 
-  if (!session_id) {
-    return res.status(400).json({ message: "session_id manquant" });
+  if (!session_id || !officialStartTime || !starterId) {
+    return res.status(400).json({ message: "Paramètres manquants" });
   }
 
   try {
@@ -824,7 +824,8 @@ async function startSegmentationController(req, res) {
       users,
       io: req.app.get("io"),
       socketUsers,
-      officialStartTime     // <--- ajoute ce paramètre ici
+      officialStartTime,     // <--- ajoute ce paramètre ici
+      starterId, 
     });
 
     return res

@@ -48,10 +48,11 @@ function selectBalancedUser(sessionId, users) {
 
 async function startSegmentScheduler({
   sessionId,
-  segmentDuration,   
-  step,             
+  segmentDuration,
+  step,
   io,
-  officialStartTime, 
+  officialStartTime,
+  starterId,
 }) {
   if (activeSchedulers.has(sessionId)) {
     console.log(`[Scheduler] Déjà actif pour session ${sessionId}`);
@@ -59,12 +60,10 @@ async function startSegmentScheduler({
   }
   console.log(`[Scheduler] Démarrage pour session ${sessionId}`);
 
-  // Préavis = step secondes
-  const anticipation = step;
-
-  // 1) INITIALISATION : récupérer tous les utilisateurs connectés
+  // Récupère toutes les sockets de la room
   const sockets0 = await io.in(`session:${sessionId}`).fetchSockets();
-  const validUsers0 = sockets0
+  // Filtre les utilisateurs valides
+  const validUsers = sockets0
     .filter(sock => sock.data.user_id && sock.data.username)
     .map(sock => ({
       id:       sock.data.user_id,
@@ -72,59 +71,78 @@ async function startSegmentScheduler({
       socketId: sock.id,
     }));
 
-  if (validUsers0.length === 0) {
+  if (validUsers.length === 0) {
     console.warn(`[Scheduler] Aucuns utilisateurs pour session ${sessionId}.`);
     return;
   }
 
-  // 1.b) Premier segment → débute à 0s, status="in_progress", assignation immédiate
-  const firstUser = selectBalancedUser(sessionId, validUsers0);
+  // 1) Choisit d’abord le starter, sinon un user équilibré
+  let firstUser = validUsers.find(u => u.id === starterId);
   if (!firstUser) {
-    console.warn(`[Scheduler] Aucun utilisateur éligible pour le 1er segment.`);
-    return;
+    console.warn(`[Scheduler] Starter ${starterId} non connecté. Choix équilibré.`);
+    firstUser = selectBalancedUser(sessionId, validUsers);
   }
 
+  // 2) Création + assignation du 1er segment
   const firstSegment = await VideoSegmentModel.insert({
     session_id: sessionId,
-    start_time: convertSecondsToTime(0),               // "00:00:00"
-    end_time:   convertSecondsToTime(segmentDuration), // "00:00:10" si segmentDuration=10
+    start_time: convertSecondsToTime(0),
+    end_time:   convertSecondsToTime(segmentDuration),
     status:     "in_progress",
     created_at: new Date(),
   });
-
-  // Assignation immédiate dans segment_users
   await SegmentUserModel.insert({
     segment_id:  firstSegment.segment_id,
     user_id:     firstUser.id,
     assigned_at: new Date(),
   });
 
-  // Envoi du socket "segment-assigned" pour le premier user
-  {
-    const socketId = firstUser.socketId;
-    if (socketId) {
-      const socketModule = await import("../config/socket.js");
-      const ioSocket = socketModule.io || socketModule.default;
-      ioSocket.to(socketId).emit("segment-assigned", {
-        segment_id:  firstSegment.segment_id,
-        session_id:  firstSegment.session_id,
-        start_time:  firstSegment.start_time,
-        end_time:    firstSegment.end_time,
-        status:      "in_progress",
-        assigned_to: firstUser.username,
-        start_unix:  Number(officialStartTime),
-      });
-      console.log(`[WebSocket] Premier segment assigné à ${firstUser.username}`);
-    } else {
-      console.warn(`[Scheduler] Premier user (${firstUser.id}) sans socketId.`);
-    }
+  io.to(firstUser.socketId).emit("segment-assigned", {
+    segment_id:  firstSegment.segment_id,
+    session_id:  firstSegment.session_id,
+    start_time:  firstSegment.start_time,
+    end_time:    firstSegment.end_time,
+    status:      "in_progress",
+    assigned_to: firstUser.username,
+    start_unix:  Number(officialStartTime),
+  });
+  console.log(`[WebSocket] 1er segment assigné à ${firstUser.username}`);
+
+  // Détermine les "autres" (tous ceux qui ne sont pas le premier)
+  const others = validUsers.filter(u => u.id !== firstUser.id);
+
+  // 3) Si un second utilisateur existe, on lui crée directement un segment in_progress
+  if (others.length > 0) {
+    const secondUser   = others[0];
+    const secondOffset = step; // 5s après le début officiel
+    const secondSeg = await VideoSegmentModel.insert({
+      session_id: sessionId,
+      start_time: convertSecondsToTime(secondOffset),
+      end_time:   convertSecondsToTime(secondOffset + segmentDuration),
+      status:     "in_progress",
+      created_at: new Date(),
+    });
+    await SegmentUserModel.insert({
+      segment_id:  secondSeg.segment_id,
+      user_id:     secondUser.id,
+      assigned_at: new Date(),
+    });
+    io.to(secondUser.socketId).emit("segment-assigned", {
+      segment_id:  secondSeg.segment_id,
+      session_id:  secondSeg.session_id,
+      start_time:  secondSeg.start_time,
+      end_time:    secondSeg.end_time,
+      status:      "in_progress",
+      assigned_to: secondUser.username,
+      start_unix:  Number(officialStartTime) + secondOffset * 1000,
+    });
+    console.log(`[WebSocket] 2ᵉ segment assigné à ${secondUser.username}`);
   }
 
-  // 1.c) Pour les autres utilisateurs, créer un segment "pending" dès maintenant
-  const others = validUsers0.filter(u => u.id !== firstUser.id);
-  for (let idx = 0; idx < others.length; idx++) {
-    const u = others[idx];
-    const plannedStart = (idx + 1) * step; // ex. 5, 10, 15, …
+  // 4) Tous les suivants en "pending"
+  for (let idx = 1; idx < others.length; idx++) {
+    const u            = others[idx];
+    const plannedStart = (idx + 1) * step; // 10, 15, …
 
     const pendingSeg = await VideoSegmentModel.insert({
       session_id: sessionId,
@@ -133,105 +151,81 @@ async function startSegmentScheduler({
       status:     "pending",
       created_at: new Date(),
     });
-
-    // Réserver dans segment_users sans assigned_at (NULL)
     await SegmentUserModel.insert({
       segment_id:  pendingSeg.segment_id,
       user_id:     u.id,
       assigned_at: null,
     });
-
     console.log(
       `[Scheduler] Segment “pending” #${pendingSeg.segment_id} pour ${u.username} (start_time=${pendingSeg.start_time}).`
     );
   }
 
-  // 2) BOUCLE DE TICK (toutes les step secondes)
+  // 5) Boucle périodique pour basculer les pending → in_progress
   const intervalId = setInterval(async () => {
     const now = Date.now();
-    const elapsedSinceStart = Math.floor((now - Number(officialStartTime)) / 1000);
+    const elapsed = Math.floor((now - Number(officialStartTime)) / 1000);
 
-    // 2.a) Mettre à jour la liste des utilisateurs connectés
+    // Met à jour la liste des utilisateurs connectés
     const sockets = await io.in(`session:${sessionId}`).fetchSockets();
-    const validUsers = sockets
-      .filter(sock => sock.data.user_id && sock.data.username)
-      .map(sock => ({
-        id:       sock.data.user_id,
-        username: sock.data.username.trim(),
-        socketId: sock.id,
+    const users   = sockets
+      .filter(s => s.data.user_id && s.data.username)
+      .map(s => ({
+        id:       s.data.user_id,
+        username: s.data.username.trim(),
+        socketId: s.id,
       }));
 
-    // 2.b) Pour chaque utilisateur, vérifier/assigner
-    for (const user of validUsers) {
-      // 2.b.1) S’il a déjà un segment “in_progress” planifié dans le futur, on skip
+    for (const user of users) {
+      // a) S’il a déjà un "in_progress" futur, on skip
       const hasAssigned = await VideoSegmentModel.getUpcomingAssignedSegmentForUser(
         sessionId,
         user.id,
-        elapsedSinceStart
+        elapsed
       );
-      if (hasAssigned) {
-        continue;
-      }
+      if (hasAssigned) continue;
 
-      // 2.b.2) Chercher s’il existe un segment “pending” pour CE user
+      // b) Tente de trouver un "pending"
       const pendingSegment = await VideoSegmentModel.getUpcomingPendingSegmentByUser(
         sessionId,
         user.id,
-        elapsedSinceStart
+        elapsed
       );
-
       if (pendingSegment) {
-        // Combien de secondes avant le début
-        const startIn = convertTimeToSeconds(pendingSegment.start_time) - elapsedSinceStart;
-        if (startIn <= anticipation) {
-          // 2.b.2.a) Basculer ce “pending” en “in_progress”
+        const startIn = convertTimeToSeconds(pendingSegment.start_time) - elapsed;
+        if (startIn <= step) {
+          // switch → in_progress
           await VideoSegmentModel.updateSegmentStatus(
             pendingSegment.segment_id,
             "in_progress"
           );
-          // À la place d’un INSERT, on met juste à jour assigned_at du row existant
-         await SegmentUserModel.updateAssignedAt(pendingSegment.segment_id, user.id);
-
-          // **Ici** on ré-insère dans segment_users avec assigned_at = NOW()
+          await SegmentUserModel.updateAssignedAt(pendingSegment.segment_id, user.id);
           await SegmentUserModel.insert({
             segment_id:  pendingSegment.segment_id,
             user_id:     user.id,
             assigned_at: new Date(),
           });
-
-          // Émettre le WS “segment-assigned”
-          const socketId = user.socketId;
-          if (socketId) {
-            const socketModule = await import("../config/socket.js");
-            const ioSocket = socketModule.io || socketModule.default;
-            ioSocket.to(socketId).emit("segment-assigned", {
-              segment_id:  pendingSegment.segment_id,
-              session_id:  pendingSegment.session_id,
-              start_time:  pendingSegment.start_time,
-              end_time:    pendingSegment.end_time,
-              status:      "in_progress",
-              assigned_to: user.username,
-              start_unix:  Number(officialStartTime)
-                          + convertTimeToSeconds(pendingSegment.start_time) * 1000,
-            });
-            console.log(
-              `[WebSocket] “segment-assigned” → segment ${pendingSegment.segment_id} pour ${user.username}`
-            );
-          }
+          io.to(user.socketId).emit("segment-assigned", {
+            segment_id:  pendingSegment.segment_id,
+            session_id:  pendingSegment.session_id,
+            start_time:  pendingSegment.start_time,
+            end_time:    pendingSegment.end_time,
+            status:      "in_progress",
+            assigned_to: user.username,
+            start_unix:  Number(officialStartTime)
+                        + convertTimeToSeconds(pendingSegment.start_time) * 1000,
+          });
+          console.log(
+            `[WebSocket] segment-assigned → #${pendingSegment.segment_id} pour ${user.username}`
+          );
         }
       } else {
-        // 2.b.3) Si aucun “pending” pour ce user → créer UN NOUVEAU segment “pending”
+        // c) Crée un nouveau pending si plus aucun n'existe
         const lastSeg = await VideoSegmentModel.getLastSegment(sessionId);
-        let nextStart;
-        if (lastSeg) {
-          // **CHEVAUCHEMENT** : on prend lastSeg.start_time + step (et non lastSeg.end_time)
-          const lastStartSec = convertTimeToSeconds(lastSeg.start_time);
-          nextStart = lastStartSec + step;
-        } else {
-          // Cas extrême : pas de lastSeg, on décale “now + anticipation”
-          nextStart = elapsedSinceStart + anticipation;
-        }
-
+        const base    = lastSeg
+          ? convertTimeToSeconds(lastSeg.start_time)
+          : elapsed + step;
+        const nextStart = base + step;
         const newPending = await VideoSegmentModel.insert({
           session_id: sessionId,
           start_time: convertSecondsToTime(nextStart),

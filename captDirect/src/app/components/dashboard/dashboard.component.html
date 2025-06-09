@@ -50,13 +50,11 @@
 
         <!-- Si c'est bientôt à vous, on affiche le compte à rebours -->
         <span
-          class="status-text orange-text"
-          *ngIf="getCurrentSignal() === 'orange' && nextSegment"
-        >
-          Préparez-vous ! C'est à vous dans
-          {{ ((nextSegment.start_unix - now) / 1000) | number : '1.0-0' }}
-          seconde(s)
-        </span>
+  class="status-text orange-text"
+  *ngIf="streamStarted && getCurrentSignal() === 'orange' && nextSegment">
+  Préparez-vous ! C'est à vous dans {{ getSecondsToNextSegment() }} seconde(s)
+</span>
+
 
         <!-- Si aucun segment actif ou bientôt, alerte "En attente" -->
         <span
