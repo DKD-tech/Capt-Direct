@@ -1,4 +1,3 @@
-
 import { interval, Subscription } from 'rxjs';
 import { SubtitleService } from './../../services/sessions/subtitle.service';
 import { VideoService } from './../../services/sessions/video.service';
@@ -10,6 +9,10 @@ import {
   NgZone,
   ChangeDetectorRef,
 } from '@angular/core';
+import { MatToolbarModule } from '@angular/material/toolbar';
+import { MatButtonModule } from '@angular/material/button';
+import { MatMenuModule } from '@angular/material/menu';
+import { MatDividerModule } from '@angular/material/divider';
 import { MatIconModule } from '@angular/material/icon';
 import { SocketService } from '../../services/socket.service';
 import { FormsModule } from '@angular/forms';
@@ -21,7 +24,15 @@ import { HttpErrorResponse } from '@angular/common/http';
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [MatIconModule, FormsModule, CommonModule],
+  imports: [
+    MatIconModule,
+    FormsModule,
+    CommonModule,
+    MatToolbarModule,
+    MatButtonModule,
+    MatMenuModule,
+    MatDividerModule,
+  ],
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.scss',
 })
@@ -33,7 +44,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   displayedSubtitle = '';
   userId: number = 0; // Identifiant utilisateur récupéré dynamiquement
   videoUrl = ''; // URL de la vidéo récupérée dynamiquement
-  sessionId: number = 84; // ID de la session à afficher
+  sessionId: number = 128; // ID de la session à afficher
   segments: any[] = []; // Array de segments (avec warningFlag, isVisible, timer, etc.)
   username: string = '';
   collaborators: number = 1; // Nombre de collaborateurs en ligne
@@ -57,9 +68,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
   now: number = Date.now();
   nowSub!: Subscription;
   warningThresholdSec: number = 5;
- 
 
-   // ID du setInterval pour la boucle globale
+  // ID du setInterval pour la boucle globale
 
   constructor(
     private socketService: SocketService,
@@ -262,7 +272,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
     console.log('[DEBUG] startStream() déclenché'); // 1 : on voit le clic
     this.sessionService.startStream(this.sessionId).subscribe({
       next: () => {
-        console.log('[DEBUG] réponse du back pour startStream(), on entre dans le subscribe');
+        console.log(
+          '[DEBUG] réponse du back pour startStream(), on entre dans le subscribe'
+        );
 
         // On initialise le décompte à 5 secondes
         this.countdown = 5;
@@ -270,7 +282,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
         // Affiche dès maintenant « Démarrage dans 5 seconde(s)… »
         this.countdownMessage = `Démarrage dans ${this.countdown} seconde(s)…`;
-        console.log('[DEBUG] countdownMessage initial =', this.countdownMessage);
+        console.log(
+          '[DEBUG] countdownMessage initial =',
+          this.countdownMessage
+        );
 
         // Rappel de startSegmentation en calculant officialStartTime
         const officialStartTime = Date.now() + this.countdown * 1000;
@@ -280,14 +295,19 @@ export class DashboardComponent implements OnInit, OnDestroy {
           if (this.countdown > 0) {
             this.countdown--;
             this.countdownMessage = `Démarrage dans ${this.countdown} seconde(s)…`;
-            console.log('[DEBUG] countdownMessage mise à jour =', this.countdownMessage);
+            console.log(
+              '[DEBUG] countdownMessage mise à jour =',
+              this.countdownMessage
+            );
 
             // (si nécessaire, forcer la détection de changement)
             this.cdr.markForCheck();
           } else {
             clearInterval(interval);
             this.countdownMessage = '';
-            console.log('[DEBUG] countdown terminé, on efface countdownMessage');
+            console.log(
+              '[DEBUG] countdown terminé, on efface countdownMessage'
+            );
             this.cdr.markForCheck();
 
             // Maintenant que le compte à rebours est fini, on lance la segmentation
@@ -297,10 +317,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
       },
       error: (err) => {
         console.error('[DEBUG] Erreur dans startStream() :', err);
-      }
+      },
     });
   }
-
 
   // ------------------------------------------------------------
   // 6) Demande au back-end de démarrer la segmentation
@@ -308,106 +327,100 @@ export class DashboardComponent implements OnInit, OnDestroy {
   //    → puis on appelle startGlobalTimer()
   // ------------------------------------------------------------
   // dashboard.component.ts
-startSegmentation(officialStartTime?: number): void {
-  this.officialStartTime = officialStartTime ?? Date.now();
-  // On passe maintenant this.userId comme starterId
-  this.sessionService
-    .startSegmentation(
-      this.sessionId,
-      this.officialStartTime,
-      this.userId
-    )
-    .subscribe({
-      next: (res: any) => {
-        console.log('Segmentation démarrée (backend confirme) :', res);
-        this.startGlobalTimer();
-      },
-      error: (err: any) => {
-        console.error('Erreur startSegmentation :', err);
-      },
-    });
-}
-
+  startSegmentation(officialStartTime?: number): void {
+    this.officialStartTime = officialStartTime ?? Date.now();
+    // On passe maintenant this.userId comme starterId
+    this.sessionService
+      .startSegmentation(this.sessionId, this.officialStartTime, this.userId)
+      .subscribe({
+        next: (res: any) => {
+          console.log('Segmentation démarrée (backend confirme) :', res);
+          this.startGlobalTimer();
+        },
+        error: (err: any) => {
+          console.error('Erreur startSegmentation :', err);
+        },
+      });
+  }
 
   stopSegmentation(): void {
-  this.sessionService.stopSegmentation(this.sessionId).subscribe({
-    next: (res: any) => {
-      console.log('Segmentation arrêtée :', res);
-      // 1) Arrêter la boucle globale
-      if (this.signalUpdateInterval) {
-        clearInterval(this.signalUpdateInterval);
-        this.signalUpdateInterval = null;
-      }
-      // 2) Réinitialiser l’état orange sur chaque segment
-      this.segments.forEach(seg => {
-        seg.warningFlag = false;
-      });
-      // 3) Supprimer la prochaine attribution
-      this.nextSegment = null;
-      // 4) Forcer Angular à rafraîchir la vue
-      this.cdr.markForCheck();
-    },
-    error: (err: any) => {
-      console.error('Erreur stopSegmentation :', err);
-    },
-  });
-}
-
+    this.sessionService.stopSegmentation(this.sessionId).subscribe({
+      next: (res: any) => {
+        console.log('Segmentation arrêtée :', res);
+        // 1) Arrêter la boucle globale
+        if (this.signalUpdateInterval) {
+          clearInterval(this.signalUpdateInterval);
+          this.signalUpdateInterval = null;
+        }
+        // 2) Réinitialiser l’état orange sur chaque segment
+        this.segments.forEach((seg) => {
+          seg.warningFlag = false;
+        });
+        // 3) Supprimer la prochaine attribution
+        this.nextSegment = null;
+        // 4) Forcer Angular à rafraîchir la vue
+        this.cdr.markForCheck();
+      },
+      error: (err: any) => {
+        console.error('Erreur stopSegmentation :', err);
+      },
+    });
+  }
 
   // ------------------------------------------------------------
   // 7) Boucle principale : mise à jour des timers / warning / isVisible puis updateSignalStatus
   // ------------------------------------------------------------
   startGlobalTimer(): void {
-  if (!this.officialStartTime) {
-    console.error('⛔ officialStartTime non défini.');
-    return;
+    if (!this.officialStartTime) return;
+    if (this.signalUpdateInterval) clearInterval(this.signalUpdateInterval);
+
+    this.signalUpdateInterval = setInterval(() => {
+      const nowMs = Date.now();
+
+      // 1) Inner timers (vert)
+      this.segments.forEach((segment) => {
+        if (segment.assigned_to !== this.username) return;
+
+        // démarrage du timer interne une seule fois
+        if (
+          nowMs >= segment.start_unix &&
+          nowMs <= segment.end_unix &&
+          !segment.timer
+        ) {
+          segment.isVisible = true;
+          const totalSec = Math.ceil(
+            (segment.end_unix - segment.start_unix) / 1000
+          );
+          segment.timeRemaining = totalSec;
+          segment.timer = setInterval(() => {
+            if (segment.timeRemaining! > 0) {
+              segment.timeRemaining!--;
+              this.cdr.detectChanges();
+            } else {
+              clearInterval(segment.timer!);
+              this.autoSaveSubtitle(segment);
+            }
+          }, 1000);
+        }
+
+        // warningFlag (orange)
+        const msBefore = segment.start_unix - nowMs;
+        if (
+          msBefore <= this.warningThresholdSec * 1000 &&
+          msBefore > 0 &&
+          !segment.warningFlag
+        ) {
+          segment.warningFlag = true;
+        }
+      });
+
+      // 2) Vert / orange / rouge (inclut le tick à timeRemaining===0)
+      this.updateSignalStatus();
+
+      // 3) Mise à jour UI
+      this.cdr.markForCheck();
+    }, 1000);
   }
-  if (this.signalUpdateInterval) {
-    clearInterval(this.signalUpdateInterval);
-  }
-
-  this.signalUpdateInterval = setInterval(() => {
-    const nowMs = Date.now();
-
-    // 1) Timers internes (vert & warning)
-    this.segments.forEach(segment => {
-      if ((segment.assigned_to || '').toLowerCase().trim() !== this.username) return;
-
-      // passage en vert
-      if (
-        nowMs >= segment.start_unix &&
-        nowMs <  segment.end_unix &&
-        !segment.timer
-      ) {
-        segment.isVisible = true;
-        const totalDuration = Math.ceil((segment.end_unix - segment.start_unix) / 1000);
-        segment.timeRemaining = totalDuration;
-        segment.timer = setInterval(() => {
-          if (segment.timeRemaining! > 0) {
-            segment.timeRemaining!--;
-            this.cdr.detectChanges();
-          } else {
-            clearInterval(segment.timer!);
-            this.autoSaveSubtitle(segment);
-          }
-        }, 1000);
-      }
-
-      // warningFlag orange
-      const msBefore = segment.start_unix - nowMs;
-      if (msBefore <= 5000 && msBefore > 0 && !segment.warningFlag) {
-        segment.warningFlag = true;
-      }
-    });
-
-    // 2) Recalcul vert/orange/rouge
-    this.updateSignalStatus();
-
-    // 3) Forcer l’UI
-    this.cdr.markForCheck();
-  }, 1000);
-}
-
 
   // ------------------------------------------------------------
   // 8) Détermine activeSegments et nextSegment en fonction de elapsedTime
@@ -416,28 +429,35 @@ startSegmentation(officialStartTime?: number): void {
     const usernameNorm = (this.username || '').toLowerCase().trim();
     const nowMs = Date.now();
 
-    // seuil en millisecondes
+    // seuil d’anticipation (en secondes) configurable
     const warningThresholdMs = this.warningThresholdSec * 1000;
 
-    // 1) Pour chaque segment assigné à cet utilisateur…
+    // 1) Parcours de tous les segments pour ce user
     this.segments.forEach((segment) => {
-      const assignedTo = (segment.assigned_to || '').toLowerCase().trim();
-      if (assignedTo !== usernameNorm) return;
+      if ((segment.assigned_to || '').toLowerCase().trim() !== usernameNorm) {
+        return;
+      }
 
       const startUnix = segment.start_unix;
-      const endUnix   = segment.end_unix;
+      const endUnix = segment.end_unix;
 
-      // a) warning : si on est dans la fenêtre d’anticipation
+      // a) WARNING (orange) si on est dans la fenêtre d’anticipation
       const deltaMs = startUnix - nowMs;
-      if (deltaMs <= warningThresholdMs && deltaMs > 0 && !segment.warningFlag) {
+      if (
+        deltaMs > 0 &&
+        deltaMs <= warningThresholdMs &&
+        !segment.warningFlag
+      ) {
         segment.warningFlag = true;
         console.log(
-          `⚠️ Warning pour segment ${segment.segment_id} (début dans ${Math.ceil(deltaMs/1000)} s)`
+          `⚠️ Warning pour segment ${
+            segment.segment_id
+          } (début dans ${Math.ceil(deltaMs / 1000)} s)`
         );
       }
 
-      // b) passage en vert (in_progress) : lancer le timer interne
-      if (nowMs >= startUnix && nowMs < endUnix && !segment.timer) {
+      // b) PASSAGE EN VERT (in_progress) : on lance le timer interne
+      if (nowMs >= startUnix && nowMs <= endUnix && !segment.timer) {
         segment.isVisible = true;
         const totalDurationSec = Math.ceil((endUnix - startUnix) / 1000);
         segment.timeRemaining = totalDurationSec;
@@ -458,35 +478,30 @@ startSegmentation(officialStartTime?: number): void {
       }
     });
 
-    // 2) Recalcul des segments ACTIFS (verts)
+    // 2) Recalcul de activeSegments → on garde le tick à 0 pour voir le rouge
+    // 2) Recalcul des segments « actifs » pour l’UI (vert ou rouge)
     this.activeSegments = this.segments.filter((s) => {
       const assignedTo = (s.assigned_to || '').toLowerCase().trim();
-      return (
-        assignedTo === usernameNorm &&
-        nowMs >= s.start_unix &&
-        nowMs < s.end_unix
-      );
+      // on garde tous les segments dont le timer interne tourne encore
+      return assignedTo === usernameNorm && s.isVisible && s.timeRemaining > 0;
     });
     this.activeSegment = this.activeSegments[0] || null;
 
-    // 3) Si aucun actif, trouver nextSegment (warning ou dans la fenêtre)
-    if (this.activeSegments.length === 0) {
-      // d’abord celui déjà en warning
-      this.nextSegment = this.segments.find((s) => {
-        const assignedTo = (s.assigned_to || '').toLowerCase().trim();
-        return (
-          assignedTo === usernameNorm &&
+    // 3) Si pas de segment actif, on cherche nextSegment (orange ou anticipation)
+    if (!this.activeSegment) {
+      // d’abord un segment déjà en warning
+      this.nextSegment = this.segments.find(
+        (s) =>
+          s.assigned_to === usernameNorm &&
           s.warningFlag &&
           nowMs < s.start_unix
-        );
-      });
-      // sinon celui dans la fenêtre d’anticipation
+      );
+      // sinon un segment dans la fenêtre d’anticipation
       if (!this.nextSegment) {
         this.nextSegment = this.segments.find((s) => {
-          const assignedTo = (s.assigned_to || '').toLowerCase().trim();
           const delta = s.start_unix - nowMs;
           return (
-            assignedTo === usernameNorm &&
+            s.assigned_to === usernameNorm &&
             delta > 0 &&
             delta <= warningThresholdMs
           );
@@ -497,24 +512,20 @@ startSegmentation(officialStartTime?: number): void {
     }
 
     console.log(
-      `[updateSignalStatus] nowMs=${nowMs}, active=[${this.activeSegments.map(
-        (s) => s.segment_id
-      )}], next=${
-        this.nextSegment ? this.nextSegment.segment_id : 'aucun'
-      }]`
+      `[updateSignalStatus] nowMs=${nowMs}, ` +
+        `active=[${this.activeSegments.map((s) => s.segment_id)}], ` +
+        `next=${this.nextSegment?.segment_id || 'aucun'}`
     );
   }
 
-  
   // ------------------------------------------------------------
   // 9) Retourne la couleur du signal pour l’UI : vert / orange / rouge
   // ------------------------------------------------------------
   getCurrentSignal(): 'green' | 'orange' | 'red' {
-  if (this.activeSegments.length > 0) return 'green';
-  if (this.nextSegment)            return 'orange';
-  return 'red';
-}
-
+    if (this.activeSegments.length > 0) return 'green';
+    if (this.nextSegment) return 'orange';
+    return 'red';
+  }
 
   // ------------------------------------------------------------
   // 10) Temps restant (secondes) avant le prochain segment
@@ -554,33 +565,38 @@ startSegmentation(officialStartTime?: number): void {
     });
 
     // 11.4) Quand le backend renvoie la liste complète après redistribution
-    this.socketService.onSegmentsRedistributed().subscribe((segments: any[]) => {
-      console.log('📩 onSegmentsRedistributed :', segments);
-      this.segments = [];
+    this.socketService
+      .onSegmentsRedistributed()
+      .subscribe((segments: any[]) => {
+        console.log('📩 onSegmentsRedistributed :', segments);
+        this.segments = [];
 
-      const sorted = this.mergeSort(segments);
-      this.segments = sorted.map((seg: any) => {
-        const dur = this.calculateDurationInSeconds(
-          seg.start_time,
-          seg.end_time
+        const sorted = this.mergeSort(segments);
+        this.segments = sorted.map((seg: any) => {
+          const dur = this.calculateDurationInSeconds(
+            seg.start_time,
+            seg.end_time
+          );
+          return {
+            ...seg,
+            subtitleText: '',
+            timeRemaining: dur,
+            timer: null,
+            isVisible: false,
+            warningFlag: false,
+            assigned_to: (seg.assigned_to || '').toLowerCase().trim(),
+            subtitles: seg.subtitles || [],
+            // Note : pas de start_unix ici car on l’envoie depuis le backend au moment de création
+          };
+        });
+        console.log(
+          'Segments mis à jour après redistribution :',
+          this.segments
         );
-        return {
-          ...seg,
-          subtitleText: '',
-          timeRemaining: dur,
-          timer: null,
-          isVisible: false,
-          warningFlag: false,
-          assigned_to: (seg.assigned_to || '').toLowerCase().trim(),
-          subtitles: seg.subtitles || [],
-          // Note : pas de start_unix ici car on l’envoie depuis le backend au moment de création
-        };
-      });
-      console.log('Segments mis à jour après redistribution :', this.segments);
 
-      // Forcer un update immédiat
-      this.updateSignalStatus();
-    });
+        // Forcer un update immédiat
+        this.updateSignalStatus();
+      });
 
     // 11.5) Quand un segment est assigné individuellement
     this.socketService.onSegmentAssigned().subscribe((segment: any) => {
@@ -599,27 +615,27 @@ startSegmentation(officialStartTime?: number): void {
 
       // 2) Calculer timeRemaining (secondes)
       const durInSec = this.calculateDurationInSeconds(
-  segment.start_time,
-  segment.end_time
-);
-const durInMs = durInSec * 1000;
+        segment.start_time,
+        segment.end_time
+      );
+      const durInMs = durInSec * 1000;
       // 3) Construire newSegment en incluant “start_unix” et “status”
       const newSegment = {
-  segment_id:    segment.segment_id,
-  session_id:    segment.session_id,
-  start_time:    segment.start_time,
-  end_time:      segment.end_time,
-  status:        segment.status,            // “in_progress”
-  assigned_to:   (segment.assigned_to || '').toLowerCase().trim(),
-  start_unix:    segment.start_unix,        // timestamp absolu (ms)
-  end_unix:      segment.start_unix + durInMs, // <-- AJOUTÉ
-  subtitleText:  '',
-  timeRemaining: durInSec,
-  timer:         null,
-  isVisible:     false,
-  warningFlag:   false,
-  subtitles:     segment.subtitles || []
-};
+        segment_id: segment.segment_id,
+        session_id: segment.session_id,
+        start_time: segment.start_time,
+        end_time: segment.end_time,
+        status: segment.status, // “in_progress”
+        assigned_to: (segment.assigned_to || '').toLowerCase().trim(),
+        start_unix: segment.start_unix, // timestamp absolu (ms)
+        end_unix: segment.start_unix + durInMs, // <-- AJOUTÉ
+        subtitleText: '',
+        timeRemaining: durInSec,
+        timer: null,
+        isVisible: false,
+        warningFlag: false,
+        subtitles: segment.subtitles || [],
+      };
       // 4) Ajouter dans this.segments
       this.segments.push(newSegment);
       console.log(
@@ -630,9 +646,9 @@ const durInMs = durInSec * 1000;
       this.ngZone.run(() => {
         this.updateSignalStatus();
         console.log(
-          `   ← après updateSignalStatus post-WS (elapsed=${this.elapsedTime}): active=[${this.activeSegments.map(
-            (s) => s.segment_id
-          )}], next=${
+          `   ← après updateSignalStatus post-WS (elapsed=${
+            this.elapsedTime
+          }): active=[${this.activeSegments.map((s) => s.segment_id)}], next=${
             this.nextSegment ? this.nextSegment.segment_id : 'aucun'
           }`
         );
@@ -652,22 +668,22 @@ const durInMs = durInSec * 1000;
 
     // 11.7) Quand la segmentation est stoppée côté serveur
     // 11.7) Quand la segmentation est stoppée côté serveur
-this.socketService.onSegmentationStopped().subscribe(() => {
-  console.log('⛔ Segmentation stoppée depuis le serveur');
+    this.socketService.onSegmentationStopped().subscribe(() => {
+      console.log('⛔ Segmentation stoppée depuis le serveur');
 
-  // Arrêter la boucle globale
-  if (this.signalUpdateInterval) {
-    clearInterval(this.signalUpdateInterval);
-    this.signalUpdateInterval = null;
-  }
+      // Arrêter la boucle globale
+      if (this.signalUpdateInterval) {
+        clearInterval(this.signalUpdateInterval);
+        this.signalUpdateInterval = null;
+      }
 
-  // Réinitialiser les warningFlags et nextSegment
-  this.segments.forEach(seg => seg.warningFlag = false);
-  this.nextSegment = null;
+      // Réinitialiser les warningFlags et nextSegment
+      this.segments.forEach((seg) => (seg.warningFlag = false));
+      this.nextSegment = null;
 
-  // Forcer le refresh de l’UI
-  this.cdr.markForCheck();
-});
+      // Forcer le refresh de l’UI
+      this.cdr.markForCheck();
+    });
   }
 
   // ------------------------------------------------------------
@@ -867,27 +883,30 @@ this.socketService.onSegmentationStopped().subscribe(() => {
   }
 
   onEnregistrerSousTitre() {
-  // Sécurité : évite de sauvegarder si pas de segment actif ou zone vide
-  if (!this.activeSegment || !this.subtitleText.trim()) return;
+    // Sécurité : évite de sauvegarder si pas de segment actif ou zone vide
+    if (!this.activeSegment || !this.subtitleText.trim()) return;
 
-  // Tu peux garder ou non l'auto-save, ici bouton manuel
-  this.sessionService
-    .addSubtitle(this.activeSegment.segment_id, this.subtitleText, this.userId)
-    .subscribe({
-      next: (response) => {
-        if (response?.subtitle) {
-          this.activeSegment.subtitles.push({
-            text: response.subtitle.text,
-            created_by: this.userId,
-            created_at: response.subtitle.created_at,
-          });
-        }
-        this.subtitleText = '';
-      },
-      error: (error) => {
-        console.error(`Erreur d'enregistrement du sous-titre :`, error);
-      },
-    });
-}
-
+    // Tu peux garder ou non l'auto-save, ici bouton manuel
+    this.sessionService
+      .addSubtitle(
+        this.activeSegment.segment_id,
+        this.subtitleText,
+        this.userId
+      )
+      .subscribe({
+        next: (response) => {
+          if (response?.subtitle) {
+            this.activeSegment.subtitles.push({
+              text: response.subtitle.text,
+              created_by: this.userId,
+              created_at: response.subtitle.created_at,
+            });
+          }
+          this.subtitleText = '';
+        },
+        error: (error) => {
+          console.error(`Erreur d'enregistrement du sous-titre :`, error);
+        },
+      });
+  }
 }

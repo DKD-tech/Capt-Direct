@@ -33,6 +33,6 @@ export const appConfig: ApplicationConfig = {
       withInterceptorsFromDi(), // Assure que l'intercepteur est enregistré
       withFetch()
     ),
-    { provide: HTTP_INTERCEPTORS, useClass: AuthInterceptor, multi: true },
+    { provide: HTTP_INTERCEPTORS, useClass: AuthInterceptor, multi: true }, provideAnimationsAsync(),
   ],
 };

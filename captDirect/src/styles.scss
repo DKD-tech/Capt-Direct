@@ -1,3 +1,52 @@
+// Custom Theming for Angular Material
+// For more information: https://material.angular.io/guide/theming
+@use "@angular/material" as mat;
+// Plus imports for other components in your app.
+
+// Include the common styles for Angular Material. We include this here so that you only
+// have to load a single css file for Angular Material in your app.
+// Be sure that you only ever include this mixin once!
+@include mat.core();
+
+// Define the theme object.
+$captDirect-theme: mat.define-theme(
+  (
+    color: (
+      theme-type: light,
+      primary: mat.$cyan-palette,
+      // Utilise la palette cyan qui existe
+      tertiary: mat.$blue-palette,
+      // Garde blue-palette qui fonctionnait
+    ),
+    density: (
+      scale: 0,
+    ),
+  )
+);
+
+// Include theme styles for core and each component used in your app.
+// Alternatively, you can import and @include the theme mixins for each component
+// that you are using.
+:root {
+  @include mat.all-component-themes($captDirect-theme);
+
+  // Variables CSS pour utilisation dans vos composants (couleurs proches de votre logo)
+  --primary-color: #00bcd4; // Cyan de votre logo
+  --primary-dark: #0097a7;
+  --tertiary-color: #2196f3; // Bleu de votre logo
+  --tertiary-dark: #1976d2;
+  --logo-cyan: #00bcd4;
+  --logo-blue: #2196f3;
+  --logo-dark-blue: #1565c0;
+}
+
+// Comment out the line below if you want to use the pre-defined typography utility classes.
+// For more information: https://material.angular.io/guide/typography#using-typography-styles-in-your-application.
+// @include mat.typography-hierarchy($captDirect-theme);
+
+// Comment out the line below if you want to use the deprecated `color` inputs.
+// @include mat.color-variants-backwards-compatibility($captDirect-theme);
+
 /* You can add global styles to this file, and also import other style files */
 
 html,
@@ -7,8 +56,9 @@ body {
   padding: 0;
   overflow: hidden; /* Éviter le défilement global */
 }
+
 body {
   margin: 0;
   font-family: Roboto, "Helvetica Neue", sans-serif;
-  background-color: bisque;
+  background-color: #f5f5f5; // Changé de bisque à un gris clair plus moderne
 }
