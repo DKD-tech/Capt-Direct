@@ -1,0 +1,99 @@
+1
+NaN:NaN:NaN,NaN --> NaN:NaN:NaN,NaN
+Ceci est une phrase test.
+
+2
+NaN:NaN:NaN,NaN --> NaN:NaN:NaN,NaN
+Presque terminé.
+
+3
+NaN:NaN:NaN,NaN --> NaN:NaN:NaN,NaN
+Je commence à taper.
+
+4
+NaN:NaN:NaN,NaN --> NaN:NaN:NaN,NaN
+Je participe à la session.
+
+5
+NaN:NaN:NaN,NaN --> NaN:NaN:NaN,NaN
+Le sous-titre s’enregistre.
+
+6
+NaN:NaN:NaN,NaN --> NaN:NaN:NaN,NaN
+J'écris rapidement.
+
+7
+NaN:NaN:NaN,NaN --> NaN:NaN:NaN,NaN
+Voici ma contribution.
+
+8
+NaN:NaN:NaN,NaN --> NaN:NaN:NaN,NaN
+Dernier test utilisateur.
+
+9
+NaN:NaN:NaN,NaN --> NaN:NaN:NaN,NaN
+Bonjour, je suis prêt.
+
+10
+NaN:NaN:NaN,NaN --> NaN:NaN:NaN,NaN
+Un autre segment ici.
+
+11
+NaN:NaN:NaN,NaN --> NaN:NaN:NaN,NaN
+Je participe à la session.
+
+12
+NaN:NaN:NaN,NaN --> NaN:NaN:NaN,NaN
+Dernier test utilisateur.
+
+13
+NaN:NaN:NaN,NaN --> NaN:NaN:NaN,NaN
+Voici ma contribution.
+
+14
+NaN:NaN:NaN,NaN --> NaN:NaN:NaN,NaN
+Voici ma contribution.
+
+15
+NaN:NaN:NaN,NaN --> NaN:NaN:NaN,NaN
+J'écris rapidement.
+
+16
+NaN:NaN:NaN,NaN --> NaN:NaN:NaN,NaN
+Un autre segment ici.
+
+17
+NaN:NaN:NaN,NaN --> NaN:NaN:NaN,NaN
+Bonjour, je suis prêt.
+
+18
+NaN:NaN:NaN,NaN --> NaN:NaN:NaN,NaN
+Dernier test utilisateur.
+
+19
+NaN:NaN:NaN,NaN --> NaN:NaN:NaN,NaN
+Le sous-titre s’enregistre.
+
+20
+NaN:NaN:NaN,NaN --> NaN:NaN:NaN,NaN
+Je participe à la session.
+
+21
+NaN:NaN:NaN,NaN --> NaN:NaN:NaN,NaN
+.
+
+22
+NaN:NaN:NaN,NaN --> NaN:NaN:NaN,NaN
+Je commence à taper.
+
+23
+NaN:NaN:NaN,NaN --> NaN:NaN:NaN,NaN
+Ceci est une phrase test.
+
+24
+NaN:NaN:NaN,NaN --> NaN:NaN:NaN,NaN
+Un autre segment ici.
+
+25
+NaN:NaN:NaN,NaN --> NaN:NaN:NaN,NaN
+Presque terminé.

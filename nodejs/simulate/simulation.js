@@ -137,8 +137,7 @@ const fs = require("fs");
 const path = require("path");
 
 const SERVER_URL = "http://192.168.196.212:3000";
-const SESSION_ID = 35;
-const MAX_SEGMENTS_PER_USER = 2;
+const SESSION_ID = 88;
 
 const USERS = [
   { id: 31, username: "User1" },
@@ -154,17 +153,29 @@ const USERS = [
 ];
 
 const TEXTS = [
-  "Bonjour, je suis prêt.",
-  "Je commence à taper.",
-  "Voici ma contribution.",
-  "Ceci est une phrase test.",
-  "Je participe à la session.",
-  "Un autre segment ici.",
-  "Le sous-titre s’enregistre.",
-  "J'écris rapidement.",
-  "Presque terminé.",
-  "Dernier test utilisateur.",
+  "Aujourd’hui, nous abordons la réforme de l'énergie nucléaire.",
+  "Nous abordons la réforme de l'énergie nucléaire. Le ministre interviendra à ce sujet.",
+  "Le ministre interviendra à ce sujet. Il évoquera aussi les énergies renouvelables.",
+  "Il évoquera aussi les énergies renouvelables, notamment le solaire et l’éolien.",
+  "Notamment le solaire et l’éolien, qui jouent un rôle crucial dans la transition.",
+  "Qui jouent un rôle crucial dans la transition énergétique selon les experts.",
+  "Selon les experts, une réduction de 40 % des émissions est envisageable.",
+  "Une réduction de 40 % des émissions est envisageable d’ici 2035.",
+  "D’ici 2035, le gouvernement veut atteindre la neutralité carbone.",
+  "Le gouvernement veut atteindre la neutralité carbone avec des efforts collectifs.",
+  "Avec des efforts collectifs, chaque citoyen peut contribuer au changement.",
+  "Chaque citoyen peut contribuer au changement par des gestes simples.",
+  "Par des gestes simples comme éteindre les lumières ou mieux isoler son logement.",
+  "Comme éteindre les lumières ou mieux isoler son logement pour réduire la consommation.",
+  "Pour réduire la consommation, des aides financières seront proposées.",
+  "Des aides financières seront proposées pour accompagner les foyers modestes.",
+  "Pour accompagner les foyers modestes, des subventions seront renforcées.",
+  "Des subventions seront renforcées dès l’année prochaine, promet le ministre.",
+  "Dès l’année prochaine, promet le ministre, un plan ambitieux sera lancé.",
+  "Un plan ambitieux sera lancé, impliquant tous les acteurs du secteur.",
 ];
+
+const TEXT_QUEUE = [...TEXTS];
 
 let socketsReady = 0;
 let sockets = [];
@@ -177,7 +188,6 @@ function simulateUser(user, index, onReady) {
 
   socket.on("connect", () => {
     console.log(`🟢 [${username}] connecté (socket id: ${socket.id})`);
-
     socket.emit("join-session", {
       session_id: SESSION_ID,
       user_id: userId,
@@ -191,13 +201,16 @@ function simulateUser(user, index, onReady) {
   });
 
   socket.on("segment-assigned", async (segment) => {
-    if (segmentCount >= MAX_SEGMENTS_PER_USER) return;
     segmentCount++;
-
     console.log(`📦 [${username}] segment assigné: ${segment.segment_id}`);
+
     const delay = Math.max(segment.start_unix - Date.now(), 0);
     setTimeout(async () => {
-      const text = TEXTS[(index + segmentCount - 1) % TEXTS.length];
+      const text =
+        TEXT_QUEUE.length > 0
+          ? TEXT_QUEUE.shift()
+          : `Texte par défaut pour segment ${segment.segment_id}`;
+
       const payload = {
         segment_id: segment.segment_id,
         text,
@@ -239,7 +252,7 @@ async function startSession() {
 async function generateAndDownloadSRT() {
   try {
     const response = await axios.get(
-      `${SERVER_URL}/api/sessions/${SESSION_ID}/export-srt`,
+      `${SERVER_URL}/api/sessions/export-srt/${SESSION_ID}`,
       { responseType: "arraybuffer" }
     );
 
@@ -265,10 +278,8 @@ async function stopSessionAndDisconnect() {
     );
   }
 
-  // 🔽 Génération du fichier SRT
   await generateAndDownloadSRT();
 
-  // 🔻 Déconnexion propre
   sockets.forEach(({ socket, userId, username }) => {
     socket.emit("leaveVideoSession", { userId, sessionId: SESSION_ID });
     socket.disconnect();

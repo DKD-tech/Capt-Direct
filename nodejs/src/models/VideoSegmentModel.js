@@ -4,7 +4,7 @@ const SegmentStatus = require("../utils/SegmentStatus");
 
 class VideoSegmentModel extends Model {
   constructor() {
-    super("video_segments");
+    super("video_segments", "segment_id");
   }
 
   // méthodes spécifiques au modèle VideoSegment si nécessaire

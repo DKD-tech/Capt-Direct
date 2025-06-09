@@ -75,6 +75,13 @@ async function generateSegment({
   // const socketId = await getAsync(`socket:${userToAssign.id}`);
   if (socketId) {
     const io = require("../config/socket");
+
+    // 🔄 Mise à jour du start_unix avant émission
+    await VideoSegmentModel.updateOneById(segment.segment_id, {
+      start_unix: segmentStartUnix,
+    });
+    segment.start_unix = segmentStartUnix;
+
     // io.to(socketId).emit("segment-assigned", segment);
     io.to(socketId).emit("segment-assigned", {
       ...segment,

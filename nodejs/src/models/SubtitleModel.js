@@ -1,4 +1,11 @@
+const pool = require("../config/db");
 const Model = require("./Model");
+
+// tout en haut du fichier
+function timeToSeconds(timeStr) {
+  const [h, m, s] = timeStr.split(":").map(Number);
+  return h * 3600 + m * 60 + s;
+}
 
 class SubtitleModel extends Model {
   constructor() {
@@ -93,10 +100,30 @@ class SubtitleModel extends Model {
     return await this.updateOneById(subtitle_id, data);
   }
 
-  // // Désactiver un sous-titre (soft delete)
-  // async deleteSubtitle(subtitle_id) {
-  //   return await this.updateOneById(subtitle_id, { is_active: false });
-  // }
+  async getSubtitlesBySession(sessionId) {
+    const query = `
+    SELECT 
+      s.subtitle_id,
+      s.text,
+      s.created_by,
+      s.created_at,
+      v.segment_id,
+      TO_CHAR(v.start_time, 'HH24:MI:SS') AS start_time,
+      TO_CHAR(v.end_time, 'HH24:MI:SS') AS end_time
+    FROM subtitles s
+    JOIN video_segments v ON v.segment_id = s.segment_id
+    WHERE v.session_id = $1
+      AND s.is_active = true
+    ORDER BY start_time ASC;
+  `;
+
+    const result = await pool.query(query, [sessionId]);
+    return result.rows.map((row) => ({
+      ...row,
+      start_time: timeToSeconds(row.start_time),
+      end_time: timeToSeconds(row.end_time),
+    }));
+  }
 }
 
 module.exports = new SubtitleModel();

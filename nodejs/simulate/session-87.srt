@@ -1,0 +1,71 @@
+1
+00:00:00,000 --> 00:00:10,000
+Aujourd'hui, nous allons parler de la segmentation vidéo.
+
+2
+00:00:10,100 --> 00:00:15,000
+La segmentation est essentielle pour l'édition vidéo.
+
+3
+00:00:15,100 --> 00:00:16,100
+Nous allons voir comment segmenter une vidéo en
+
+4
+00:00:16,200 --> 00:00:20,000
+segments plus petits.
+
+5
+00:00:20,100 --> 00:00:21,100
+Nous allons utiliser des algorithmes avancés pour segmenter
+
+6
+00:00:21,200 --> 00:00:25,000
+la vidéo.
+
+7
+00:00:25,100 --> 00:00:26,100
+La segmentation vidéo est utile pour la création
+
+8
+00:00:26,200 --> 00:00:30,000
+de vidéos.
+
+9
+00:00:30,100 --> 00:00:31,100
+Nous allons voir comment utiliser la segmentation vidéo
+
+10
+00:00:31,200 --> 00:00:35,000
+pour créer des vidéos.
+
+11
+00:00:35,100 --> 00:00:40,000
+.
+
+12
+00:00:40,100 --> 00:00:45,000
+.
+
+13
+00:00:45,100 --> 00:00:46,100
+La segmentation vidéo est utile pour la création
+
+14
+00:00:46,200 --> 00:00:50,000
+de vidéos.
+
+15
+00:00:50,100 --> 00:00:51,100
+Nous allons voir comment utiliser la segmentation vidéo
+
+16
+00:00:51,200 --> 00:00:55,000
+pour créer des vidéos.
+
+17
+00:00:55,100 --> 00:01:00,000
+Texte par défaut pour segment 3696.
+
+18
+00:01:00,100 --> 00:01:05,000
+Texte par défaut pour segment 3697.

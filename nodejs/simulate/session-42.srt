@@ -1,0 +1,14 @@
+1
+00:00:00,000 --> 00:01:05,000
+Bonjour, je suis prêt.
+Je participe à la session.
+Voici ma contribution.
+Le sous-titre s’enregistre.
+Presque terminé.
+Je commence à taper.
+Ceci est une phrase test.
+Dernier test utilisateur.
+Un autre segment ici.
+J'écris rapidement.
+Je commence à taper.
+Un autre segment ici.

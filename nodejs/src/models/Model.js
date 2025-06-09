@@ -1,10 +1,11 @@
 const pool = require("../config/db");
 
 class Model {
-  constructor(tableName) {
+  constructor(tableName, primaryKey = "id") {
     if (!tableName)
       throw new Error("Le nom de la table doit être défini pour le modèle.");
     this.tableName = tableName;
+    this.primaryKey = primaryKey;
   }
 
   async insert(data) {
@@ -23,7 +24,7 @@ class Model {
       .map((key, i) => `${key} = $${i + 1}`)
       .join(", ");
     const values = [...Object.values(data), id];
-    const query = `UPDATE ${this.tableName} SET ${setClause} WHERE user_id = $${values.length} RETURNING user_id`;
+    const query = `UPDATE ${this.tableName} SET ${setClause} WHERE ${this.primaryKey} = $${values.length} RETURNING *`;
     const result = await pool.query(query, values);
     return result.rows[0];
   }

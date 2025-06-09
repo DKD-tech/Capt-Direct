@@ -1,0 +1,11 @@
+1
+00:00:00,000 --> 00:00:10,000
+Aujourdhui, nous abordons la réforme de l'energie nucléaire.
+
+2
+00:00:10,000 --> 00:00:15,000
+Le ministre interviendras à ce sujet.
+
+3
+00:00:15,000 --> 00:00:20,000
+Il évoquera aussi les energies renouvelables.

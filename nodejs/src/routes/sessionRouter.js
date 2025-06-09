@@ -65,7 +65,29 @@ const {
 const { startStream } = require("../controllers/rtmp/streamController");
 
 const authMiddleware = require("../middlewares/authMiddleware");
-const { exportSrtController } = require("../controllers/stc/srtController");
+const {
+  exportSrtController,
+} = require("../controllers/stc/exportSrtController");
+const {
+  exportSrtImprovedController,
+  exportSrtFlexibleController,
+  exportSrtComparisonController,
+  exportSrtCorrectedController,
+  testLanguageToolController,
+  correctTextsBatchController,
+  getLanguageToolConfigController,
+} = require("../controllers/stc/exportSrt2Controller");
+const {
+  exportSrtOptimizedController,
+  exportSrtFlexible2Controller,
+  diagnosticSrtController,
+  getOptimalConfigController,
+} = require("../controllers/stc/exportSrt3Controller");
+
+const {
+  exportImprovedSrtWithDeduplicationController,
+} = require("../controllers/stc/hybridSrtGenerator2");
+
 const sessionRouter = express.Router();
 
 sessionRouter.post("/create-session", createSessionController);
@@ -91,7 +113,47 @@ sessionRouter.get(
   authMiddleware,
   getSegmentsWithSubtitles
 );
-sessionRouter.get("/:sessionId/export-srt", exportSrtController);
+sessionRouter.get("/:session_id/export-srt", exportSrtController);
+sessionRouter.get("/export-srt/:session_id", exportSrtImprovedController);
+sessionRouter.get("/export-srt-v2/:session_id", exportSrtFlexibleController);
+sessionRouter.get(
+  "/export-srt-comparison/:session_id",
+  exportSrtComparisonController
+);
+sessionRouter.get(
+  "/export-srt-optimized/:session_id",
+  exportSrtOptimizedController
+);
+sessionRouter.get(
+  "/export-srt-diagnostic/:session_id",
+  diagnosticSrtController
+);
+sessionRouter.get(
+  "/export-srt-flexible2/:session_id",
+  exportSrtFlexible2Controller
+);
+sessionRouter.get(
+  "/export-srt-optimal-config/:session_id",
+  getOptimalConfigController
+);
+sessionRouter.get(
+  "//srt/export/:session_id/dedup",
+  exportImprovedSrtWithDeduplicationController
+);
+// Nouvelles routes avec correction LanguageTool
+sessionRouter.get(
+  "/export-srt-corrected/:session_id",
+  exportSrtCorrectedController
+);
+
+// Route pour tester LanguageTool (POST car on envoie du texte)
+sessionRouter.post("/test-languagetool", testLanguageToolController);
+
+// Route pour correction par lot
+sessionRouter.post("/correct-texts-batch", correctTextsBatchController);
+
+// Route pour obtenir la config LanguageTool
+sessionRouter.get("/languagetool-config", getLanguageToolConfigController);
 sessionRouter.get("/info/:sessionId", getSessionController);
 sessionRouter.post("/store-duration/:sessionId", storeVideoDurationController);
 sessionRouter.post("/get-duration/:sessionId", getVideoDuration);

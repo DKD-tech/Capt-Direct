@@ -47,4 +47,56 @@ Je participe à la session.
 J'écris rapidement.
 
 13
-00:01:00,000 --> 00:01:10,000
+00:01:00,000 --> 00:01:02,000
+Je commence à taper.
+
+14
+00:01:05,000 --> 00:01:07,000
+Un autre segment ici.
+
+15
+00:01:10,000 --> 00:01:12,000
+Presque terminé.
+
+16
+00:01:15,000 --> 00:01:17,000
+Je commence à taper.
+
+17
+00:01:20,000 --> 00:01:22,166
+Je participe à la session.
+
+18
+00:01:25,000 --> 00:01:27,083
+Dernier test utilisateur.
+
+19
+00:01:30,000 --> 00:01:32,000
+Voici ma contribution.
+
+20
+00:01:35,000 --> 00:01:37,000
+J'écris rapidement.
+
+21
+00:01:40,000 --> 00:01:42,000
+.
+
+22
+00:01:45,000 --> 00:01:47,083
+Ceci est une phrase test.
+
+23
+00:01:50,000 --> 00:01:52,000
+Un autre segment ici.
+
+24
+00:01:55,000 --> 00:01:57,250
+Le sous-titre s’enregistre.
+
+25
+00:02:00,000 --> 00:02:02,083
+Dernier test utilisateur.
+
+26
+00:02:05,000 --> 00:02:15,000

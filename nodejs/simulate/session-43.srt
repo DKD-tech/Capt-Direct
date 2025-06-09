@@ -1,0 +1,151 @@
+1
+00:00:00,000 --> 00:00:10,000
+Un autre segment ici.
+
+2
+00:00:05,000 --> 00:00:15,000
+Dernier test utilisateur.
+
+3
+00:00:10,000 --> 00:00:20,000
+Voici ma contribution.
+
+4
+00:00:15,000 --> 00:00:25,000
+Ceci est une phrase test.
+
+5
+00:00:20,000 --> 00:00:30,000
+Je commence à taper.
+
+6
+00:00:25,000 --> 00:00:35,000
+Je participe à la session.
+
+7
+00:00:30,000 --> 00:00:40,000
+J'écris rapidement.
+
+8
+00:00:35,000 --> 00:00:45,000
+Bonjour, je suis prêt.
+
+9
+00:00:40,000 --> 00:00:50,000
+Presque terminé.
+
+10
+00:00:45,000 --> 00:00:55,000
+Le sous-titre s’enregistre.
+
+11
+00:00:50,000 --> 00:01:00,000
+Le sous-titre s’enregistre.
+
+12
+00:00:55,000 --> 00:01:05,000
+Bonjour, je suis prêt.
+
+13
+00:01:00,000 --> 00:01:10,000
+Ceci est une phrase test.
+
+14
+00:01:05,000 --> 00:01:15,000
+t.
+
+15
+00:01:10,000 --> 00:01:20,000
+Voici ma contribution.
+
+16
+00:01:15,000 --> 00:01:25,000
+Je participe à la session.
+
+17
+00:01:20,000 --> 00:01:30,000
+Le sous-titre s’enregistre.
+
+18
+00:01:25,000 --> 00:01:35,000
+Presque terminé.
+
+19
+00:01:30,000 --> 00:01:40,000
+Je commence à taper.
+
+20
+00:01:35,000 --> 00:01:45,000
+Un autre segment ici.
+
+21
+00:01:40,000 --> 00:01:50,000
+Dernier test utilisateur.
+
+22
+00:01:45,000 --> 00:01:55,000
+Ceci est une phrase test.
+
+23
+00:01:50,000 --> 00:02:00,000
+J'écris rapidement.
+
+24
+00:01:55,000 --> 00:02:05,000
+Je commence à taper.
+
+25
+00:02:00,000 --> 00:02:10,000
+Ceci est une phrase test.
+
+26
+00:02:05,000 --> 00:02:15,000
+Un autre segment ici.
+
+27
+00:02:10,000 --> 00:02:20,000
+Le sous-titre s’enregistre.
+
+28
+00:02:15,000 --> 00:02:25,000
+Ceci est une phrase test.
+
+29
+00:02:20,000 --> 00:02:30,000
+Je commence à taper.
+
+30
+00:02:25,000 --> 00:02:35,000
+Presque terminé.
+
+31
+00:02:30,000 --> 00:02:40,000
+Un autre segment ici.
+
+32
+00:02:35,000 --> 00:02:45,000
+J'écris rapidement.
+
+33
+00:02:40,000 --> 00:02:50,000
+Dernier test utilisateur.
+
+34
+00:02:45,000 --> 00:02:55,000
+Voici ma contribution.
+
+35
+00:02:50,000 --> 00:03:00,000
+Presque terminé.
+
+36
+00:02:55,000 --> 00:03:05,000
+J'écris rapidement.
+
+37
+00:03:00,000 --> 00:03:10,000
+Bonjour, je suis prêt.
+
+38
+00:03:05,000 --> 00:03:15,000
+Je participe à la session.

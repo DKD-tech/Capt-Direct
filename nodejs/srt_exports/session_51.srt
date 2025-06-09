@@ -1,0 +1,40 @@
+1
+00:00:00,000 --> 00:00:06,000
+bonjour
+Bonjour 
+
+2
+00:00:06,000 --> 00:00:12,000
+salut
+Salut et toi ça va être compliqué 
+
+3
+00:00:12,000 --> 00:00:18,000
+Aujourd'hui nous abordons la réforme 
+Aujourd’hui nous 
+
+4
+00:00:18,000 --> 00:00:24,000
+Aujourd'hui 
+Bonjour 
+
+5
+00:00:24,000 --> 00:00:30,000
+Aujourd'hui nous abordons la réforme 
+Nous abordons la réforme 
+
+6
+00:00:30,000 --> 00:00:36,000
+Le ministre interviendra 
+De l’énergie nucléaire 
+
+7
+00:00:36,000 --> 00:00:42,000
+Notamment le soclo
+Le ministère ont 
+
+8
+00:00:42,000 --> 00:00:48,000
+D'ici 2035 
+À ce sujet 
+

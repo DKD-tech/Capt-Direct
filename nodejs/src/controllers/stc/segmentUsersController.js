@@ -114,11 +114,23 @@ async function addSubtitle(req, res) {
       `📌 Texte final pour le segment ${segment_id} : "${adjustedText}"`
     );
 
+    // ✅ Calcul du temps réel
+    const now = Date.now();
+    let real_time = null;
+
+    if (currentSegment.start_unix) {
+      real_time = Math.floor((now - currentSegment.start_unix) / 1000); // secondes
+      console.log(`⏱️ Temps réel d'affichage calculé : ${real_time} s`);
+    } else {
+      console.warn("⚠️ start_unix manquant sur le segment, temps réel ignoré.");
+    }
+
     // ✅ Ajouter le sous-titre en base de données
     const newSubtitle = await SubtitleModel.addSubtitle({
       segment_id,
       text: adjustedText,
       created_by,
+      real_time,
     });
 
     return res.status(201).json({
