@@ -1,0 +1,52 @@
+1
+00:00:05,000 --> 00:00:10,000
+Je commence
+
+2
+00:00:10,000 --> 00:00:15,000
+à taper.
+
+3
+00:00:15,000 --> 00:00:20,000
+Ceci est une phrase test.
+
+4
+00:00:20,000 --> 00:00:25,000
+Un autre segment ici.
+
+5
+00:00:25,000 --> 00:00:30,000
+J'écris rapidement.
+
+6
+00:00:30,000 --> 00:00:35,000
+Dernier test utilisateur.
+
+7
+00:00:35,000 --> 00:00:37,500
+Bonjour, je suis prêt à aller au
+
+8
+00:00:37,500 --> 00:00:40,000
+cameroun l'année prochaine .
+
+9
+00:00:40,000 --> 00:00:45,000
+Je participe à la session.
+
+10
+00:00:45,000 --> 00:00:50,000
+Presque terminé.
+
+11
+00:00:50,000 --> 00:00:55,000
+Voici ma contribution.
+
+12
+00:00:55,000 --> 00:01:00,000
+Le sous-titre s’enregistre.
+
+13
+00:01:00,000 --> 00:01:05,000
+Je commence à taper.
+

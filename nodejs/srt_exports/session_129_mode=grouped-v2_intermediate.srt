@@ -1,0 +1,23 @@
+1
+00:00:00,000 --> 00:00:10,000
+Aujourd’hui, nous abordons la réforme de l'énergie nucléaire.
+
+2
+00:00:10,000 --> 00:00:15,000
+Le ministre interviendra à ce sujet.
+
+3
+00:00:15,000 --> 00:00:20,000
+Il évoquera aussi les énergies renouvelables.
+
+4
+00:00:20,100 --> 00:00:21,100
+Il évoquera aussi les énergies renouvelables, notamment le
+
+5
+00:00:21,200 --> 00:00:25,000
+solaire et l’éolien.
+
+6
+00:00:25,000 --> 00:00:35,000
+qui jouent un rôle crucial dans la transition.

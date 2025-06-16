@@ -5,7 +5,12 @@ const { client: redisClient } = require("../../redis/index");
 const levenshtein = require("fast-levenshtein"); // Librairie pour Levenshtein
 const { adjustTextWithNeighbors } = require("../../utils/algo_textes");
 
-const { predictNextWord, trigramModel } = require("../../utils/correction");
+const {
+  correctTextWithContext,
+  predictNextWordContextual,
+  completePartialWord,
+  words,
+} = require("../../utils/correction");
 
 async function assignUserToSegmentController(req, res) {
   const { user_id, segment_id } = req.body;
@@ -130,7 +135,191 @@ async function addSubtitle(req, res) {
     return res.status(500).json({ message: "Erreur serveur." });
   }
 }
+// async function addSubtitle(req, res) {
+//   const { segment_id, text, created_by } = req.body;
 
+//   if (!segment_id || !text || !created_by) {
+//     return res.status(400).json({ message: "Champs obligatoires manquants." });
+//   }
+
+//   try {
+//     // ✅ Vérifier si le segment existe
+//     const currentSegment = await VideoSegmentModel.findById(segment_id);
+//     if (!currentSegment) {
+//       return res.status(404).json({ message: "Segment introuvable." });
+//     }
+
+//     // ✅ Vérifier si l'utilisateur est bien assigné à ce segment
+//     const isUserAssigned = await SegmentUserModel.isUserAssignedToSegment(
+//       created_by,
+//       segment_id
+//     );
+
+//     if (!isUserAssigned) {
+//       return res.status(403).json({
+//         message: "🚫 Vous n'êtes pas autorisé à sous-titrer ce segment.",
+//       });
+//     }
+
+//     console.log(
+//       `✏️ Ajout du sous-titre pour le segment ${segment_id} : "${text}"`
+//     );
+
+//     // // ✅ Utilisation de `predictNextWord()` pour compléter automatiquement le texte
+//     // const predictedWord = predictNextWord(text, trigramModel);
+//     // if (predictedWord) {
+//     //   text = `${text} ${predictedWord}`;
+//     //   console.log(`🔮 Correction automatique avec n-gram : "${text}"`);
+//     // }
+//     // ✅ Créer une copie modifiable du texte
+//     // ✅ NOUVEAU : Récupérer le contexte des segments voisins pour améliorer la prédiction
+//     const segmentContext = await getSegmentContext(currentSegment);
+
+//     let processedText = text;
+//     // ✅ NOUVEAU : Utiliser le système de correction contextuelle amélioré
+//     const contextualCorrection = correctTextWithContext(
+//       processedText,
+//       segmentContext.allSegments,
+//       segmentContext.currentIndex
+//     );
+
+//     if (contextualCorrection) {
+//       if (contextualCorrection.type === "completion") {
+//         processedText = contextualCorrection.corrected;
+//         console.log(
+//           `🧠 Complétion contextuelle : "${text}" → "${processedText}"`
+//         );
+//       } else if (contextualCorrection.type === "prediction") {
+//         processedText = processedText + " " + contextualCorrection.predicted;
+//         console.log(
+//           `🔮 Prédiction contextuelle (${contextualCorrection.method}) : "${
+//             contextualCorrection.predicted
+//           }" (confiance: ${(contextualCorrection.confidence * 100).toFixed(
+//             1
+//           )}%)`
+//         );
+//       }
+//     } else {
+//       // ✅ FALLBACK : Si pas de correction contextuelle, utiliser l'ancien système
+//       console.log("⚠️ Utilisation du système de fallback");
+//       // Étape 1 : Tenter de compléter un mot inachevé (ancien système)
+//       const completedWord = suggestCompletion(processedText, wordList);
+//       if (completedWord) {
+//         let words = text.trim().split(/\s+/);
+//         words[words.length - 1] = completedWord;
+//         processedText = words.join(" ");
+//         console.log(`🧠 Complétion du mot (fallback) : "${processedText}"`);
+//       }
+
+//       // Étape 2 : Prédire le mot suivant avec trigram (ancien système)
+//       const predictedWord = predictNextWord(processedText, trigramModel);
+//       if (predictedWord) {
+//         processedText = `${processedText} ${predictedWord}`;
+//         console.log(`🔮 Prédiction n-gram (fallback) : "${processedText}"`);
+//       }
+//     }
+
+//     // ✅ Vérifier les chevauchements avec les segments voisins
+//     const adjustedText = await adjustTextWithNeighbors(
+//       currentSegment,
+//       processedText
+//     );
+//     console.log(
+//       `📌 Texte final pour le segment ${segment_id} : "${adjustedText}"`
+//     );
+
+//     // ✅ Ajouter le sous-titre en base de données
+//     const newSubtitle = await SubtitleModel.addSubtitle({
+//       segment_id,
+//       text: adjustedText,
+//       created_by,
+//     });
+
+//     return res.status(201).json({
+//       message: "✅ Sous-titre ajouté avec succès.",
+//       subtitle: newSubtitle,
+//     });
+//   } catch (error) {
+//     console.error("❌ Erreur lors de l’ajout du sous-titre :", error);
+//     return res.status(500).json({ message: "Erreur serveur." });
+//   }
+// }
+
+// ✅ NOUVELLE FONCTION : Récupérer le contexte des segments pour améliorer la prédiction
+// ✅ FONCTION CORRIGÉE : Récupérer le contexte des segments pour améliorer la prédiction
+async function getSegmentContext(currentSegment) {
+  try {
+    // ✅ CORRECTION : Utiliser une requête SQL directe au lieu de VideoSegmentModel.find()
+    const pool = require("../../config/db"); // Assurez-vous que ce chemin est correct
+
+    // Récupérer tous les segments de la même session, triés par ordre temporel
+    const segmentsQuery = `
+      SELECT * FROM video_segments 
+      WHERE session_id = $1 
+      ORDER BY start_time ASC
+    `;
+    const segmentsResult = await pool.query(segmentsQuery, [
+      currentSegment.session_id,
+    ]);
+    const allSegmentsData = segmentsResult.rows;
+
+    // ✅ Récupérer les sous-titres segment par segment
+    const segmentIds = allSegmentsData.map((seg) => seg.segment_id);
+    const subtitleMap = {};
+
+    // Récupérer les sous-titres pour chaque segment individuellement
+    for (const segmentId of segmentIds) {
+      try {
+        const subtitles = await SubtitleModel.getSubtitlesBySegment(segmentId);
+        if (subtitles && subtitles.length > 0) {
+          // Prendre le sous-titre le plus récent pour ce segment
+          subtitleMap[segmentId] = subtitles[subtitles.length - 1].text;
+        }
+      } catch (error) {
+        console.warn(
+          `Erreur lors de la récupération des sous-titres pour le segment ${segmentId}:`,
+          error
+        );
+        // Continuer avec les autres segments
+      }
+    }
+
+    // Construire le contexte des segments avec leurs textes
+    const allSegments = allSegmentsData.map((segment) => ({
+      segment_id: segment.segment_id,
+      start_time: segment.start_time,
+      end_time: segment.end_time,
+      text: subtitleMap[segment.segment_id] || "",
+    }));
+
+    // Trouver l'index du segment actuel
+    const currentIndex = allSegments.findIndex(
+      (seg) => seg.segment_id === currentSegment.segment_id
+    );
+
+    // Retourner seulement les textes des segments (pour la prédiction)
+    const segmentTexts = allSegments
+      .filter((seg) => seg.text && seg.text.trim().length > 0)
+      .map((seg) => seg.text);
+
+    console.log(
+      `📊 Contexte récupéré pour le segment ${currentSegment.segment_id}: ${segmentTexts.length} segments avec texte`
+    );
+
+    return {
+      allSegments: segmentTexts,
+      currentIndex: Math.max(0, currentIndex),
+      segmentData: allSegments,
+    };
+  } catch (error) {
+    console.error("❌ Erreur lors de la récupération du contexte :", error);
+    return {
+      allSegments: [],
+      currentIndex: -1,
+      segmentData: [],
+    };
+  }
+}
 // async function addSubtitle(req, res) {
 //   const { segment_id, text, created_by } = req.body;
 

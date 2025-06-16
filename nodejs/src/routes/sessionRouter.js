@@ -51,10 +51,11 @@ const {
   getVideoDuration,
   startSegmentationController,
   stopSegmentationController,
+  handleUserDisconnection,
 } = require("../controllers/stc/videoSegmentController");
 const {
   assignSegmentsToUsers,
-  handleUserDisconnection,
+
   redistributeSegments,
 } = require("../controllers/stc/assignSegmentController");
 const {
@@ -64,13 +65,25 @@ const {
 const { startStream } = require("../controllers/rtmp/streamController");
 
 const authMiddleware = require("../middlewares/authMiddleware");
+const {
+  exportSrtImprovedController,
+  exportSrtFlexibleController,
+  exportSrtComparisonController,
+  exportSrtQualityController,
+} = require("../controllers/stc/exportSrt2Controller");
 
+const {
+  exportImprovedSrtWithDeduplicationController,
+} = require("../controllers/stc/hybridSrtGenerator2");
+
+const { exportSrtController } = require("../controllers/stc/srtController");
 const sessionRouter = express.Router();
 
 sessionRouter.post("/create-session", createSessionController);
 sessionRouter.post("/create-segment", createVideoSegmentController);
 sessionRouter.post("/assign-user", redistributeSegments);
 sessionRouter.post("/assign-user-seg", assignSegmentsToUsers);
+sessionRouter.post("/user-disconnect", handleUserDisconnection);
 sessionRouter.post("/disconnect-user", handleUserDisconnection);
 sessionRouter.post("/add-subtitle", addSubtitle);
 sessionRouter.get("/get-subtitles/:segment_id", getSubtitlesBySegment);
@@ -88,6 +101,21 @@ sessionRouter.get(
   "/segments/:session_id",
   authMiddleware,
   getSegmentsWithSubtitles
+);
+sessionRouter.get("/:sessionId/export-srt", exportSrtController);
+sessionRouter.get("/export-srt/:session_id", exportSrtImprovedController);
+sessionRouter.get("/export-srt-v2/:session_id", exportSrtFlexibleController);
+sessionRouter.get(
+  "/export-srt-contrainte/:session_id",
+  exportSrtQualityController
+);
+sessionRouter.get(
+  "/export-srt-comparison/:session_id",
+  exportSrtComparisonController
+);
+sessionRouter.get(
+  "/srt-export/:session_id/dedup",
+  exportImprovedSrtWithDeduplicationController
 );
 sessionRouter.get("/info/:sessionId", getSessionController);
 sessionRouter.post("/store-duration/:sessionId", storeVideoDurationController);

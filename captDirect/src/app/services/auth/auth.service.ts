@@ -1,8 +1,9 @@
 import { Router } from '@angular/router';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { Injectable } from '@angular/core';
+import { Inject, Injectable, PLATFORM_ID } from '@angular/core';
 import { Observable, of, throwError } from 'rxjs';
 import { catchError, tap } from 'rxjs/operators';
+import { isPlatformBrowser } from '@angular/common';
 
 // Définition du type de réponse de l'API
 interface AuthResponse {
@@ -13,13 +14,29 @@ interface AuthResponse {
   providedIn: 'root',
 })
 export class AuthService {
-  // private apiUrl = 'http://192.168.1.69:3000/api/auth'; // URL de l'API backend
-  // private apiUrlL = 'http://192.168.1.69:3000/api/user';
-  // private apiUrlSession = 'http://192.168.1.69:3000/api/session';
-  private apiUrl = 'http://localhost:3000/api/auth'; // URL de l'API backend
-  private apiUrlL = 'http://localhost:3000/api/user';
-  private apiUrlSession = 'http://localhost:3000/api/session';
-  constructor(private http: HttpClient, private router: Router) {}
+  private apiUrl: string;
+  private apiUrlL: string;
+  private apiUrlSession: string;
+  private ip_url: string;
+  // private apiUrl = 'http://localhost:3000/api/auth'; // URL de l'API backend
+  // private apiUrlL = 'http://localhost:3000/api/user';
+  // private apiUrlSession = 'http://localhost:3000/api/session';
+  constructor(
+    private http: HttpClient,
+    private router: Router,
+    @Inject(PLATFORM_ID) private platformId: Object
+  ) {
+    if (isPlatformBrowser(this.platformId)) {
+      this.ip_url = `${window.location.protocol}//${window.location.hostname}:3000`;
+    } else {
+      // Valeur fallback côté serveur si nécessaire (optionnel)
+      this.ip_url = 'http://localhost:3000';
+    }
+
+    this.apiUrl = `${this.ip_url}/api/auth`;
+    this.apiUrlL = `${this.ip_url}/api/user`;
+    this.apiUrlSession = `${this.ip_url}/api/session`;
+  }
 
   // Méthode pour récupérer la session de l'utilisateur
   getUserSession(): Observable<any> {

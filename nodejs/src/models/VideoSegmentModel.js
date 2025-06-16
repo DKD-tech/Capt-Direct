@@ -1,5 +1,6 @@
 const pool = require("../config/db");
 const Model = require("./Model");
+const SegmentStatus = require("../utils/SegmentStatus");
 
 class VideoSegmentModel extends Model {
   constructor() {
@@ -10,10 +11,13 @@ class VideoSegmentModel extends Model {
   async findAvailableSegment(session_id) {
     const query = `
     SELECT * FROM ${this.tableName}
-    WHERE session_id = $1 AND status = 'available'
+    WHERE session_id = $1 AND status = $2
     LIMIT 1
     `;
-    const result = await pool.query(query, [session_id]);
+    const result = await pool.query(query, [
+      session_id,
+      SegmentStatus.AVAILABLE,
+    ]);
     return result.rows[0];
   }
 
@@ -21,14 +25,20 @@ class VideoSegmentModel extends Model {
     console.log("Mise à jour du segment :", segment_id);
     const query = `
     UPDATE ${this.tableName}
-    SET status = 'assigned'
-    WHERE segment_id = $1
-    RETURNING *
-    `;
-    const result = await pool.query(query, [segment_id]);
-    console.log("Résultat de la mise à jour :", result.rows[0]);
+    SET status = $1
+    WHERE segment_id = $2
+    RETURNING *;
+  `;
+    const result = await pool.query(query, [
+      segment_id,
+      SegmentStatus.IN_PROGRESS,
+    ]);
+    console.log(
+      `Segment ${segment_id} marqué comme '${SegmentStatus.IN_PROGRESS}'`
+    );
     return result.rows[0];
   }
+
   async getSegmentsByStatus(session_id, status) {
     // On sélectionne tous les segments de la session
     // dont le statut est égal à status
@@ -160,6 +170,60 @@ class VideoSegmentModel extends Model {
     const result = await pool.query(query, [session_id]);
     return result.rows[0];
   }
+
+  // Exemple pour getUpcomingAvailableSegment
+/**
+ * Récupère le prochain segment “pending” (déjà réservé) pour CE user,
+ * dont start_time > afterSeconds.
+ */
+// Dans ton modèle : éviter le toTime/toSeconds, on compare directement en SQL
+async getUpcomingPendingSegmentByUser(session_id, user_id, afterSeconds) {
+  const query = `
+    SELECT s.*
+    FROM video_segments s
+    JOIN segment_users su
+      ON su.segment_id = s.segment_id
+      AND su.user_id = $2
+    WHERE s.session_id = $1
+      AND s.status    = 'pending'
+      AND EXTRACT(
+      EPOCH 
+      FROM (s.start_time::time)
+    ) >= ($3 - 1)
+    ORDER BY s.start_time ASC
+    LIMIT 1
+  `;
+  const result = await pool.query(query, [session_id, user_id, afterSeconds]);
+  return result.rows[0] || null;
 }
 
+async getUpcomingAssignedSegmentForUser(session_id, user_id, afterSeconds) {
+  const pad = (n) => n.toString().padStart(2, '0');
+  const toTime = (secs) => {
+    const h = Math.floor(secs / 3600);
+    const m = Math.floor((secs % 3600) / 60);
+    const s = secs % 60;
+    return `${pad(h)}:${pad(m)}:${pad(s)}`;
+  };
+  const afterTime = toTime(afterSeconds);
+
+  const query = `
+    SELECT s.*
+    FROM ${this.tableName} s
+    JOIN segment_users su
+      ON su.segment_id = s.segment_id
+    WHERE s.session_id = $1
+      AND su.user_id = $2
+      AND s.status = 'in_progress'
+      AND s.start_time > $3
+    ORDER BY s.start_time ASC
+    LIMIT 1
+  `;
+  const result = await pool.query(query, [session_id, user_id, afterTime]);
+  return result.rows[0] || null;
+}
+
+
+
+}
 module.exports = new VideoSegmentModel();

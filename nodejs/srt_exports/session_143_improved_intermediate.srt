@@ -1,0 +1,11 @@
+1
+00:00:00,000 --> 00:00:10,000
+Moi je le porterai dans la durée.
+
+2
+00:00:10,100 --> 00:00:11,100
+porterai dans la durée je le porterai jusqu'au
+
+3
+00:00:11,200 --> 00:00:15,000
+bout

@@ -178,7 +178,7 @@ const SessionModel = require("../../models/SessionModel");
 const SubtitlesModel = require("../../models/SubtitleModel");
 const axios = require("axios");
 const { mergeSortSegments } = require("../../utils/mergeSortSegment");
-const { setAsync, getAsync } = require("../../redis/index");
+const { setAsync, getAsync, lRangeAsync } = require("../../redis/index");
 const {
   startSegmentScheduler,
   stopSegmentScheduler,
@@ -237,6 +237,7 @@ const { getConnectedUsers } = require("../../utils/socketUtils");
 const client = require("../../redis/index");
 const { assignSegmentsToUsers } = require("./assignSegmentController");
 const { socketUsers } = require("../../app"); // Assurez-vous que socketUsers est exporté depuis app.js
+const SegmentStatus = require("../../utils/SegmentStatus");
 /**
  *
  * @param {Object} req
@@ -266,7 +267,7 @@ async function createVideoSegmentController(req, res) {
         "Les segments existent déjà. Vérification des assignations..."
       );
       const availableSegments = existingSegments.filter(
-        (segment) => segment.status === "available"
+        (segment) => segment.status === SegmentStatus.AVAILABLE
       );
 
       if (availableSegments.length > 0) {
@@ -312,7 +313,7 @@ async function createVideoSegmentController(req, res) {
         session_id,
         start_time: convertSecondsToTime(start_time),
         end_time: convertSecondsToTime(end_time),
-        status: "available",
+        status: SegmentStatus.AVAILABLE,
         created_at: new Date(),
       });
     }
@@ -530,7 +531,7 @@ async function handleUserDisconnection(req, res) {
   try {
     // Étape 1 : Récupérer les segments associés à cette session
     const redisKey = `session:${session_id}:segments`;
-    const segments = await client.lRange(redisKey, 0, -1);
+    const segments = await client.lRangeAsync(redisKey, 0, -1);
 
     // Étape 2 : Identifier les segments à redistribuer
     const segmentsToRedistribute = [];
@@ -539,7 +540,7 @@ async function handleUserDisconnection(req, res) {
 
       if (parsedSegment.assigned_to === user_id) {
         // Segments assignés à l'utilisateur déconnecté
-        if (parsedSegment.status === "in_progress") {
+        if (parsedSegment.status === SegmentStatus.IN_PROGRESS) {
           console.log(
             `Segment ${parsedSegment.segment_id} est en cours. Non redistribué.`
           );
@@ -547,7 +548,7 @@ async function handleUserDisconnection(req, res) {
         }
 
         // Marquer comme disponible pour redistribution
-        parsedSegment.status = "available";
+        parsedSegment.status = SegmentStatus.AVAILABLE;
         parsedSegment.assigned_to = null;
         segmentsToRedistribute.push(parsedSegment);
       }
@@ -556,12 +557,13 @@ async function handleUserDisconnection(req, res) {
     });
 
     // Mise à jour des segments dans Redis
-    const pipeline = client.pipeline();
-    pipeline.del(redisKey); // Supprimer l'ancienne liste
-    updatedSegments.forEach((segment) =>
-      pipeline.rPush(redisKey, JSON.stringify(segment))
+    await client.delAsync(redisKey);
+
+    await Promise.all(
+      updatedSegments.map((segment) =>
+        client.rPush(redisKey, JSON.stringify(segment))
+      )
     );
-    await pipeline.exec();
 
     // Étape 3 : Redistribuer les segments disponibles
     if (segmentsToRedistribute.length > 0) {
@@ -584,7 +586,7 @@ async function handleUserDisconnection(req, res) {
       segmentsToRedistribute.forEach((segment, index) => {
         const userToAssign = connectedUsers[index % totalUsers].user_id;
         segment.assigned_to = userToAssign;
-        segment.status = "in_progress"; // Les segments deviennent en cours
+        segment.status = SegmentStatus.IN_PROGRESS; // Les segments deviennent en cours
       });
 
       // Mise à jour Redis après redistribution
@@ -787,19 +789,20 @@ async function saveSubtitlesToDB(req, res) {
 // }
 async function startSegmentationController(req, res) {
   const session_id = req.params.sessionId;
+  const { officialStartTime, starterId } = req.body;
 
-  if (!session_id) {
-    return res.status(400).json({ message: "session_id manquant" });
+  if (!session_id || !officialStartTime || !starterId) {
+    return res.status(400).json({ message: "Paramètres manquants" });
   }
 
   try {
-    const io = req.app.get("io"); // ✅ d'abord récupérer io
+    const io = req.app.get("io");
 
     if (!io) {
       return res.status(500).json({ message: "Socket.io non initialisé" });
     }
 
-    const connectedUsers = await getConnectedUsers(io, session_id); // ✅ maintenant utiliser io
+    const connectedUsers = await getConnectedUsers(io, session_id);
 
     if (!connectedUsers || connectedUsers.length === 0) {
       return res
@@ -816,11 +819,13 @@ async function startSegmentationController(req, res) {
 
     startSegmentScheduler({
       sessionId: session_id,
-      segmentDuration: 10,
-      step: 5,
+      segmentDuration: 5,
+      step: 2,
       users,
       io: req.app.get("io"),
       socketUsers,
+      officialStartTime, // <--- ajoute ce paramètre ici
+      starterId,
     });
 
     return res
@@ -840,6 +845,10 @@ async function stopSegmentationController(req, res) {
   }
 
   stopSegmentScheduler(sessionId);
+
+  // Émettre un signal au frontend pour stopper aussi côté client
+  const io = req.app.get("io"); // Récupère Socket.IO depuis app
+  io.to(`session:${sessionId}`).emit("segmentation-stopped");
 
   return res.status(200).json({
     message: `Segmentation arrêtée pour la session ${sessionId}`,
