@@ -65,6 +65,17 @@ const {
 const { startStream } = require("../controllers/rtmp/streamController");
 
 const authMiddleware = require("../middlewares/authMiddleware");
+const {
+  exportSrtImprovedController,
+  exportSrtFlexibleController,
+  exportSrtComparisonController,
+  exportSrtQualityController,
+} = require("../controllers/stc/exportSrt2Controller");
+
+const {
+  exportImprovedSrtWithDeduplicationController,
+} = require("../controllers/stc/hybridSrtGenerator2");
+
 const { exportSrtController } = require("../controllers/stc/srtController");
 const sessionRouter = express.Router();
 
@@ -92,6 +103,20 @@ sessionRouter.get(
   getSegmentsWithSubtitles
 );
 sessionRouter.get("/:sessionId/export-srt", exportSrtController);
+sessionRouter.get("/export-srt/:session_id", exportSrtImprovedController);
+sessionRouter.get("/export-srt-v2/:session_id", exportSrtFlexibleController);
+sessionRouter.get(
+  "/export-srt-contrainte/:session_id",
+  exportSrtQualityController
+);
+sessionRouter.get(
+  "/export-srt-comparison/:session_id",
+  exportSrtComparisonController
+);
+sessionRouter.get(
+  "/srt-export/:session_id/dedup",
+  exportImprovedSrtWithDeduplicationController
+);
 sessionRouter.get("/info/:sessionId", getSessionController);
 sessionRouter.post("/store-duration/:sessionId", storeVideoDurationController);
 sessionRouter.post("/get-duration/:sessionId", getVideoDuration);

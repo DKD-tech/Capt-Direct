@@ -44,7 +44,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   displayedSubtitle = '';
   userId: number = 0; // Identifiant utilisateur récupéré dynamiquement
   videoUrl = ''; // URL de la vidéo récupérée dynamiquement
-  sessionId: number = 128; // ID de la session à afficher
+  sessionId: number = 157; // ID de la session à afficher
   segments: any[] = []; // Array de segments (avec warningFlag, isVisible, timer, etc.)
   username: string = '';
   collaborators: number = 1; // Nombre de collaborateurs en ligne
@@ -67,7 +67,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   signalUpdateInterval: any = null;
   now: number = Date.now();
   nowSub!: Subscription;
-  warningThresholdSec: number = 5;
+  warningThresholdSec: number = 2;
 
   // ID du setInterval pour la boucle globale
 

@@ -186,87 +186,192 @@ function completePartialWord(partialText, allWords) {
   };
 }
 
-// Fonction principale de correction avec contexte
+// ==========================================
+// 🚨 NOUVELLES FONCTIONS CRITIQUES
+// ==========================================
+
+function isWordComplete(word) {
+  if (!word || word.trim().length === 0) return false;
+
+  const cleanWord = word.toLowerCase().replace(/[^\w]/g, "");
+
+  // Vérifier dans le dictionnaire de mots (même source que les n-grams)
+  const exists = words.includes(cleanWord);
+  console.log(`🔍 Mot "${cleanWord}" existe dans le dictionnaire: ${exists}`);
+
+  return exists;
+}
+
+function hasNaturalRepetition(text) {
+  const textWords = text.toLowerCase().trim().split(/\s+/);
+  if (textWords.length < 4) return false;
+
+  // Chercher des répétitions de 2-4 mots consécutifs
+  for (let seqLength = 2; seqLength <= 4; seqLength++) {
+    for (let i = 0; i <= textWords.length - seqLength; i++) {
+      const sequence = textWords.slice(i, i + seqLength).join(" ");
+
+      // Chercher cette séquence plus tard dans le texte
+      for (let j = i + seqLength; j <= textWords.length - seqLength; j++) {
+        const laterSequence = textWords.slice(j, j + seqLength).join(" ");
+
+        if (sequence === laterSequence && sequence.length > 3) {
+          console.log(`🔄 Répétition naturelle détectée: "${sequence}"`);
+          return true;
+        }
+      }
+    }
+  }
+
+  return false;
+}
+
+function hasIncompleteWord(text) {
+  const textWords = text.trim().split(/\s+/);
+  const lastWord = textWords[textWords.length - 1];
+
+  // Un mot est considéré comme incomplet s'il:
+  // 1. Fait moins de 3 caractères ET n'existe pas dans le dictionnaire
+  // 2. OU se termine par une voyelle isolée (souvent signe d'incomplétude)
+  const isShortAndUnknown = lastWord.length < 3 && !isWordComplete(lastWord);
+  const endsWithIsolatedVowel =
+    lastWord.match(/[aeiou]$/i) &&
+    lastWord.length < 4 &&
+    !isWordComplete(lastWord);
+
+  return isShortAndUnknown || endsWithIsolatedVowel;
+}
+
+function isPhraseComplete(text) {
+  if (!text || text.trim().length === 0) return false;
+
+  const trimmedText = text.trim();
+  const textWords = trimmedText.split(/\s+/);
+
+  console.log(`📝 Analyse de complétude pour "${trimmedText}":`, {
+    mots: textWords.length,
+    dernierMot: textWords[textWords.length - 1],
+  });
+
+  // Critères de complétude
+  const hasMinimumWords = textWords.length >= 5;
+  const lastWordComplete = isWordComplete(textWords[textWords.length - 1]);
+  const hasRepetition = hasNaturalRepetition(trimmedText);
+  const hasPunctuation = trimmedText.match(/[.!?]$/);
+
+  console.log(`🔍 Critères:`, {
+    mots_suffisants: hasMinimumWords,
+    dernier_mot_valide: lastWordComplete,
+    repetition_naturelle: hasRepetition,
+    ponctuation: !!hasPunctuation,
+  });
+
+  // Une phrase est complète si:
+  // 1. Elle se termine par ponctuation OU
+  // 2. Elle a assez de mots ET (dernier mot valide OU répétition naturelle)
+  const isComplete =
+    hasPunctuation || (hasMinimumWords && (lastWordComplete || hasRepetition));
+
+  console.log(`✅ Résultat: ${isComplete ? "COMPLÈTE" : "INCOMPLÈTE"}`);
+  return isComplete;
+}
+
+// ==========================================
+// 🚨 FONCTION PRINCIPALE CORRIGÉE
+// ==========================================
+
 function correctTextWithContext(
   segmentText,
   allSegments = [],
   currentIndex = -1
 ) {
-  // 1. Essayer de compléter un mot partiel
-  const completion = completePartialWord(segmentText, words);
-  if (completion && completion.confidence > 0.3) {
-    const correctedText = segmentText.replace(
-      new RegExp(completion.original + "$"),
-      completion.completion
+  console.log(`🧠 Correction contextuelle pour: "${segmentText}"`);
+
+  // ✅ ÉTAPE 1: Vérifier d'abord si la phrase est complète
+  if (isPhraseComplete(segmentText)) {
+    console.log(
+      `✅ Phrase considérée comme complète, aucune correction nécessaire`
     );
-    return {
-      type: "completion",
-      original: segmentText,
-      corrected: correctedText,
-      confidence: completion.confidence,
-    };
+    return null; // 🚨 CRITIQUE: retourner null, pas false
   }
 
-  // 2. Essayer de prédire le mot suivant
+  // ✅ ÉTAPE 2: Essayer de compléter un mot partiel SEULEMENT s'il y en a un
+  if (hasIncompleteWord(segmentText)) {
+    console.log(`🔧 Tentative de complétion d'un mot incomplet`);
+    const completion = completePartialWord(segmentText, words);
+    if (completion && completion.confidence > 0.5) {
+      const correctedText = segmentText.replace(
+        new RegExp(completion.original + "$"),
+        completion.completion
+      );
+      return {
+        type: "completion",
+        original: segmentText,
+        corrected: correctedText,
+        confidence: completion.confidence,
+      };
+    }
+  }
+
+  // ✅ ÉTAPE 3: Prédiction seulement si vraiment nécessaire
+  console.log(`🤔 Tentative de prédiction du mot suivant`);
   const prediction = predictNextWordContextual(
     segmentText,
     allSegments,
     currentIndex
   );
-  if (prediction && prediction.confidence > 0.5) {
-    return {
-      type: "prediction",
-      original: segmentText,
-      predicted: prediction.prediction,
-      confidence: prediction.confidence,
-      method: prediction.ngramType,
-    };
+
+  if (prediction && prediction.confidence > 0.8) {
+    // Vérification anti-duplication
+    const segmentWords = segmentText.toLowerCase().split(/\s+/);
+    const lastWord = segmentWords[segmentWords.length - 1];
+
+    if (prediction.prediction !== lastWord) {
+      return {
+        type: "prediction",
+        original: segmentText,
+        predicted: prediction.prediction,
+        confidence: prediction.confidence,
+        method: prediction.ngramType,
+      };
+    } else {
+      console.log(`🛑 Éviter la duplication du mot "${lastWord}"`);
+    }
   }
 
+  console.log(`❌ Aucune correction/prédiction appropriée trouvée`);
   return null;
 }
 
-function suggestCompletion(segment, wordList) {
-  const words = segment.trim().toLowerCase().split(/\s+/);
-  const lastWord = words[words.length - 1];
-
-  if (!lastWord) return null;
-
-  const suggestions = wordList.filter(
-    (w) => w.startsWith(lastWord) && w.length > lastWord.length
-  );
-
-  if (suggestions.length > 0) {
-    return suggestions[0]; // ou utilisez une logique plus avancée ici
-  }
-  return null;
-}
 // Exporter les fonctions
 module.exports = {
   predictNextWordContextual,
   completePartialWord,
   correctTextWithContext,
+  isPhraseComplete,
+  isWordComplete,
+  hasNaturalRepetition,
   words,
   wordPositions,
-  suggestCompletion,
 };
 
-// Exemple d'utilisation pour votre cas :
+// ==========================================
+// 🧪 TEST AVEC VOTRE EXEMPLE
+// ==========================================
+
 console.log("=== Test avec votre exemple ===");
-const testSegments = [
-  "Moi je le porterai dans la durant",
-  "orterai dans la durée je le porterai",
-];
+const testText = "Moi je le porterai dans la durée je le porterai";
 
-testSegments.forEach((segment, index) => {
-  console.log(`\nSegment ${index + 1}: "${segment}"`);
+console.log(`\n🧪 Test: "${testText}"`);
+const result = correctTextWithContext(testText, [], 0);
 
-  const result = correctTextWithContext(segment, testSegments, index);
-  if (result) {
-    console.log(`Type: ${result.type}`);
-    console.log(`Résultat: ${result.corrected || result.predicted}`);
-    console.log(`Confiance: ${(result.confidence * 100).toFixed(1)}%`);
-  } else {
-    console.log("Aucune correction trouvée");
-  }
-});
+if (result === null) {
+  console.log(
+    `✅ SUCCÈS: Aucune correction appliquée, phrase reconnue comme complète`
+  );
+  console.log(`📌 Texte final: "${testText}"`);
+} else {
+  console.log(`❌ ÉCHEC: Une correction a été appliquée`);
+  console.log(`Type: ${result.type}`);
+  console.log(`Résultat: ${result.corrected || result.predicted}`);
+}

@@ -788,7 +788,7 @@ async function saveSubtitlesToDB(req, res) {
 //   }
 // }
 async function startSegmentationController(req, res) {
-  const session_id       = req.params.sessionId;
+  const session_id = req.params.sessionId;
   const { officialStartTime, starterId } = req.body;
 
   if (!session_id || !officialStartTime || !starterId) {
@@ -819,13 +819,13 @@ async function startSegmentationController(req, res) {
 
     startSegmentScheduler({
       sessionId: session_id,
-      segmentDuration: 10,
-      step: 5,
+      segmentDuration: 5,
+      step: 2,
       users,
       io: req.app.get("io"),
       socketUsers,
-      officialStartTime,     // <--- ajoute ce paramètre ici
-      starterId, 
+      officialStartTime, // <--- ajoute ce paramètre ici
+      starterId,
     });
 
     return res
